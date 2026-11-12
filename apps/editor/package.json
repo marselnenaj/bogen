@@ -26,7 +26,7 @@
     "y-protocols": "^1",
     "y-websocket": "^3",
     "yjs": "^13.6",
-    "zustand": "*"
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@types/culori": "*",
