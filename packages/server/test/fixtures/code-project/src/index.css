@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #e5484d;
+  --color-brand-ink: #ffffff;
+  --radius-pill: 999px;
+}
+
+@layer base {
+  body {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    color: var(--color-zinc-900);
+  }
+}

@@ -1,0 +1,70 @@
+name: Bug report
+description: Something does not work as the documentation says.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Run `bogen doctor` first, and check [troubleshooting](https://github.com/marselnenaj/bogen/blob/main/docs/guide/troubleshooting.md).
+        For a security problem, use a [private advisory](https://github.com/marselnenaj/bogen/security/advisories/new) instead.
+
+        **`bogen report`** writes one `.tar.gz` with the version, `doctor`, the end of the logs, recent failed runs, and the state of paired devices and phones, with tokens, keys, cookies and Tailscale logins masked. It sends nothing. [What it holds](https://github.com/marselnenaj/bogen/blob/main/docs/guide/reference/cli.md#bogen-report).
+        Masking catches known shapes only: logs and screenshots can still show your designs, file names and prompts. Read them before you attach them.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Canvas or editor
+        - MCP and agents
+        - Capture and import
+        - Export and code
+        - Brands
+        - Sync and devices
+        - Phone
+        - Omarchy
+        - Install
+        - Docs
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: For an agent problem, the MCP tool, its arguments and its result, and which client you used.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`bogen status` shows the version and build, such as 0.1.0+66d2d79."
+    validations:
+      required: true
+  - type: textarea
+    id: host
+    attributes:
+      label: Machine
+      description: Distribution and desktop, Node version, browser, and for sync or the phone the other device. `bogen doctor` shows most of it.
+  - type: textarea
+    id: report
+    attributes:
+      label: Report bundle
+      description: Attach the file `bogen report` printed, by dragging it here, after you read it. With a bundle, the two fields below can stay empty.
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of bogen doctor
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The relevant part of `server.log` in the data folder, or `journalctl --user -u bogen` with the user service.
+      render: text

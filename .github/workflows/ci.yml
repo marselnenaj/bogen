@@ -1,0 +1,32 @@
+name: Verify
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-fund --no-audit
+      - run: npm run check:release-source
+      - run: node scripts/check-asset-provenance.mjs
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run check:docs
+      - name: Core, editor and distribution contracts
+        run: npx vitest run packages/core/test apps/editor/test packages/server/test/release.test.ts packages/server/test/release-recovery.test.ts packages/server/test/settings-startup.test.ts packages/server/test/screen-previews.test.ts packages/server/test/canvas-plan.test.ts packages/server/test/updates.test.ts packages/server/test/phone.test.ts packages/server/test/peers.test.ts
+      - name: Pack with locked runtime dependencies
+        run: npm run release:npm -- --no-build

@@ -1,0 +1,35 @@
+#!/bin/bash
+# Managed by Bogen integrations/omarchy.
+# Opens the Bogen window, starting the server first if it is down.
+# With a path, opens that .bogen file: bogen-launch ~/Designs/landing.bogen
+set -u
+
+URL=${BOGEN_URL:-http://127.0.0.1:29990}
+PATTERN='127\.0\.0\.1__'
+
+up() { curl -fsS -m 1 -o /dev/null "$URL/api/status" 2>/dev/null; }
+tell() { omarchy-notification-send --app-name=Bogen -i bogen -u normal "$@"; }
+
+if ! up; then
+  systemctl --user start bogen.service 2>/dev/null
+  for _ in {1..40}; do
+    up && break
+    sleep 0.25
+  done
+fi
+if ! up; then
+  tell "Bogen server did not start" "See: journalctl --user -u bogen"
+  exit 1
+fi
+
+if [[ -n ${1:-} ]]; then
+  id=$(curl -fsS -m 30 -X POST -H 'Content-Type: application/octet-stream' \
+    -H "X-Bogen-Filename: $(basename -- "$1")" --data-binary "@$1" \
+    "$URL/api/files/import" 2>/dev/null | jq -r '.id // empty')
+  if [[ -n $id ]]; then
+    exec omarchy-launch-webapp "$URL/#/file/$id"
+  fi
+  tell "Could not open $(basename -- "$1")" "This Bogen server cannot import that file."
+fi
+
+exec omarchy-launch-or-focus-webapp "$PATTERN" "$URL"

@@ -1,0 +1,11 @@
+-- Managed by Bogen integrations/omarchy. install.sh writes it, uninstall.sh removes it.
+
+-- App window: tiled, and fully opaque so canvas colours are exact.
+-- Chromium names app windows after host and path: chrome-127.0.0.1__-Default.
+local bogen_window = { class = "^.+-127[.]0[.]0[.]1__.*$" }
+o.window(bogen_window, { tag = "-default-opacity" })
+o.window(bogen_window, { tag = "-chromium-based-browser" })
+o.window(bogen_window, { tile = true, opacity = "1.0 override 1.0 override" })
+
+local bogen_bin = os.getenv("HOME") .. "/.local/bin/"
+@BINDINGS@

@@ -1,0 +1,78 @@
+/* Components, theme modes and text styles. */
+.ds-mark { color: var(--ui-accent); flex: none; }
+.ds-count { font-size: 12px; color: var(--ui-fg-2); }
+.ds-list { display: flex; flex-direction: column; gap: 1px; }
+.ds-row { display: flex; align-items: center; gap: 4px; min-height: var(--row-sm); font-size: 12.5px; }
+.ds-row-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-row-note { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-fg-2); font-size: 12px; text-align: right; }
+.ds-row > .icon-btn { width: 22px; height: 22px; flex: none; }
+.ds-row > .ds-slot-name { flex: 1 1 auto; min-width: 0; }
+.ds-sub { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; min-height: 20px; }
+.ds-sub-title { font-size: 12px; color: var(--ui-fg-2); }
+.ds-link { color: var(--ui-accent); font-size: 12px; }
+.ds-link:hover { text-decoration: underline; }
+.ds-controls { display: flex; flex-direction: column; gap: 4px; }
+.ds-controls > .field, .mode-bar > .field { flex: none; height: var(--row); }
+.panel-left > .tabs { padding: 0 2px; }
+/* Five tabs in the left panel: the Data tab is its icon only, so that the others keep their words. */
+.panel-left > .tabs .tab { padding: 0 3px; gap: 2px; font-size: 12px; }
+.ds-control { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.ds-control > .field { flex: 1 1 auto; min-width: 0; }
+.ds-control > .icon-btn { width: 22px; height: 22px; flex: none; }
+.ds-prop-label { display: inline-block; max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-fg-2); font-size: 12px; }
+.ds-prop-label.is-set { color: var(--ui-fg); }
+.ds-toggle { display: flex; align-items: center; justify-content: space-between; min-height: var(--row-sm); padding: 0 2px 0 6px; }
+.ds-toggle input { margin: 0; accent-color: var(--ui-accent); }
+.ds-text-style { display: flex; align-items: center; gap: 2px; min-width: 0; margin-bottom: 4px; }
+.ds-text-style-select { flex: 1 1 auto; min-width: 0; }
+.ds-text-style > .icon-btn { width: 24px; height: 24px; flex: none; }
+
+/* Layer list */
+.layer-row.is-main .layer-icon, .layer-row.is-instance .layer-icon { color: var(--ui-accent); }
+.layer-row.is-main .layer-name { color: var(--ui-accent); }
+.layer-row.is-inside .layer-name, .layer-row.is-inside .layer-icon { color: var(--ui-fg-2); }
+.layer-row.is-slot .layer-icon { color: var(--ui-accent); opacity: .7; }
+
+/* Assets panel */
+.assets { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.assets-head { flex: none; padding: 6px; border-bottom: 1px solid var(--ui-border); }
+.assets-scroll { flex: 1 1 auto; overflow: auto; min-height: 0; padding: 2px 6px 8px; scrollbar-width: thin; }
+.asset { padding: 4px 0; }
+.asset + .asset { border-top: 1px solid var(--ui-border); }
+.asset-head { display: flex; align-items: center; gap: 5px; height: 24px; font-size: 12.5px; }
+.asset-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.asset-count { flex: none; font-size: 12px; color: var(--ui-fg-2); }
+.asset-members { display: grid; grid-template-columns: 1fr; gap: 4px; }
+.asset-members.is-set { grid-template-columns: 1fr 1fr; }
+.asset-member { position: relative; cursor: grab; border-radius: var(--radius); background: var(--ui-bg-2); touch-action: none; user-select: none; }
+.asset-member:hover { box-shadow: inset 0 0 0 1px var(--ui-border); }
+.asset-member:active { cursor: grabbing; }
+.asset-preview { position: relative; height: 72px; overflow: hidden; pointer-events: none; contain: strict; color: #111; }
+.asset-members.is-set .asset-preview { height: 56px; }
+.asset-variant { display: block; padding: 0 4px 2px; font-size: 12px; color: var(--ui-fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.asset-ghost { position: fixed; z-index: 1000; display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; background: var(--ui-bg); color: var(--ui-fg); border-radius: var(--radius); box-shadow: var(--shadow); font-size: 12.5px; pointer-events: none; }
+.asset-group + .asset-group { margin-top: 6px; border-top: 1px solid var(--ui-border); }
+.asset-group-title { display: flex; align-items: center; gap: 5px; height: 24px; font-size: 12px; color: var(--ui-fg-2); }
+.library-controls { margin-top: 8px; padding-top: 4px; border-top: 1px solid var(--ui-border); }
+.library-row { display: flex; align-items: center; gap: 4px; height: 26px; font-size: 12.5px; }
+.library-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-row .btn, .banner .btn { height: 20px; padding: 0 7px; font-size: 12px; flex: none; }
+
+/* Icon picker */
+.icon-popover { padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; height: 272px; overflow: auto; scrollbar-width: thin; align-content: start; }
+.icon-cell { display: flex; align-items: center; justify-content: center; height: 32px; border-radius: var(--radius); color: var(--ui-fg); }
+.icon-cell:hover { background: var(--hover); }
+.icon-cell svg { width: 18px; height: 18px; display: block; }
+.icon-none { grid-column: 1 / -1; padding: 8px; }
+
+/* Theme modes in the tokens panel */
+.mode-bar { flex: none; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-bottom: 1px solid var(--ui-border); }
+.mode-row { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.mode-row > .icon-btn { width: 24px; height: 24px; flex: none; }
+.mode-hint { flex: 1 1 auto; }
+.token-row.is-from-base .field-input, .token-row.is-from-base .color-field { opacity: .55; }
+.token-row > .token-reset { width: 22px; height: 22px; flex: none; }
+.text-style-row { min-height: var(--row-sm); }
+.text-style-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.text-style-sample { flex: none; color: var(--ui-fg-2); font-size: 12px; }

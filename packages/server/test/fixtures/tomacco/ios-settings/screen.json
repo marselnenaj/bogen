@@ -1,0 +1,236 @@
+{
+  "format": "tomacco.screen",
+  "version": 1,
+  "tomacco_version": "1.3.0",
+  "captured_at": "2026-11-01T21:20:07Z",
+  "device": {
+    "platform": "ios",
+    "id": "virtual-iphone",
+    "serial": null,
+    "udid": null,
+    "virtual": true,
+    "model": "iPhone SE (3rd generation)",
+    "manufacturer": "Apple",
+    "os_name": "iOS",
+    "os_version": null,
+    "sdk": null,
+    "form_factor": "phone"
+  },
+  "display": {
+    "width_px": 750,
+    "height_px": 1334,
+    "density_dpi": null,
+    "scale": null,
+    "width_dp": null,
+    "height_dp": null,
+    "unit": "pt",
+    "orientation": "portrait",
+    "rotation": 0
+  },
+  "insets": {
+    "source": "catalogue",
+    "estimated": true,
+    "status_bar": {
+      "left": 0,
+      "top": 0,
+      "right": 750,
+      "bottom": 40
+    },
+    "navigation_bar": null,
+    "cutout": [],
+    "safe_area_px": {
+      "left": 0,
+      "top": 40,
+      "right": 0,
+      "bottom": 0
+    },
+    "safe_area_dp": null
+  },
+  "theme": null,
+  "locale": null,
+  "app": null,
+  "screenshot": {
+    "file": "screen.png",
+    "width": 750,
+    "height": 1334,
+    "bytes": 19845,
+    "sha256": "0450fb154c8ed74b854806ed47e529adcdcb566d1d08089621fa0edc4709c91c",
+    "marked_file": null
+  },
+  "hierarchy": "unavailable",
+  "elements_source": "ocr",
+  "marks": {
+    "count": 4,
+    "limit": 200,
+    "truncated": false
+  },
+  "elements": [
+    {
+      "id": "o1",
+      "parent": null,
+      "depth": 0,
+      "source": "ocr",
+      "role": "text",
+      "class": "",
+      "package": "",
+      "resource_id": "",
+      "text": "Settings",
+      "description": "",
+      "label": "Settings",
+      "bounds": {
+        "px": {
+          "left": 32,
+          "top": 124,
+          "right": 284,
+          "bottom": 196,
+          "width": 252,
+          "height": 72
+        },
+        "dp": null
+      },
+      "center": {
+        "x": 158,
+        "y": 160
+      },
+      "enabled": null,
+      "clickable": null,
+      "long_clickable": null,
+      "focusable": null,
+      "focused": null,
+      "checkable": null,
+      "checked": null,
+      "selected": null,
+      "scrollable": null,
+      "editable": null,
+      "password": null,
+      "confidence": 91,
+      "mark": 1
+    },
+    {
+      "id": "o2",
+      "parent": null,
+      "depth": 0,
+      "source": "ocr",
+      "role": "text",
+      "class": "",
+      "package": "",
+      "resource_id": "",
+      "text": "Wi-Fi",
+      "description": "",
+      "label": "Wi-Fi",
+      "bounds": {
+        "px": {
+          "left": 32,
+          "top": 247,
+          "right": 111,
+          "bottom": 287,
+          "width": 79,
+          "height": 40
+        },
+        "dp": null
+      },
+      "center": {
+        "x": 72,
+        "y": 267
+      },
+      "enabled": null,
+      "clickable": null,
+      "long_clickable": null,
+      "focusable": null,
+      "focused": null,
+      "checkable": null,
+      "checked": null,
+      "selected": null,
+      "scrollable": null,
+      "editable": null,
+      "password": null,
+      "confidence": 91,
+      "mark": 2
+    },
+    {
+      "id": "o3",
+      "parent": null,
+      "depth": 0,
+      "source": "ocr",
+      "role": "text",
+      "class": "",
+      "package": "",
+      "resource_id": "",
+      "text": "Bluetooth",
+      "description": "",
+      "label": "Bluetooth",
+      "bounds": {
+        "px": {
+          "left": 32,
+          "top": 335,
+          "right": 176,
+          "bottom": 375,
+          "width": 144,
+          "height": 40
+        },
+        "dp": null
+      },
+      "center": {
+        "x": 104,
+        "y": 355
+      },
+      "enabled": null,
+      "clickable": null,
+      "long_clickable": null,
+      "focusable": null,
+      "focused": null,
+      "checkable": null,
+      "checked": null,
+      "selected": null,
+      "scrollable": null,
+      "editable": null,
+      "password": null,
+      "confidence": 91,
+      "mark": 3
+    },
+    {
+      "id": "o4",
+      "parent": null,
+      "depth": 0,
+      "source": "ocr",
+      "role": "text",
+      "class": "",
+      "package": "",
+      "resource_id": "",
+      "text": "Notifications",
+      "description": "",
+      "label": "Notifications",
+      "bounds": {
+        "px": {
+          "left": 32,
+          "top": 423,
+          "right": 217,
+          "bottom": 463,
+          "width": 185,
+          "height": 40
+        },
+        "dp": null
+      },
+      "center": {
+        "x": 125,
+        "y": 443
+      },
+      "enabled": null,
+      "clickable": null,
+      "long_clickable": null,
+      "focusable": null,
+      "focused": null,
+      "checkable": null,
+      "checked": null,
+      "selected": null,
+      "scrollable": null,
+      "editable": null,
+      "password": null,
+      "confidence": 91,
+      "mark": 4
+    }
+  ],
+  "warnings": [
+    "The safe area is an estimate from the device catalogue."
+  ]
+}

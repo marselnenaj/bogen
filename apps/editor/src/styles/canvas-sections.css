@@ -1,0 +1,26 @@
+.canvas-section, .canvas-lane-title {
+  position: absolute; left: 0; top: 0;
+  transform: translate(calc(var(--wx) * var(--z) * 1px + var(--cx) * 1px), calc(var(--wy) * var(--z) * 1px + var(--cy) * 1px));
+  width: calc(var(--ww) * var(--z) * 1px); pointer-events: none;
+}
+.canvas-section { height: calc(var(--wh) * var(--z) * 1px); border: 1px solid color-mix(in oklab, var(--ui-fg) 20%, transparent); border-radius: 5px; }
+.canvas-section-title { position: absolute; bottom: 100%; left: 0; max-width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 5px 0; text-align: left; color: var(--ui-fg); font: 600 14px/1.3 var(--ui-font); pointer-events: auto; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.canvas-section-title span { color: var(--ui-fg-2); font-weight: 400; font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.canvas-section-title:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
+.canvas-lane-title { margin-top: -36px; opacity: clamp(0, calc((var(--z) - .2) * 10), 1); color: var(--ui-fg-2); font: 11px/1.2 var(--ui-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.canvas-connections { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.canvas-connections text { fill: var(--ui-fg-2); font: calc(11px / var(--z)) var(--ui-font); paint-order: stroke; stroke: var(--canvas-bg); stroke-width: calc(4px / var(--z)); stroke-linejoin: round; }
+.canvas-map { position: absolute; bottom: 16px; left: 16px; max-width: min(300px, calc(100% - 32px)); border: 1px solid var(--ui-border); background: var(--ui-bg); border-radius: var(--radius); color: var(--ui-fg); font-size: 12px; pointer-events: auto; z-index: 8; }
+.canvas-map summary { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; list-style: none; }
+.canvas-map summary::-webkit-details-marker { display: none; }
+.canvas-map summary > span { color: var(--ui-fg-2); margin-left: auto; }
+.canvas-map nav { display: flex; flex-direction: column; max-height: min(50vh, 340px); overflow-y: auto; border-top: 1px solid var(--ui-border); }
+.canvas-map nav button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 9px 10px; cursor: pointer; }
+.canvas-map nav button:hover { background: var(--hover); }
+.canvas-map nav button:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.canvas-map nav strong { font-weight: 600; }
+.canvas-map nav span { color: var(--ui-fg-2); line-height: 1.3; overflow-wrap: anywhere; }
+
+@media (pointer: coarse) { .canvas-map summary, .canvas-map nav button { min-height: 44px; } }
+
+.canvas-map-unassigned { padding: 9px 10px 4px; font-weight: 600; }

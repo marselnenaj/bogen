@@ -1,0 +1,46 @@
+{
+  "name": "bogen-design",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "bin": {
+    "bogen": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "tsx watch src/cli.ts serve --dev",
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@bogen/core": "*",
+    "@modelcontextprotocol/sdk": "^1.32",
+    "esbuild": "^0.28",
+    "imagetracerjs": "1.2.6",
+    "lib0": "^0.2",
+    "mp4-muxer": "^5.2.2",
+    "pdf-lib": "^1.17",
+    "puppeteer-core": "*",
+    "smol-toml": "*",
+    "tailwindcss": "^4.3.3",
+    "webm-muxer": "^5.1.4",
+    "ws": "^8",
+    "y-protocols": "^1",
+    "yjs": "^13.6",
+    "zod": "*"
+  },
+  "devDependencies": {
+    "@paper-design/shaders-react": "^0.0.82",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tsx": "*",
+    "y-websocket": "^3.1.0"
+  }
+}

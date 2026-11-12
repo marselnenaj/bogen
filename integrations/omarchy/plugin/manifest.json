@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.bogen.bogen",
+  "name": "Bogen",
+  "version": "0.1.0",
+  "author": "Bogen",
+  "license": "MIT",
+  "description": "Bogen design canvas in the Omarchy bar: server state, agents at work, recent files.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Bogen",
+    "description": "Start and stop the server, watch agents draw, open recent files, start a new one.",
+    "category": "Development",
+    "aliases": ["bogen", "design"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "notifyOnFinish": true,
+      "notifyOnComment": true,
+      "pulse": true,
+      "port": 29990
+    },
+    "schema": [
+      { "key": "notifyOnFinish", "type": "boolean", "label": "Notify when an agent finishes", "defaultValue": true },
+      { "key": "notifyOnComment", "type": "boolean", "label": "Notify when a comment arrives or a mention run ends", "defaultValue": true },
+      { "key": "pulse", "type": "boolean", "label": "Pulse the icon while an agent works", "defaultValue": true, "description": "The pulse also stays off while Hyprland animations are disabled." },
+      { "key": "port", "type": "integer", "label": "Server port", "min": 1024, "max": 65535, "step": 1, "defaultValue": 29990 }
+    ]
+  }
+}

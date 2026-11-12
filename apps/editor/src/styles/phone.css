@@ -1,0 +1,30 @@
+/* Pairing a phone, and the phone section of the Agents tab. The phone layout itself builds on :root[data-phone]. */
+
+.pair {
+  min-height: 100dvh; box-sizing: border-box; padding: max(32px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background: #f4f2ec; color: #0e0e0c; font-size: 17px; line-height: 1.45; display: flex; flex-direction: column; gap: 14px; max-width: 520px; margin: 0 auto;
+}
+.pair h1 { font-size: 26px; line-height: 1.15; margin: 0; font-weight: 700; }
+.pair p, .pair ol { margin: 0; }
+.pair ol { padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.pair code { font-size: 15px; }
+.pair form { display: flex; flex-direction: column; gap: 8px; }
+.pair label { font-size: 14px; font-weight: 600; }
+.pair input { font: inherit; font-size: 24px; letter-spacing: .12em; padding: 10px 12px; min-height: 52px; border: 2px solid #0e0e0c; border-radius: 0; background: #fff; color: #0e0e0c; }
+.pair button { font: inherit; font-weight: 600; min-height: 48px; border: 0; border-radius: 0; background: #2b3df2; color: #f4f2ec; }
+.pair button:disabled { opacity: .45; }
+.pair .pair-secondary { background: transparent; color: #2b3df2; border: 2px solid #2b3df2; }
+.pair-code { font-size: 34px; font-weight: 700; letter-spacing: .1em; }
+.pair-hint { color: #55554f; font-size: 15px; }
+.pair-error { color: #b3261e; font-weight: 600; }
+
+.phone-qr { width: 132px; height: 132px; background: #fff; padding: 4px; align-self: flex-start; }
+.phone-qr svg { display: block; width: 100%; height: 100%; }
+.phone-code { font-size: 18px; font-weight: 700; letter-spacing: .08em; }
+.phone-url { font-size: 12px; word-break: break-all; user-select: all; }
+.phone-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.phone-row .hint { margin-left: auto; }
+.phone-actions { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 2px; }
+.update-ready { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 1000; display: flex; gap: 12px; align-items: center; padding: 10px 14px; background: #0e0e0c; color: #f4f2ec; font-size: 14px; }
+.update-ready button { min-height: 44px; padding: 0 12px; background: #2b3df2; color: #f4f2ec; font-weight: 600; }
+.file.is-away { opacity: .45; }

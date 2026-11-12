@@ -1,0 +1,56 @@
+/*
+ * Direction for a right-to-left interface (Arabic, Persian, Hebrew, Urdu). The page's `dir` follows the interface
+ * language (src/i18n/store.ts), so panels, menus, dialogs and the phone screens read from the right. What is not
+ * the interface keeps left-to-right, whatever the language:
+ *
+ * - the canvas, with the design on it and every overlay drawn in its coordinates; a design's own `dir` and
+ *   `direction` still apply inside it, as they do in an exported page;
+ * - previews and thumbnails of designs, and the history stage;
+ * - code, CSS values, shortcuts and numbers typed into fields.
+ *
+ * The chrome that floats on the canvas (find, the text bar, the context menu) reads in the interface's direction.
+ *
+ * The editor's frame keeps its places: the layers panel left, the inspector right, the canvas between them. Their
+ * resizers and drawers are drawn and dragged by physical sides, and the canvas must not move under the design
+ * when the language changes, so only what is inside each panel reads from the right.
+ */
+.canvas,
+.bogen-world,
+.asset-preview,
+.code,
+.code-panel pre,
+.menu-keys,
+textarea.css-value,
+kbd,
+code,
+input[type='number'],
+input[inputmode='decimal'],
+input[inputmode='numeric'] {
+  direction: ltr;
+}
+
+kbd,
+code {
+  unicode-bidi: isolate;
+}
+
+:root[dir='rtl'] .canvas :is(.find-bar, .text-bar, .menu) {
+  direction: rtl;
+}
+
+:root[dir='rtl'] .workspace {
+  direction: ltr;
+}
+
+:root[dir='rtl'] .workspace > .panel-slot > *,
+:root[dir='rtl'] .stage > :not(.canvas) {
+  direction: rtl;
+}
+
+/* Controls drawn with physical sides in app.css, mirrored for right-to-left. */
+:root[dir='rtl'] .field-select { padding-right: 0; padding-left: 16px; }
+:root[dir='rtl'] .field-chevron { right: auto; left: 4px; }
+:root[dir='rtl'] .field-label { padding: 0 7px 0 2px; }
+:root[dir='rtl'] .field-suffix { padding-right: 0; padding-left: 6px; }
+
+.language-select { flex: 0 1 220px; }

@@ -1,0 +1,12 @@
+# Managed by Bogen integrations/omarchy
+[Unit]
+Description=Bogen design canvas server
+
+[Service]
+ExecStart=@BOGEN_BIN@ serve@BOGEN_ARGS@
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,4 @@
+#!/bin/bash
+# Managed by Bogen integrations/omarchy. Tells a running server to re-read the theme and font.
+# Redundant with the server's own watcher for themes; the only signal for font changes.
+curl -fsS -m 2 -X POST -o /dev/null "${BOGEN_URL:-http://127.0.0.1:29990}/api/omarchy/reload" 2>/dev/null || true

@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Troubleshooting
+    url: https://github.com/marselnenaj/bogen/blob/main/docs/guide/troubleshooting.md
+    about: Common messages with their cause and fix.
+  - name: Run bogen doctor
+    url: https://github.com/marselnenaj/bogen/blob/main/docs/guide/troubleshooting.md#troubleshooting
+    about: "`bogen doctor` checks Node, the service, the browser, Tailscale, paired devices and each MCP client, and prints the exact fix for each problem. It changes nothing."
+  - name: Questions
+    url: https://github.com/marselnenaj/bogen/blob/main/docs/guide/faq.md
+    about: Short answers on cost, agents, what it runs on, Figma and privacy.
+  - name: Security problem
+    url: https://github.com/marselnenaj/bogen/security/advisories/new
+    about: Please report it privately, through a security advisory.

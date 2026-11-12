@@ -1,0 +1,49 @@
+/* Touch. The canvas gestures live in canvas/touch.ts; this keeps the browser from fighting them and
+   gives fingers room to hit things without moving anything on screen. */
+
+/* A long press is ours: no iOS callout or text selection on the canvas. Safari reads only the prefixed
+   user-select, the plain one is already set in app.css. */
+.canvas { -webkit-user-select: none; -webkit-touch-callout: none; }
+/* Except where text is meant to be edited. */
+.canvas .bogen-world .bogen-text-editing, .canvas input, .canvas textarea {
+  -webkit-user-select: text; user-select: text; -webkit-touch-callout: default;
+}
+
+@media (any-pointer: coarse) {
+  /* No rubber band or pull to refresh behind the canvas. */
+  html, body { overscroll-behavior: none; }
+  .toolbar { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .toolbar input { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+}
+
+@media (pointer: coarse) {
+  /* Top bar and tool buttons: an invisible 44px tall hit area. They sit close together, so it grows up
+     and down only, where there is room. */
+  .toolbar :is(.icon-btn, .zoom-btn, .file-name, .peer, .follow-pill) { position: relative; }
+  .toolbar :is(.icon-btn, .zoom-btn, .file-name, .peer, .follow-pill)::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%);
+  }
+
+  /* Menu rows touch each other, so they grow for real. A long menu scrolls inside the canvas. */
+  .menu-item { height: auto; min-height: 44px; }
+  .canvas .menu { max-height: min(620px, calc(100% - 16px)); overflow-y: auto; overscroll-behavior: contain; }
+
+  /* Selection handles keep their drawn size. Their hit areas grow mostly outwards, so a small selected
+     layer can still be dragged by its middle. */
+  .ov-handle::before { content: ""; position: absolute; width: 44px; height: 44px; }
+  .ov-handle-nw::before { left: -32px; top: -32px; }
+  .ov-handle-ne::before { right: -32px; top: -32px; }
+  .ov-handle-se::before { right: -32px; bottom: -32px; }
+  .ov-handle-sw::before { left: -32px; bottom: -32px; }
+  .ov-edge-n { left: 8px; right: 8px; top: -36px; height: 44px; }
+  .ov-edge-s { left: 8px; right: 8px; bottom: -36px; height: 44px; }
+  .ov-edge-w { top: 8px; bottom: 8px; left: -36px; width: 44px; }
+  .ov-edge-e { top: 8px; bottom: 8px; right: -36px; width: 44px; }
+  .ov-rotate-handle::before { content: ""; position: absolute; inset: -17.5px; border-radius: 50%; }
+}
+
+/* iOS zooms the whole page into any field set below 16px when it gets focus, and leaves it zoomed.
+   On a touch screen every field is 16px at least, in the phone layout and in the full editor. */
+@media (pointer: coarse) {
+  input, textarea, select, [contenteditable="true"], [contenteditable=""] { font-size: max(16px, 1em) !important; }
+}

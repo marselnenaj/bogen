@@ -1,0 +1,20 @@
+{
+  "name": "@bogen/core",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    ".": "./src/index.ts",
+    "./icons": "./src/icons.ts",
+    "./css-check": "./src/css-check.ts"
+  },
+  "dependencies": {
+    "css-select": "^7",
+    "culori": "^4.0.2",
+    "dom-serializer": "^3",
+    "domhandler": "^6",
+    "fractional-indexing": "^4.0.0",
+    "htmlparser2": "^12",
+    "yjs": "^13.6"
+  }
+}

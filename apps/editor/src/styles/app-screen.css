@@ -1,0 +1,53 @@
+/* App screens from Tomacco: the import dialog and design versus app. */
+
+.appscreen-dialog { width: min(600px, calc(100 * var(--ui-vw) - 32px)); max-height: calc(84 * var(--ui-vh)); }
+.appscreen-body { display: flex; gap: 16px; padding: 14px 16px; overflow: auto; font-size: 12.5px; line-height: 1.4; }
+.appscreen-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.appscreen-main p, .appscreen-source p { margin: 0; }
+.appscreen-source { display: flex; flex-direction: column; gap: 8px; }
+.appscreen-devices { display: flex; flex-direction: column; border: 1px solid var(--ui-border); border-radius: var(--radius); overflow: hidden; }
+.appscreen-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 34px; padding: 0 10px; text-align: left; color: inherit; font-size: 12.5px; }
+.appscreen-row + .appscreen-row { border-top: 1px solid var(--ui-border); }
+.appscreen-row b { font-weight: 600; }
+.appscreen-row.is-active { background: var(--accent-soft); }
+.appscreen-row.is-active .appscreen-state { color: var(--ui-accent); }
+.appscreen-state { color: var(--ui-fg-2); flex: none; }
+.appscreen-read { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.appscreen-options { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
+.appscreen-preview { margin: 0; width: 150px; flex: none; display: flex; flex-direction: column; gap: 6px; align-items: center; font-size: 12px; color: var(--ui-fg-2); text-align: center; }
+.appscreen-preview img, .appscreen-blank { display: block; width: 150px; height: auto; border: 1px solid var(--ui-border); background: var(--ui-bg-2); }
+.appscreen-blank { aspect-ratio: 9 / 19.5; }
+.appscreen-foot { display: flex; justify-content: flex-end; gap: 6px; padding: 10px 16px; border-top: 1px solid var(--ui-border); flex: none; }
+
+.appscreen-stage { flex-direction: row; }
+.appscreen-canvas { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 24px; overflow: auto; }
+.appscreen-pick { width: min(420px, 100%); display: flex; flex-direction: column; gap: 10px; padding: 14px; background: var(--ui-bg); border-radius: 8px; box-shadow: var(--shadow); font-size: 12.5px; }
+.appscreen-pair { display: flex; gap: 32px; align-items: flex-start; max-height: 100%; }
+.appscreen-figure { margin: 0; display: flex; flex-direction: column; gap: 6px; align-items: center; font-size: 12px; color: var(--ui-fg-2); }
+.appscreen-frame { position: relative; box-shadow: 0 1px 3px rgb(0 0 0 / 12%); background: #fff; }
+.appscreen-frame img { display: block; height: min(calc(72 * var(--ui-vh)), 860px); width: auto; }
+.appscreen-over { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+.appscreen-mark { position: absolute; pointer-events: none; border: 2px solid var(--ui-accent); background: color-mix(in oklab, var(--ui-accent) 12%, transparent); }
+.appscreen-mark.is-app { border-color: var(--ui-danger); background: color-mix(in oklab, var(--ui-danger) 12%, transparent); }
+.appscreen-aside { width: 320px; flex: none; display: flex; flex-direction: column; min-height: 0; background: var(--ui-bg); border-left: 1px solid var(--ui-border); font-size: 12.5px; }
+.appscreen-aside-head { display: flex; flex-direction: column; gap: 2px; padding: 8px 8px 10px 14px; border-bottom: 1px solid var(--ui-border); }
+.appscreen-aside-title { display: flex; align-items: center; justify-content: space-between; min-height: 26px; }
+.appscreen-controls { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--ui-border); }
+.appscreen-controls p { margin: 0; }
+.appscreen-controls b { font-weight: 600; }
+.appscreen-controls .btn { align-self: flex-start; }
+.appscreen-slider { display: flex; align-items: center; gap: 10px; color: var(--ui-fg-2); }
+.appscreen-slider input { flex: 1 1 auto; accent-color: var(--ui-accent); }
+.appscreen-slider span:last-child { color: var(--ui-fg); width: 34px; text-align: right; }
+.appscreen-list { flex: 1 1 auto; overflow: auto; padding: 4px 0 12px; scrollbar-width: thin; }
+.appscreen-item { display: flex; justify-content: space-between; gap: 10px; width: 100%; min-height: 30px; padding: 4px 14px; text-align: left; color: inherit; font-size: 12.5px; }
+.appscreen-item:hover, .appscreen-item:focus-visible { background: var(--hover); }
+.appscreen-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.appscreen-off { color: var(--ui-danger); flex: none; text-align: right; }
+.appscreen-group { padding: 10px 14px 4px; color: var(--ui-fg-2); }
+
+/* Whether Tomacco can give a screen now, and the one command that fixes it. */
+.appscreen-ready { display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 1.4; }
+.appscreen-ready p { margin: 0; }
+.appscreen-command { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 4px 4px 4px 8px; border: 1px solid var(--ui-border); border-radius: var(--radius); background: var(--ui-bg-2); }
+.appscreen-command code { flex: 1 1 auto; min-width: 0; overflow-x: auto; white-space: nowrap; font-family: var(--ui-mono); font-size: 11.5px; user-select: all; }

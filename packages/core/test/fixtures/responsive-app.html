@@ -1,0 +1,36 @@
+<style>
+  :root { --space-sm: 8px; --space-md: 16px; --space-lg: 32px; --space-xl: 64px; --text-body: 16px; --text-lg: 24px; --text-xl: 40px; --text-2xl: 56px }
+  .shell { display: flex; flex-direction: column; width: 100%; font-family: system-ui, sans-serif; color: #111; background: #fff }
+  .bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-xl) }
+  .menu { display: flex; gap: var(--space-lg); white-space: nowrap }
+  .head { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-xl) }
+  .head h1 { font-size: var(--text-2xl); white-space: nowrap }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-lg); padding: 0 var(--space-xl) }
+  .stat { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-lg); border: 1px solid #ddd }
+  .stat b { font-size: var(--text-xl) }
+  .wide { grid-column: span 2 }
+  .split { display: flex; gap: var(--space-xl); padding: var(--space-xl) }
+  .chart { width: 820px; height: 360px; background: #eef }
+  .side { display: flex; flex-direction: column; gap: var(--space-md); width: 420px }
+  .row { display: flex; justify-content: space-between; gap: var(--space-md); font-size: var(--text-lg) }
+</style>
+<div class="shell">
+  <header class="bar">
+    <strong>Ledger</strong>
+    <nav class="menu"><a href="#">Overview</a><a href="#">Invoices</a><a href="#">Clients</a><a href="#">Reports</a><a href="#">Settings</a><a href="#">Help</a></nav>
+  </header>
+  <div class="head"><h1>October at a glance for the studio</h1><p>Everything that came in and went out this month.</p></div>
+  <section class="stats">
+    <div class="stat wide"><span>Revenue</span><b>48,200</b></div>
+    <div class="stat"><span>Open</span><b>12</b></div>
+    <div class="stat"><span>Late</span><b>3</b></div>
+  </section>
+  <section class="split">
+    <div class="chart"></div>
+    <aside class="side">
+      <div class="row"><span>Hoffmann GmbH</span><span>8,400</span></div>
+      <div class="row"><span>Nordlicht</span><span>5,100</span></div>
+      <div class="row"><span>Atelier Weiss</span><span>2,950</span></div>
+    </aside>
+  </section>
+</div>

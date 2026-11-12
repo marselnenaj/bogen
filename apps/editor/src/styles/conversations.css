@@ -1,0 +1,72 @@
+/* Comment threads as conversations: compact headers, one open at a time, and who a reply goes to. */
+
+.conversations .thread.conv { padding: 0; }
+.conversations .thread.conv:hover { background: none; }
+.conversations .thread.conv.is-open { background: var(--accent-soft); }
+.conv-h { margin: 0; font: inherit; }
+.conv-head {
+  display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; column-gap: 6px; row-gap: 2px; align-items: center;
+  width: 100%; padding: 8px 8px 8px 6px; border: 0; background: none; color: var(--ui-fg); text-align: left; font: inherit; cursor: pointer;
+}
+.conv-head:hover { background: var(--hover); }
+.conv-head:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.conv-caret { color: var(--ui-fg-2); transition: transform .12s ease; }
+.conv-head[aria-expanded="true"] .conv-caret { transform: rotate(90deg); }
+.conv-title { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-meta { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ui-fg-2); white-space: nowrap; }
+.conv-target, .conv-preview { grid-column: 2 / 4; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.conv-target { color: var(--ui-fg-2); }
+.conv-preview { color: var(--ui-fg-2); }
+.conv-preview b { color: var(--ui-fg); font-weight: 500; }
+.conv-unread { display: inline-flex; align-items: center; gap: 4px; color: var(--ui-accent); font-weight: 600; }
+.conv-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ui-accent); }
+.conv-state { padding: 0 5px; border-radius: 3px; border: 1px solid var(--ui-border); color: var(--ui-fg); }
+.conv-state.is-working { border-color: var(--ui-accent); color: var(--ui-accent); }
+.conv-draft { font-style: italic; }
+.conv-resolved { color: var(--ui-fg-2); }
+.thread.conv.is-unread .conv-title { color: var(--ui-fg); }
+.conv-outside { margin: 0; padding: 0 8px 6px 26px; font-size: 11.5px; color: var(--ui-fg-2); }
+.conv-body { padding: 0 8px 8px 26px; display: flex; flex-direction: column; }
+.conversations .reply { flex-direction: column; align-items: stretch; }
+.conv-earlier { align-self: flex-start; margin-bottom: 6px; }
+.conv-body .message.is-system .message-text { color: var(--ui-fg-2); font-size: 12px; }
+.conv-body .thread-actions { position: static; display: flex; justify-content: flex-end; gap: 2px; margin-top: 4px; opacity: 1; }
+
+/* Who a reply goes to. */
+.reply-target { display: flex; flex-direction: column; gap: 3px; padding-top: 4px; font-size: 12px; }
+.reply-target-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.reply-target-chip {
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; height: 24px; padding: 0 8px;
+  border: 1px solid var(--ui-border); border-radius: 12px; background: var(--ui-bg); color: var(--ui-fg); font: inherit; cursor: pointer;
+}
+.reply-target-chip:hover { background: var(--hover); }
+.reply-target-chip:focus-visible, .reply-target-option:focus-visible, .reply-target-reset:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+.reply-target[data-route="agent"] .reply-target-chip, .reply-target[data-route="mention"] .reply-target-chip { border-color: color-mix(in oklab, var(--ui-accent) 55%, var(--ui-border)); }
+.reply-target-to { color: var(--ui-fg-2); }
+.reply-target-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reply-target-caret { color: var(--ui-fg-2); flex: none; }
+.reply-target-chip[aria-expanded="true"] .reply-target-caret { transform: rotate(180deg); }
+.reply-target-reset { border: 0; background: none; padding: 0; color: var(--ui-accent); font: inherit; cursor: pointer; }
+.reply-target-note { margin: 0; color: var(--ui-fg-2); line-height: 1.35; }
+.reply-target-panel { display: flex; flex-direction: column; gap: 6px; padding: 6px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); }
+.reply-target-options { display: flex; gap: 2px; padding: 2px; border-radius: 6px; background: var(--ui-bg-2); }
+.reply-target-option { flex: 1 1 0; height: 24px; border: 0; border-radius: 4px; background: none; color: var(--ui-fg); font: inherit; cursor: pointer; white-space: nowrap; }
+.reply-target-option.is-on { background: var(--ui-bg); box-shadow: 0 0 0 1px var(--ui-border); font-weight: 600; }
+.reply-target-models { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.reply-target-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--ui-fg-2); }
+.reply-target-field select { min-width: 0; height: 26px; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-bg); color: var(--ui-fg); font: inherit; }
+
+/* Phone: the same, at finger size, in the phone's colours. */
+.reply-target.is-phone {
+  --ui-fg: var(--p-ink); --ui-fg-2: var(--p-dim); --ui-border: var(--p-rule); --ui-bg: var(--p-paper); --ui-bg-2: var(--p-paper-deep); --ui-accent: var(--p-blue); --hover: var(--p-paper-deep);
+  padding: 0 0 6px; font-size: 14px;
+}
+.reply-target.is-phone .reply-target-chip { height: 34px; padding: 0 12px; border-radius: 17px; }
+.reply-target.is-phone .reply-target-option { height: 36px; }
+.reply-target.is-phone .reply-target-field select { height: 38px; font-size: 16px; }
+.reply-target.is-phone .reply-target-reset { min-height: 34px; }
+.pf-thread-row .pf-thread-row-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--p-dim); }
+.pf-thread-row.is-unread .pf-thread-row-head b::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: var(--p-blue); vertical-align: middle; }
+.pf-thread-row .pf-state { font-weight: 600; color: var(--p-ink); }
+.pf-thread-row:focus-visible { outline: 2px solid var(--p-blue); outline-offset: -2px; }
+.pf-earlier { align-self: flex-start; }

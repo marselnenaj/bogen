@@ -1,0 +1,20 @@
+{
+  "name": "code-components-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4",
+    "@vitejs/plugin-react": "*",
+    "tailwindcss": "^4",
+    "typescript": "^5.9",
+    "vite": "*"
+  }
+}
