@@ -19,7 +19,7 @@
     "@fontsource-variable/source-sans-3": "*",
     "@paper-design/shaders-react": "*",
     "culori": "*",
-    "lucide-react": "*",
+    "lucide-react": "^1.70.0",
     "paper": "^0.16.0",
     "react": "^19",
     "react-dom": "^19",
