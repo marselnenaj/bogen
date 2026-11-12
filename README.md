@@ -1,141 +1,165 @@
 # Bogen
 
-An open source design canvas where every layer is real HTML and CSS, and your own coding agent draws on it with you.
-Claude Code, Codex or another MCP client draws while you watch, edit and decide. Bogen is made for Omarchy, where it
-also designs complete desktop themes.
+**Give your agent a canvas.**
 
-<p>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-6cb6ff" alt="License: GPL-3.0-or-later"></a>
-  <img src="https://img.shields.io/badge/version-0.1.0-2b3df2" alt="Version 0.1.0">
-  <img src="https://img.shields.io/badge/made_for-Omarchy-b58cff" alt="Made for Omarchy">
-</p>
+Bogen is an open-source design tool where you and your coding agent edit the same canvas. Every layer is real
+HTML and CSS. Connect Claude Code, Codex or another MCP client, then work on a website, an app interface or an
+Omarchy theme together.
 
-<img src="assets/readme/editor.png" alt="The Bogen editor with the file Bogen Brand System open: the Colour board selected on the canvas, the layer list on the left, and on the right its position, vertical layout and its fill from the paper token." width="100%">
+It runs on your machine and uses your existing agent plan. Bogen adds no subscription or MCP usage quota;
+your agent provider's billing and limits still apply. **The first release is made for Omarchy desktop.**
+
+[Website](https://bogen.dev) · [Quickstart](#quickstart) · [Documentation](docs/guide/README.md) ·
+[What's new](docs/guide/changelog.md)
+
+<img src="assets/readme/editor.png" alt="Bogen's editor showing an editable brand system, with the colour palette selected and its layout and styles in the inspector." width="100%">
 
 ## Quickstart
 
-You need Node 22.18 or newer and a Chromium-based browser (Chromium, Chrome, Brave or Edge). Omarchy ships with
-Chromium.
+On Omarchy, with **Node 22.18 or newer** and a Chromium-based browser installed:
 
 ```sh
 curl -fsSL https://bogen.dev/install.sh | bash
+bogen install claude-code    # For Codex, use: bogen install codex
 bogen open
 ```
 
-The script downloads the release from GitHub, checks it against its checksum and the release signature, and installs
-it for your user: the package in `~/.local/share/bogen-app`, the `bogen` command in `~/.local/bin`. On Omarchy it then
-sets up the user service, the launcher entry, the keybinding and the bar widget; `--no-omarchy` leaves that out. It
-never uses `sudo`. [Read it first](install.sh) if you like.
+The installer verifies the release checksum and signature, installs for your user, and sets up the Omarchy
+launcher, bar widget and background service. It never uses `sudo`. [Read the script](install.sh), or pass
+`--no-omarchy` to skip the desktop integration.
 
-Or let your coding agent do it. Tell Claude Code or Codex: "Set up Bogen for me: bogen.dev/agent".
+Start a new session in your connected agent and ask:
 
-From a checkout of this repository:
+```text
+Design a pricing page in Bogen. Check the desktop and phone layouts.
+```
+
+Keep the canvas open to see the work and edit it yourself. Or press **Ctrl+K** in Bogen to run your installed
+Claude Code or Codex from the canvas. A comment mentioning `@claude` or `@codex` can start a run too.
+
+**Want your agent to handle setup?** Give it this:
+
+> Set up Bogen for me: https://bogen.dev/agent
+
+If something is missing, `bogen doctor` checks the setup and prints the fix without changing anything.
+You can also explore four example designs and 20 theme templates by hand, without an agent login.
+[Getting started](docs/guide/getting-started.md) walks through the first file.
+
+<details>
+<summary>Build from source</summary>
 
 ```sh
+git clone https://github.com/marselnenaj/bogen.git
+cd bogen
 npm install
 npm run build
 alias bogen="node $PWD/packages/server/dist/cli.js"
 bogen open
 ```
 
-`bogen open` starts the server in the background and opens `http://127.0.0.1:29990` in your browser. The first
-start makes one file, Welcome to Bogen, that walks through the basics. Then check your setup:
+See [Building](docs/building.md) for development servers and [Contributing](CONTRIBUTING.md) for checks.
 
-```sh
-bogen doctor
-```
+</details>
 
-It checks the whole setup, prints the exact fix for each problem, and changes nothing.
+## Work on the same design
 
-You can try Bogen without an agent subscription: the home screen has four finished example designs and 20 Omarchy
-theme templates to open and edit by hand. [Getting started](docs/guide/getting-started.md) walks through a first
-file.
+Your agent connects through MCP and works on the actual layers. You can move things, edit text or change styles
+while it works. It can take screenshots of the result and run design checks before handing it back.
 
-## Connect your agent
+For a larger change, the agent can place a proposal beside the current design. Compare the two and decide what
+stays. Agent edits have their own undo, so reverting an agent's work does not undo yours.
 
-```sh
-bogen install claude-code
-bogen install codex
-```
+Claude Code and Codex have been tested with real runs. Other MCP clients can use `bogen mcp` over stdio or connect
+to `http://127.0.0.1:29990/mcp`. The [agent guide](docs/guide/agents.md) lists the setup commands and which clients
+have been tried. The [MCP reference](docs/guide/reference/mcp-tools.md) lists the tools.
 
-`bogen install` registers Bogen's MCP server with the client and, for Claude Code and Codex, writes a small skill
-file (`skills/bogen/SKILL.md` in `~/.claude` or `$CODEX_HOME`). `bogen uninstall <client>` removes both.
+## Keep a brand book your agents can use
 
-Then ask your agent, in its own window:
+A brand in Bogen holds the logo, visual rules and voice of a product. Its brand book records the decisions behind
+those rules, with sources and open questions. Agents can read it before starting another screen.
 
-```text
-Design a pricing page in Bogen.
-```
+Link designs to the brand to share its tokens, fonts and rules. Review an agent's suggested changes before making
+them binding. The book can be exported as editable Markdown; the PDF contains the visual foundation and chapter
+index. [Brands and brand books](docs/guide/brand.md)
 
-Keep the canvas open and watch it draw. The agent works on your own Claude or Codex plan, and that plan's limits
-apply; Bogen needs no API key and calls no AI provider itself.
+The agent's design guidance is editable too. Bogen includes **16 design playbooks** for different kinds of work.
+Change their `SKILL.md` files in Settings when you want your agents to follow different instructions. Built-in
+canvas runs receive the relevant playbook before they start; external agents can read it through MCP.
+[Design guidance](docs/guide/design-knowledge.md)
 
-Other clients: `bogen install` also knows `cursor`, `vscode`, `opencode`, `gemini`, `zed`, `grok`, `hermes` and
-`omp`, and `--all` sets up every client it finds. Only Claude Code and Codex have been tried with the real apps.
-Anything else that speaks MCP can connect to `bogen mcp` (stdio) or `http://127.0.0.1:29990/mcp` (Streamable HTTP).
-The [MCP tool reference](docs/guide/reference/mcp-tools.md), generated from a running server, lists every tool.
+## Check responsive layouts and export the layers
 
-You can also stay on the canvas: Ctrl+K runs your installed `claude` or `codex` CLI with Bogen's tools only, and a
-comment that mentions `@claude` or `@codex` starts a run that answers in the thread.
+Preview the same design at desktop and phone widths, side by side. Edit its breakpoints and use the checks to find
+overflow, clipped content or text that is too small. Because the layers are HTML and CSS, the previews use real
+browser layout, including media and container queries. [Responsive design](docs/guide/canvas.md#responsive-variants)
+
+Export a screen or a selected layer as **HTML, React or React with Tailwind**. Image, SVG, PDF and video exports are
+available too. Your development tools build and run the application. [Export and code](docs/guide/export-and-code.md)
 
 ## Design an Omarchy theme
 
-1. Add the desktop integration. It is optional, and gives you the launcher entry, bar widget and user service:
+Open **Themes → Omarchy Desktop** on the home screen. Start a new theme, use an installed theme as a starting
+point, or pick one of **20 included Bogen templates**. These are Bogen's own templates, with AI-generated artwork
+for landscape and portrait displays; community-theme repositories are not bundled. The artwork is provided under
+CC0. [Asset origins](ASSET_PROVENANCE.md)
 
-   ```sh
-   bogen omarchy install --dry-run    # prints every step, changes nothing
-   bogen omarchy install
-   ```
+With an agent connected, try:
 
-2. On the home screen choose Themes, then Omarchy Desktop. Open one of the 20 bundled templates, start from a theme
-   you have installed, or start a new one. With an agent connected you can ask instead:
+```text
+Make an Omarchy theme in Bogen, starting from the theme I have installed.
+```
 
-   ```text
-   Make an Omarchy theme in Bogen, starting from tokyo-night, warmer and with less contrast.
-   ```
+The palette and desktop previews stay together on the canvas. Changing a colour token updates the previews.
+Landscape and portrait wallpapers have their own compositions.
 
-3. The theme is one file on the canvas: the palette as tokens, the backgrounds for landscape and portrait screens,
-   and previews that redraw when a token changes.
+Install the finished theme from the theme dialog, then choose when to apply it. **Undo apply** returns to your
+previous theme. You can also export a standard Omarchy theme folder or Git repository to share.
+[Theme workflow and installation](docs/guide/omarchy.md#design-a-theme)
 
-4. In the theme dialog, Install copies the theme to `~/.config/omarchy/themes/<name>`. Apply switches to it, and
-   Undo apply goes back to the theme you had. An agent can design and install a theme; only you can apply one, and
-   an agent never replaces a theme that is already there.
+## Pick up the work on another computer
 
-5. To share it, export with Git repository checked. You get a folder named `omarchy-<name>-theme` that anyone can
-   install the usual way once you have pushed it:
+Pair your desktop and laptop over **Tailscale** to sync designs, brands and assets directly between them. There is
+no Bogen cloud in between. Changes made offline sync when the devices reconnect, with conflicting text kept for
+review.
 
-   ```sh
-   omarchy theme install https://github.com/you/omarchy-dusk-theme
-   ```
+Start pairing on one computer:
 
-The [Omarchy guide](docs/guide/omarchy.md#design-a-theme) has the details, including portrait monitors, what an
-exported theme contains and which parts have been run on a real desktop.
+```sh
+bogen peer pair --name Desktop
+```
 
-## What it does
+Run the command it prints on the other computer. Both need Bogen and Tailscale installed. Agent runs and personal
+design-skill overrides stay on their own device. [Device sync](docs/guide/devices.md)
 
-- **A canvas made of HTML and CSS.** A frame is a `<div>` with flex or grid, text is text, colours are CSS
-  variables. What you see, what the agent sees in a screenshot and what you export come from the same rendering.
-- **You and your agent in one file.** The agent draws over MCP; you edit by hand at the same time. Larger changes
-  arrive as proposals you accept or discard, every change is on a timeline with who made it, and you can undo one
-  agent's work without touching your own.
-- **Omarchy themes.** Palette, backgrounds and previews on one canvas, exported as a standard theme folder or Git
-  repository.
-- **Checks before you ship.** Contrast, overflow, small text and touch targets, token use, and responsive widths;
-  a brand with rules that designs are checked against.
-- **Out to code and files.** HTML, React, and React with Tailwind from any layer; PNG, JPG, WebP, AVIF, SVG, PDF,
-  MP4 and WebM.
+A phone can act as a companion for reviewing proposals and leaving comments on the Bogen server running on your
+computer. [Phone setup](docs/guide/devices.md#iphone-and-ipad)
 
-Bogen can also copy a live web page onto the canvas as editable layers, keep files in sync between two of your own
-machines over Tailscale, and show proposals and comments on your phone. See the [documentation](docs/guide/README.md).
+## Compare a design with the running app
 
-## How it works
+[Tomacco](https://tomacco.dev) is a sibling project that builds, runs and tests Android and iOS apps on Linux.
+Bogen can import a screen from a running app as editable layers and compare it with a design using a side-by-side
+view, overlay or difference view.
 
-`bogen` is one Node program. It runs a server on your machine at `127.0.0.1:29990` that stores your files in
-`~/.local/share/bogen`, serves the editor as a web page, and exposes the same operations to agents as MCP tools. A
-headless Chromium, the one already on your system, renders screenshots and exports, so an agent can look at its own
-work. There is no account and no Bogen cloud. When an agent works in Bogen, the request and what the tools return
-(layers, comments, screenshots) go to your agent client and from there to its provider, as with any other agent
-task.
+An agent connected to both tools can work from the design to the app and bring the screen back for comparison.
+Neither tool requires the other. [Bogen and Tomacco](docs/guide/tomacco.md)
+
+## More ways to work
+
+| Task | Guide |
+| --- | --- |
+| Bring a live website onto the canvas as editable layers | [Capture and import](docs/guide/capture-and-import.md) |
+| Reuse components across designs | [Components and libraries](docs/guide/components.md) |
+| Review changes, branch a design or keep it in Git | [History](docs/guide/history.md) |
+| Share a design for review | [Sharing](docs/guide/sharing.md) |
+| Find a command or troubleshoot setup | [CLI reference](docs/guide/reference/cli.md), [Troubleshooting](docs/guide/troubleshooting.md) |
+
+The [documentation index](docs/guide/README.md) lists every guide.
+
+## How it runs
+
+`bogen` is one Node program. It stores your designs in `~/.local/share/bogen`, serves the browser editor at
+`http://127.0.0.1:29990`, and exposes the MCP tools. Your installed Chromium-based browser renders screenshots and
+exports.
 
 ## Requirements
 
@@ -147,7 +171,8 @@ task.
 | Optional | `ffmpeg` for video and AVIF export; the `claude` or `codex` CLI for agent runs; Tailscale for device sync and the phone |
 | For `bogen omarchy install` | `omarchy`, `jq` and `curl` |
 
-## What it changes on your machine
+<details>
+<summary>Install locations and desktop changes</summary>
 
 - The install script adds the package in `~/.local/share/bogen-app` and the `bogen` command in `~/.local/bin`. On
   Omarchy it then runs `bogen omarchy install`, described below.
@@ -161,7 +186,10 @@ task.
   which offers to open the firewall for device sync. The [Omarchy guide](docs/guide/omarchy.md#install) lists
   every path.
 
-## Uninstall
+</details>
+
+<details>
+<summary>Uninstall Bogen</summary>
 
 Three steps, in this order. The first two need the `bogen` command, so the package goes last.
 
@@ -183,6 +211,8 @@ What stays behind, on purpose:
 
 Delete those yourself if you want them gone.
 
+</details>
+
 ## Security and privacy
 
 - **Local only.** The server listens on `127.0.0.1:29990`. There is no login for your own user: any program you run
@@ -196,7 +226,12 @@ Delete those yourself if you want them gone.
 [Privacy](docs/guide/privacy.md) lists every network request Bogen makes. [SECURITY.md](SECURITY.md) describes each
 listener and how to report a vulnerability privately.
 
-## Status and known limits
+## Status
+
+Bogen 0.1.0 is the first release. It is developed and tested on Arch Linux with Omarchy, on x86_64 and aarch64.
+
+<details>
+<summary>Known limits and untested integrations</summary>
 
 Bogen 0.1.0 is the first version. It is maintained by one person.
 
@@ -216,24 +251,7 @@ Bogen 0.1.0 is the first version. It is maintained by one person.
 Each guide says where a feature works only in part, and the [feature matrix](docs/SPEC.md#feature-matrix) marks
 every item as done, partly there or open.
 
-## Documentation
-
-| I want to | Guide |
-| --- | --- |
-| Install Bogen and make a first file | [Getting started](docs/guide/getting-started.md) |
-| Connect an agent and see what it can do | [Agents](docs/guide/agents.md), [MCP tool reference](docs/guide/reference/mcp-tools.md) |
-| Design and share an Omarchy theme | [Omarchy](docs/guide/omarchy.md) |
-| Learn the canvas | [Canvas](docs/guide/canvas.md), [Components](docs/guide/components.md) |
-| Set up a brand and check designs against it | [Brands](docs/guide/brand.md) |
-| Copy a live site onto the canvas | [Capture and import](docs/guide/capture-and-import.md) |
-| Export images, video or code | [Export and code](docs/guide/export-and-code.md) |
-| Go back, branch, or keep a design in Git | [History](docs/guide/history.md) |
-| Use two machines or my phone | [Devices](docs/guide/devices.md) |
-| Fix something | [Troubleshooting](docs/guide/troubleshooting.md), [FAQ](docs/guide/faq.md) |
-| Look up a command | [Command line](docs/guide/reference/cli.md) |
-
-The [documentation index](docs/guide/README.md) lists every guide, and the
-[changelog](docs/guide/changelog.md) says what is in this version.
+</details>
 
 ## Contributing
 
@@ -241,25 +259,6 @@ Issues and pull requests are welcome; for a larger change, open an issue first. 
 has the build and test commands and the rules for changes, and [Architecture](docs/architecture.md) explains how
 the packages fit together. A report of what happened when you tried Bogen on a system or client listed above as
 untested is a useful contribution.
-
-## Related
-
-[Tomacco](https://tomacco.dev) is a sibling project by the same author that builds, runs and tests Android and iOS
-apps on Linux. Bogen can import a real app screen from it and compare a design against it; neither needs the other.
-See [Tomacco](docs/guide/tomacco.md).
-
-## Legal notice
-
-- **Independent.** Bogen is an independent project. It is not affiliated with, endorsed by or sponsored by Paper
-  (Lost Coast Labs) or Figma, and is independent of Omarchy. Names identify compatible tools.
-- **Clean room.** Bogen is written from scratch, from public documentation, web standards and permissively licensed
-  packages, with its own MCP tool names, schemas and file format. The Paper Desktop app and its bundles, and any
-  reverse engineered clone of a design tool, were never read, copied or used as a source. The rule is in the
-  [spec](docs/SPEC.md#clean-room-rule).
-- **Shaders.** Shader layers use `@paper-design/shaders` and `@paper-design/shaders-react`, under the Apache License
-  2.0. Their license and NOTICE are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-- **Figma import** uses Figma's public REST API with your own personal access token.
-- **No warranty.** Bogen is supplied without warranty, as the GNU General Public License states.
 
 ## License
 
@@ -273,3 +272,19 @@ exports under terms of your choice. The Omarchy bar plugin in
 license, like Omarchy itself. The bundled theme artwork is dedicated to the public domain under CC0 1.0, so themes
 made from it can be published under any terms. Third-party packages keep their own licenses,
 listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Asset origins and generated-art disclosure are in [ASSET_PROVENANCE.md](ASSET_PROVENANCE.md).
+
+<details>
+<summary>Legal notice and third-party components</summary>
+
+- **Independent.** Bogen is an independent project. It is not affiliated with, endorsed by or sponsored by Paper
+  (Lost Coast Labs) or Figma, and is independent of Omarchy. Names identify compatible tools.
+- **Clean room.** Bogen is written from scratch, from public documentation, web standards and permissively licensed
+  packages, with its own MCP tool names, schemas and file format. The Paper Desktop app and its bundles, and any
+  reverse engineered clone of a design tool, were never read, copied or used as a source. The rule is in the
+  [spec](docs/SPEC.md#clean-room-rule).
+- **Shaders.** Shader layers use `@paper-design/shaders` and `@paper-design/shaders-react`, under the Apache License
+  2.0. Their license and NOTICE are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- **Figma import** uses Figma's public REST API with your own personal access token.
+- **No warranty.** Bogen is supplied without warranty, as the GNU General Public License states.
+
+</details>
