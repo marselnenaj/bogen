@@ -1,0 +1,666 @@
+{
+  "format": "tomacco.screen",
+  "version": 1,
+  "tomacco_version": "1.3.0",
+  "captured_at": "2026-11-01T21:20:07Z",
+  "device": {
+    "platform": "android",
+    "id": "emulator-5554",
+    "serial": "emulator-5554",
+    "udid": null,
+    "virtual": true,
+    "model": "sdk_gphone64_x86_64",
+    "manufacturer": "Google",
+    "os_name": "Android",
+    "os_version": "16",
+    "sdk": 36,
+    "form_factor": "phone"
+  },
+  "display": {
+    "width_px": 720,
+    "height_px": 1560,
+    "density_dpi": 320,
+    "scale": 2,
+    "width_dp": 360,
+    "height_dp": 780,
+    "unit": "dp",
+    "orientation": "portrait",
+    "rotation": 0
+  },
+  "insets": {
+    "source": "dumpsys window",
+    "estimated": false,
+    "status_bar": {
+      "left": 0,
+      "top": 0,
+      "right": 720,
+      "bottom": 48
+    },
+    "navigation_bar": {
+      "left": 0,
+      "top": 1512,
+      "right": 720,
+      "bottom": 1560
+    },
+    "cutout": [],
+    "safe_area_px": {
+      "left": 0,
+      "top": 48,
+      "right": 0,
+      "bottom": 48
+    },
+    "safe_area_dp": {
+      "left": 0,
+      "top": 24,
+      "right": 0,
+      "bottom": 24
+    }
+  },
+  "theme": {
+    "mode": "light",
+    "source": "cmd uimode night"
+  },
+  "locale": {
+    "tag": "en-US",
+    "source": "getprop ro.product.locale"
+  },
+  "app": {
+    "package": "com.example.couchette",
+    "activity": "com.example.couchette.LoginActivity",
+    "source": "dumpsys window"
+  },
+  "screenshot": {
+    "file": "screen.png",
+    "width": 720,
+    "height": 1560,
+    "bytes": 40813,
+    "sha256": "d3dd65ada31ba38b71416919f486b7e77c03bb139085350ebe5feebd6602bced",
+    "marked_file": null
+  },
+  "hierarchy": "available",
+  "elements_source": "hierarchy",
+  "marks": {
+    "count": 5,
+    "limit": 200,
+    "truncated": false
+  },
+  "elements": [
+    {
+      "id": "e0",
+      "parent": null,
+      "depth": 0,
+      "source": "hierarchy",
+      "role": "container",
+      "class": "android.widget.FrameLayout",
+      "package": "com.example.couchette",
+      "resource_id": "",
+      "text": "",
+      "description": "",
+      "label": "",
+      "bounds": {
+        "px": {
+          "left": 0,
+          "top": 0,
+          "right": 720,
+          "bottom": 1560,
+          "width": 720,
+          "height": 1560
+        },
+        "dp": {
+          "left": 0,
+          "top": 0,
+          "right": 360,
+          "bottom": 780,
+          "width": 360,
+          "height": 780
+        }
+      },
+      "center": {
+        "x": 360,
+        "y": 780
+      },
+      "enabled": false,
+      "clickable": false,
+      "long_clickable": false,
+      "focusable": false,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": null
+    },
+    {
+      "id": "e1",
+      "parent": "e0",
+      "depth": 1,
+      "source": "hierarchy",
+      "role": "container",
+      "class": "android.widget.LinearLayout",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/content",
+      "text": "",
+      "description": "",
+      "label": "Sign in Use your Couchette account ana@example.com •••••••• Continue Forgot password?",
+      "bounds": {
+        "px": {
+          "left": 0,
+          "top": 48,
+          "right": 720,
+          "bottom": 1512,
+          "width": 720,
+          "height": 1464
+        },
+        "dp": {
+          "left": 0,
+          "top": 24,
+          "right": 360,
+          "bottom": 756,
+          "width": 360,
+          "height": 732
+        }
+      },
+      "center": {
+        "x": 360,
+        "y": 780
+      },
+      "enabled": false,
+      "clickable": false,
+      "long_clickable": false,
+      "focusable": false,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": null
+    },
+    {
+      "id": "e2",
+      "parent": "e1",
+      "depth": 2,
+      "source": "hierarchy",
+      "role": "image",
+      "class": "android.widget.ImageView",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/logo",
+      "text": "",
+      "description": "",
+      "label": "",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 128,
+          "right": 144,
+          "bottom": 224,
+          "width": 96,
+          "height": 96
+        },
+        "dp": {
+          "left": 24,
+          "top": 64,
+          "right": 72,
+          "bottom": 112,
+          "width": 48,
+          "height": 48
+        }
+      },
+      "center": {
+        "x": 96,
+        "y": 176
+      },
+      "enabled": false,
+      "clickable": false,
+      "long_clickable": false,
+      "focusable": false,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": null
+    },
+    {
+      "id": "e3",
+      "parent": "e1",
+      "depth": 2,
+      "source": "hierarchy",
+      "role": "text",
+      "class": "android.widget.TextView",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/title",
+      "text": "Sign in",
+      "description": "",
+      "label": "Sign in",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 256,
+          "right": 672,
+          "bottom": 328,
+          "width": 624,
+          "height": 72
+        },
+        "dp": {
+          "left": 24,
+          "top": 128,
+          "right": 336,
+          "bottom": 164,
+          "width": 312,
+          "height": 36
+        }
+      },
+      "center": {
+        "x": 360,
+        "y": 292
+      },
+      "enabled": false,
+      "clickable": false,
+      "long_clickable": false,
+      "focusable": false,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": null
+    },
+    {
+      "id": "e4",
+      "parent": "e1",
+      "depth": 2,
+      "source": "hierarchy",
+      "role": "text",
+      "class": "android.widget.TextView",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/subtitle",
+      "text": "Use your Couchette account",
+      "description": "",
+      "label": "Use your Couchette account",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 360,
+          "right": 672,
+          "bottom": 404,
+          "width": 624,
+          "height": 44
+        },
+        "dp": {
+          "left": 24,
+          "top": 180,
+          "right": 336,
+          "bottom": 202,
+          "width": 312,
+          "height": 22
+        }
+      },
+      "center": {
+        "x": 360,
+        "y": 382
+      },
+      "enabled": false,
+      "clickable": false,
+      "long_clickable": false,
+      "focusable": false,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": null
+    },
+    {
+      "id": "e5",
+      "parent": "e1",
+      "depth": 2,
+      "source": "hierarchy",
+      "role": "text_field",
+      "class": "android.widget.EditText",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/email",
+      "text": "ana@example.com",
+      "description": "",
+      "label": "ana@example.com",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 436,
+          "right": 672,
+          "bottom": 540,
+          "width": 624,
+          "height": 104
+        },
+        "dp": {
+          "left": 24,
+          "top": 218,
+          "right": 336,
+          "bottom": 270,
+          "width": 312,
+          "height": 52
+        }
+      },
+      "center": {
+        "x": 360,
+        "y": 488
+      },
+      "enabled": false,
+      "clickable": true,
+      "long_clickable": false,
+      "focusable": true,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": true,
+      "password": false,
+      "confidence": null,
+      "mark": 5
+    },
+    {
+      "id": "e6",
+      "parent": "e1",
+      "depth": 2,
+      "source": "hierarchy",
+      "role": "text_field",
+      "class": "android.widget.EditText",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/password",
+      "text": "••••••••",
+      "description": "",
+      "label": "••••••••",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 572,
+          "right": 672,
+          "bottom": 676,
+          "width": 624,
+          "height": 104
+        },
+        "dp": {
+          "left": 24,
+          "top": 286,
+          "right": 336,
+          "bottom": 338,
+          "width": 312,
+          "height": 52
+        }
+      },
+      "center": {
+        "x": 360,
+        "y": 624
+      },
+      "enabled": false,
+      "clickable": true,
+      "long_clickable": false,
+      "focusable": true,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": true,
+      "password": true,
+      "confidence": null,
+      "mark": 6
+    },
+    {
+      "id": "e7",
+      "parent": "e1",
+      "depth": 2,
+      "source": "hierarchy",
+      "role": "container",
+      "class": "android.widget.LinearLayout",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/remember_row",
+      "text": "",
+      "description": "",
+      "label": "Remember me",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 708,
+          "right": 672,
+          "bottom": 772,
+          "width": 624,
+          "height": 64
+        },
+        "dp": {
+          "left": 24,
+          "top": 354,
+          "right": 336,
+          "bottom": 386,
+          "width": 312,
+          "height": 32
+        }
+      },
+      "center": {
+        "x": 360,
+        "y": 740
+      },
+      "enabled": false,
+      "clickable": false,
+      "long_clickable": false,
+      "focusable": false,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": null
+    },
+    {
+      "id": "e8",
+      "parent": "e7",
+      "depth": 3,
+      "source": "hierarchy",
+      "role": "text",
+      "class": "android.widget.TextView",
+      "package": "com.example.couchette",
+      "resource_id": "",
+      "text": "Remember me",
+      "description": "",
+      "label": "Remember me",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 722,
+          "right": 260,
+          "bottom": 758,
+          "width": 212,
+          "height": 36
+        },
+        "dp": {
+          "left": 24,
+          "top": 361,
+          "right": 129.81,
+          "bottom": 379,
+          "width": 105.81,
+          "height": 18
+        }
+      },
+      "center": {
+        "x": 154,
+        "y": 740
+      },
+      "enabled": false,
+      "clickable": false,
+      "long_clickable": false,
+      "focusable": false,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": null
+    },
+    {
+      "id": "e9",
+      "parent": "e7",
+      "depth": 3,
+      "source": "hierarchy",
+      "role": "switch",
+      "class": "android.widget.Switch",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/remember",
+      "text": "",
+      "description": "",
+      "label": "",
+      "bounds": {
+        "px": {
+          "left": 584,
+          "top": 716,
+          "right": 672,
+          "bottom": 764,
+          "width": 88,
+          "height": 48
+        },
+        "dp": {
+          "left": 292,
+          "top": 358,
+          "right": 336,
+          "bottom": 382,
+          "width": 44,
+          "height": 24
+        }
+      },
+      "center": {
+        "x": 628,
+        "y": 740
+      },
+      "enabled": false,
+      "clickable": true,
+      "long_clickable": false,
+      "focusable": true,
+      "focused": false,
+      "checkable": true,
+      "checked": true,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": 9
+    },
+    {
+      "id": "e10",
+      "parent": "e1",
+      "depth": 2,
+      "source": "hierarchy",
+      "role": "button",
+      "class": "android.widget.Button",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/continue",
+      "text": "Continue",
+      "description": "",
+      "label": "Continue",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 804,
+          "right": 672,
+          "bottom": 908,
+          "width": 624,
+          "height": 104
+        },
+        "dp": {
+          "left": 24,
+          "top": 402,
+          "right": 336,
+          "bottom": 454,
+          "width": 312,
+          "height": 52
+        }
+      },
+      "center": {
+        "x": 360,
+        "y": 856
+      },
+      "enabled": false,
+      "clickable": true,
+      "long_clickable": false,
+      "focusable": true,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": 10
+    },
+    {
+      "id": "e11",
+      "parent": "e1",
+      "depth": 2,
+      "source": "hierarchy",
+      "role": "text",
+      "class": "android.widget.TextView",
+      "package": "com.example.couchette",
+      "resource_id": "com.example.couchette:id/forgot",
+      "text": "Forgot password?",
+      "description": "",
+      "label": "Forgot password?",
+      "bounds": {
+        "px": {
+          "left": 48,
+          "top": 940,
+          "right": 288,
+          "bottom": 980,
+          "width": 240,
+          "height": 40
+        },
+        "dp": {
+          "left": 24,
+          "top": 470,
+          "right": 144.06,
+          "bottom": 490,
+          "width": 120.06,
+          "height": 20
+        }
+      },
+      "center": {
+        "x": 168,
+        "y": 960
+      },
+      "enabled": false,
+      "clickable": true,
+      "long_clickable": false,
+      "focusable": false,
+      "focused": false,
+      "checkable": false,
+      "checked": false,
+      "selected": false,
+      "scrollable": false,
+      "editable": false,
+      "password": false,
+      "confidence": null,
+      "mark": 11
+    }
+  ],
+  "warnings": []
+}

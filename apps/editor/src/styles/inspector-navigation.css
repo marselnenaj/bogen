@@ -1,0 +1,41 @@
+.panel-right .tabs.inspector-nav { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); height: 42px; min-height: 42px; gap: 2px; padding: 4px 6px; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid var(--ui-border); }
+.panel-right .tabs.inspector-nav .tab { position: relative; min-width: 0; min-height: 32px; padding: 4px 1px; white-space: nowrap; border-radius: 4px; color: var(--ui-fg-2); }
+.panel-right .tabs.inspector-nav .tab svg { flex: none; }
+.panel-right .tabs.inspector-nav .tab.is-active { color: var(--ui-accent); background: var(--accent-soft); }
+.inspector-nav .inspector-tab-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.inspector-nav .tab-count { position: absolute; top: 0; right: 0; font-size: 9px; height: 13px; min-width: 13px; line-height: 13px; padding: 0 2px; }
+.inspector-current-panel { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; padding: 5px 12px; border-bottom: 1px solid var(--ui-border); }
+.inspector-current-panel h2 { min-width: 0; margin: 0; font-size: 13px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.project-kind-control { display: inline-flex; flex: none; align-items: center; gap: 5px; min-height: 27px; padding: 3px 5px; color: var(--ui-fg-2); border-radius: var(--radius); font-size: 12px; cursor: pointer; }
+.project-kind-control:hover { color: var(--ui-fg); background: var(--hover); }
+.project-kind-control:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+.project-question { gap: 8px; min-height: 34px; padding-block: 4px; color: var(--ui-fg-2); background: var(--ui-bg-2); border-bottom: 1px solid var(--ui-border); }
+.project-question > span { min-width: 0; flex: 1; }
+.panel-right .panel-scroll { min-width: 0; }
+.panel-right .section-head { gap: 8px; }
+.panel-right .section-title, .panel-right .section-toggle { min-width: 0; }
+@container inspector (max-width: 260px) {
+  .panel-right .code-head, .panel-right .code-motion { flex-wrap: wrap; }
+  .panel-right .code-head > .segmented, .panel-right .code-motion > .segmented { min-width: 0; flex: 1 1 140px; }
+  .inspector-current-panel { padding-inline: 8px; }
+  .panel-right .section-actions { flex-shrink: 0; }
+}
+@media (pointer: coarse) {
+  .panel-right .tabs.inspector-nav { grid-template-columns: repeat(8, minmax(38px, 1fr)); height: 48px; min-height: 48px; }
+  .panel-right .tabs.inspector-nav .tab { min-height: 40px; }
+  .project-kind-control { min-height: 36px; }
+}
+
+.panel-right .align-row { flex-wrap: wrap; gap: 5px; padding: 4px 8px 6px; }
+.align-controls { display: flex; flex: 1 0 150px; justify-content: space-between; }
+.distribute-controls { display: flex; flex: 1 0 75px; justify-content: flex-end; }
+@container inspector (max-width: 240px) { .panel-right .inspector-appearance-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; } }
+
+@container inspector (max-width: 260px) { .panel-right .inspector-quad-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; } }
+
+.inspector-current-panel h2 { flex: 1 1 auto; }
+.project-kind-control { max-width: 60%; min-width: 0; }
+.project-kind-control > svg { flex: none; }
+.project-kind-control > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.redo-screen-action { display: flex; flex-wrap: wrap; gap: 4px; }

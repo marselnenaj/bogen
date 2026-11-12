@@ -1,0 +1,301 @@
+/*
+ * A file on the phone (phone/PhoneFile.tsx), from row D of the Phone page of the Bogen Brand System file:
+ * Archivo with its width axis, ink, paper and blue, no radius but the drag handle (and the comment pin, a
+ * speech bubble as drawn). Every control is 44 px at least, every field 16 px or more. The colours are
+ * the ones phone-ui.css sets on .pf.
+ */
+
+.pf {
+  position: fixed; left: 0; right: 0; top: var(--pf-top, 0px); height: var(--pf-h, 100%);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--p-paper); color: var(--p-ink); font-family: var(--p-sans); font-size: 16px; line-height: 1.35;
+  -webkit-text-size-adjust: 100%;
+}
+.pf:not(.pf-full-workspace) button, .pf:not(.pf-full-workspace) input, .pf:not(.pf-full-workspace) select, .pf:not(.pf-full-workspace) textarea { font-family: var(--p-sans); border-radius: 0; color: inherit; }
+.pf button { -webkit-tap-highlight-color: transparent; }
+.pf p, .pf h2 { margin: 0; }
+
+/* The bar at the top */
+.pf-top {
+  flex: none; display: flex; align-items: center; gap: 8px; min-height: 52px; box-sizing: content-box;
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  border-bottom: 2px solid var(--p-ink); background: var(--p-paper);
+}
+.pf-back { flex: none; min-width: 84px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--p-dim) !important; font-size: 17px; text-align: left; }
+.pf-title { flex: 1; min-width: 0; text-align: center; font-size: 17px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-right { flex: none; min-width: 84px; max-width: 40%; min-height: 44px; padding: 0; border: 0; background: transparent; font-size: 15px; font-weight: 700; text-align: right; }
+.pf-page { display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.pf-page-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-caret { font-size: 11px; }
+
+/* The canvas, and what sits on it */
+.pf-middle { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.pf-canvas { flex: 1; min-height: 0; position: relative; background: var(--p-paper-deep); }
+.pf-canvas .editor { height: 100%; }
+.pf-canvas .loading { font-family: var(--p-sans); font-size: 15px; padding: 0 24px; text-align: center; }
+.pf-chrome { position: absolute; left: 4px; right: 14px; bottom: 12px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 6px; pointer-events: none; }
+.pf-chrome > * { pointer-events: auto; }
+.pf-steps { flex: 1; min-width: 0; display: flex; align-items: center; }
+.pf-step { flex: none; width: 36px; min-height: 44px; padding: 0; border: 0; background: transparent; font-size: 26px; font-weight: 700; line-height: 1; }
+.pf-step:disabled { color: var(--p-rule) !important; }
+.pf-where { min-width: 0; font-size: 14px; color: var(--p-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-zoom { flex: none; display: flex; gap: 6px; }
+.pf-sq { width: 44px; height: 44px; flex: none; padding: 0; display: grid; place-items: center; border: 2px solid var(--p-ink); background: var(--p-paper); font-size: 20px; font-weight: 800; line-height: 1; }
+.pf-sq:disabled { opacity: .35; }
+.pf-sq:active:not(:disabled) { background: var(--p-ink); color: var(--p-paper); }
+.pf-history { position: absolute; top: 12px; right: 14px; z-index: 30; display: flex; gap: 6px; }
+.pf-drag { position: absolute; top: 12px; left: 14px; z-index: 30; display: flex; border: 2px solid var(--p-ink); background: var(--p-paper); }
+.pf-drag button { min-width: 64px; height: 40px; padding: 0 12px; border: 0; background: transparent; color: var(--p-ink); font-size: 16px; font-weight: 700; }
+.pf-drag button.is-on { background: var(--p-ink); color: var(--p-paper); }
+.pf.has-sheet .pf-drag { display: none; }
+
+/* The canvas on a phone: the selection in blue, frame labels in the brand's type, the pins as drawn. */
+.pf .ov-selection { box-shadow: 0 0 0 2px var(--p-blue); }
+.pf .ov-frame-label { font-family: var(--p-sans); font-size: 12px; }
+/* Sizes are in Edit, Layout; on the small canvas the label only covers what is under it. */
+.pf .ov-size { display: none; }
+.pf .ov-pin { width: 30px; height: 30px; margin: -30px 0 0 0; }
+.pf .ov-pin::before { content: ""; position: absolute; inset: -7px; }
+.pf .ov-pin span { display: none; }
+.pf .ov-pin::after {
+  content: attr(data-count); display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 30px; height: 30px;
+  border: 2px solid var(--p-ink); border-radius: 15px 15px 15px 0; background: var(--p-paper); color: var(--p-ink);
+  font-family: var(--p-sans); font-size: 14px; font-weight: 800; pointer-events: none;
+}
+.pf .ov-pin.is-active::after { background: var(--p-ink); color: var(--p-paper); }
+/* The comment being written is a pin with a plus on its spot. What it says is typed in the sheet. */
+.pf .ov-composer { width: 30px; height: 30px; margin: -22px 0 0 -12px; padding: 0; background: transparent; box-shadow: none; pointer-events: none; }
+.pf .ov-composer > * { display: none !important; }
+.pf .ov-composer::after {
+  content: "+"; display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 30px; height: 30px;
+  border-radius: 15px 15px 15px 0; background: var(--p-blue); color: var(--p-paper); font-family: var(--p-sans); font-size: 18px; font-weight: 800;
+}
+.pf .proposal-tray, .pf .proposal-bar { top: 8px; height: 44px; border: 2px solid var(--p-ink); border-radius: 0; background: var(--p-paper); font-family: var(--p-sans); font-size: 15px; }
+.pf .proposal-tray { left: 12px; transform: none; }
+.pf .proposal-bar .btn { height: 36px; border-radius: 0; font-family: var(--p-sans); font-size: 15px; }
+/* With a sheet open the canvas is for looking: the board steps and zoom wait until it closes, as drawn. */
+.pf.has-sheet .pf-chrome { display: none; }
+/* In the flow above the canvas, so that it never sits under undo and redo. */
+.pf .banner { position: relative; flex: none; z-index: 25; height: auto; min-height: 26px; padding: 8px 14px; gap: 10px; background: var(--p-ink); color: var(--p-paper); border: 0; font-family: var(--p-sans); font-size: 14px; line-height: 1.35; }
+.pf .toast { bottom: calc(96px + env(safe-area-inset-bottom)); font-family: var(--p-sans); font-size: 14px; padding: 10px 14px; }
+
+/* The tools at the bottom */
+.pf-tools { flex: none; display: flex; border-top: 2px solid var(--p-ink); background: var(--p-paper); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.pf-tool { flex: 1; min-height: 46px; padding: 12px 0 8px; border: 0; background: transparent; color: var(--p-dim) !important; font-size: 15px; }
+.pf-tool.is-active { color: var(--p-ink) !important; font-weight: 800; box-shadow: inset 0 3px 0 var(--p-ink); }
+.pf-tool:disabled { opacity: .5; }
+.pf.is-keyboard .pf-tools { display: none; }
+
+/* Sheets */
+.pf-sheet {
+  flex: none; position: relative; z-index: 40; height: min(382px, 58%); display: flex; flex-direction: column;
+  background: var(--p-paper); color: var(--p-ink); border-top: 2px solid var(--p-ink);
+  transition: transform .2s cubic-bezier(.2, .8, .2, 1);
+}
+.pf.is-comment .pf-sheet { height: min(350px, 56%); }
+.pf-sheet.is-full { position: absolute; inset: 0; height: auto; border-top: 0; }
+.pf-sheet.is-dragging { transition: none; }
+.pf-sheet.is-dark { background: var(--p-ink); color: var(--p-paper); border-top-color: var(--p-ink); }
+.pf.is-keyboard .pf-sheet { height: auto; max-height: calc(100% - 110px); }
+.pf-grab { flex: none; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pf-handle { height: 20px; display: flex; align-items: center; justify-content: center; position: relative; cursor: grab; outline: none; }
+.pf-handle::before { content: ""; position: absolute; left: 50%; top: 0; width: 120px; height: 34px; transform: translateX(-50%); }
+.pf-handle span { width: 40px; height: 4px; border-radius: 2px; background: var(--p-rule); }
+.pf-sheet.is-dark .pf-handle span { background: var(--p-dim-dark); }
+.pf-sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 20px 6px; min-height: 44px; }
+.pf-sheet-title { font-size: 22px; line-height: 1.1; font-weight: 800; font-stretch: 110%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-sheet-aside { flex: none; max-width: 55%; display: flex; align-items: center; }
+.pf-aside-text { font-size: 15px; color: var(--p-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-sheet-tabs { flex: none; }
+.pf-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.pf-sheet-foot { flex: none; padding-bottom: 0; }
+.pf-empty, .pf-dim, .pf-hint { padding: 0 20px; font-size: 15px; color: var(--p-dim); }
+.pf-hint { padding: 6px 20px 12px; font-size: 17px; color: var(--p-ink); }
+.pf-ink { color: var(--p-ink); }
+.pf-link { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--p-blue) !important; font-size: 15px; font-weight: 700; }
+.pf-link.is-dim { color: var(--p-dim) !important; font-weight: 400; }
+.pf-wide { margin: 12px 20px; min-height: 48px; width: calc(100% - 40px); border: 2px solid var(--p-ink); background: transparent; font-size: 17px; font-weight: 700; }
+
+/* D5: pages and boards */
+.pf-kicker { padding: 18px 20px 10px; font-size: 15px; color: var(--p-dim); }
+.pf-kicker.is-ruled { padding-top: 22px; border-top: 2px solid var(--p-ink); }
+.pf-page-list { display: flex; flex-direction: column; }
+.pf-page-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 0 20px; border: 0; border-top: 1px solid var(--p-rule); background: transparent; text-align: left; }
+.pf-page-row-name { font-size: 18px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-count { flex: none; font-size: 15px; color: var(--p-dim); }
+.pf-page-row.is-current { background: var(--p-ink); color: var(--p-paper); }
+.pf-page-row.is-current .pf-page-row-name { font-weight: 800; }
+.pf-page-row.is-current .pf-count { color: var(--p-dim-dark); }
+.pf-boards { display: flex; gap: 12px; padding: 0 20px 16px; align-items: flex-end; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.pf-board { flex: none; display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: transparent; text-align: left; }
+.pf-board-pic { display: block; box-sizing: border-box; background: var(--p-paper-deep); border: 1px solid var(--p-rule); overflow: hidden; }
+.pf-board-pic img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.pf-board.is-current .pf-board-pic { border: 3px solid var(--p-blue); }
+.pf-board-w { font-size: 14px; color: var(--p-dim); }
+.pf-board.is-current .pf-board-w { color: var(--p-ink); font-weight: 700; }
+.pf-hatch { margin: 8px 20px 24px; padding-top: 12px; border-top: 1px solid var(--p-rule); font-size: 15px; color: var(--p-dim); }
+.pf-hatch summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+.pf-hatch p { margin: 4px 0 8px; line-height: 1.4; }
+.pf-hatch a { display: inline-flex; align-items: center; min-height: 44px; color: var(--p-ink); font-weight: 700; }
+
+/* D2: layers */
+.pf-layer-list { display: flex; flex-direction: column; border-top: 1px solid var(--p-rule); }
+.pf-layer { display: flex; align-items: stretch; min-height: 44px; border-bottom: 1px solid var(--p-rule); }
+.pf-layer-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0 20px; border: 0; background: transparent; text-align: left; }
+.pf-layer-glyph { width: 18px; flex: none; font-size: 13px; color: var(--p-dim); text-align: center; }
+.pf-layer-name { flex: 1; min-width: 0; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-layer.is-board .pf-layer-name { font-weight: 700; }
+.pf-layer.is-hidden .pf-layer-name { color: var(--p-dim); }
+.pf-layer.is-selected { background: var(--p-blue); color: var(--p-paper); }
+.pf-layer.is-selected .pf-layer-glyph { color: var(--p-paper); }
+.pf-layer.is-selected .pf-layer-name { font-weight: 700; }
+.pf-layer-edit { flex: none; min-width: 64px; padding: 0 20px 0 8px; border: 0; background: transparent; color: var(--p-paper) !important; font-size: 15px; text-align: right; }
+
+/* D3: edit */
+.pf-tabs { display: flex; gap: 6px; padding: 4px 16px 12px; }
+.pf-tab { flex: 1; min-height: 44px; padding: 0; border: 1px solid var(--p-rule); background: transparent; color: var(--p-dim) !important; font-size: 15px; }
+.pf-tab.is-on { background: var(--p-ink); border-color: var(--p-ink); color: var(--p-paper) !important; font-weight: 700; }
+.pf-edit-body { display: flex; flex-direction: column; gap: 14px; padding: 4px 20px 20px; }
+.pf-edit-body .pf-dim, .pf-edit-body .pf-empty { padding: 0; }
+.pf-field { display: flex; flex-direction: column; gap: 6px; }
+.pf-label { font-size: 14px; color: var(--p-dim); }
+.pf-input { display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 11px 14px; border: 2px solid var(--p-ink); background: #fff; font-size: 17px; line-height: 1.35; resize: none; outline: none; caret-color: var(--p-blue); }
+.pf-input:focus { border-color: var(--p-blue); }
+.pf-pick { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid var(--p-rule); background: transparent; font-size: 17px; text-align: left; }
+.pf-pick b { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-pick span { flex: none; color: var(--p-dim); }
+.pf-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-swatch { width: 44px; height: 44px; flex: none; padding: 0; box-sizing: border-box; border: 1px solid var(--p-rule); }
+.pf-swatch.is-on { border: 3px solid var(--p-blue); box-shadow: inset 0 0 0 2px var(--p-paper); }
+.pf-swatch.is-none { background: linear-gradient(to top right, transparent calc(50% - 1px), var(--p-dim) calc(50% - 1px), var(--p-dim) calc(50% + 1px), transparent calc(50% + 1px)), var(--p-paper); }
+.pf-stepper { display: flex; align-items: center; gap: 10px; min-height: 48px; }
+.pf-stepper-label { flex: 1; font-size: 17px; }
+.pf-stepper-value { min-width: 96px; text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--p-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-stepper.is-off .pf-stepper-value, .pf-stepper.is-off .pf-stepper-label { color: var(--p-dim); }
+.pf-type-list { display: flex; flex-direction: column; border-top: 1px solid var(--p-rule); margin: 0 -20px; }
+.pf-type { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 0 20px; border: 0; border-bottom: 1px solid var(--p-rule); background: transparent; font-size: 17px; text-align: left; }
+.pf-type b { font-weight: 800; }
+.pf-type span { color: var(--p-dim); flex: none; }
+.pf-type.is-on { background: var(--p-ink); color: var(--p-paper); }
+.pf-type.is-on span { color: var(--p-dim-dark); }
+
+/* D4: comments */
+.pf-messages { display: flex; flex-direction: column; gap: 14px; padding: 10px 20px; border-top: 1px solid var(--p-rule); }
+.pf-message-head { font-size: 14px; color: var(--p-dim); }
+.pf-message-head b { color: var(--p-ink); font-weight: 700; }
+.pf-message-text { font-size: 17px; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
+.pf-mention { font-weight: 700; color: var(--p-blue); }
+.pf-run { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--p-dim); }
+.pf-run button { min-height: 44px; padding: 0 12px; border: 2px solid var(--p-ink); background: transparent; font-size: 15px; font-weight: 700; }
+.pf-all { margin: 0 20px; }
+.pf-thread-list { display: flex; flex-direction: column; border-top: 1px solid var(--p-rule); }
+.pf-thread-row { display: flex; flex-direction: column; gap: 2px; min-height: 56px; padding: 10px 20px; border: 0; border-bottom: 1px solid var(--p-rule); background: transparent; text-align: left; }
+.pf-thread-row-head { font-size: 14px; color: var(--p-dim); }
+.pf-thread-row-head b { color: var(--p-ink); }
+.pf-thread-row-text { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-compose { display: flex; gap: 10px; padding: 10px 16px 12px; }
+.pf-compose-input { flex: 1; min-width: 0; min-height: 48px; box-sizing: border-box; padding: 0 14px; border: 2px solid var(--p-ink); background: #fff; font-size: 17px; outline: none; caret-color: var(--p-blue); }
+.pf-compose-input::placeholder { color: var(--p-dim); }
+.pf-send { width: 48px; height: 48px; flex: none; padding: 0; display: grid; place-items: center; border: 0; background: var(--p-blue); color: var(--p-paper) !important; }
+.pf-send:disabled { opacity: .55; }
+.pf-send.is-stop { background: var(--p-ink-raised); }
+.pf-composer { display: flex; flex-direction: column; }
+.pf-composer .pf-compose { align-items: flex-end; padding-bottom: 6px; }
+.pf-compose-text { padding: 11px 14px; line-height: 1.35; resize: none; overflow-y: auto; height: 48px; }
+.pf-compose-note { margin: 0; padding: 0 16px 12px; font-size: 13px; line-height: 1.35; color: var(--p-dim); }
+.pf-mic { width: 48px; height: 48px; flex: none; padding: 0; display: grid; place-items: center; border: 2px solid var(--p-ink); background: var(--p-paper); }
+.pf-mic:disabled { opacity: .55; }
+.pf-recording { flex: 1; min-width: 0; height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--p-ink); color: var(--p-paper); }
+.pf-rec-dot { width: 10px; height: 10px; flex: none; background: var(--p-paper); animation: pf-rec 1.2s ease-in-out infinite; }
+.pf-rec-time { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pf-rec-meter { flex: 1; min-width: 0; height: 18px; display: flex; align-items: center; gap: 3px; overflow: hidden; }
+.pf-rec-meter span { width: 3px; flex: none; background: var(--p-dim-dark); }
+/* Tomato stays the agent's cursor alone, so recording is ink and Stop is the blue of every main action. */
+.pf-rec-stop { height: 48px; flex: none; padding: 0 16px; border: 0; background: var(--p-blue); color: var(--p-paper) !important; font-size: 16px; font-weight: 700; }
+@keyframes pf-rec { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .pf-rec-dot { animation: none; } }
+.pf-voice-chip { align-self: flex-start; display: flex; align-items: center; gap: 4px; margin: 6px 16px 0; padding-left: 12px; background: var(--p-ink); color: var(--p-paper); font-size: 15px; font-weight: 700; }
+.pf-voice-chip button { width: 44px; height: 40px; padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: var(--p-paper) !important; }
+.pf-voice { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.pf-voice-name, .pf-voice-away { font-size: 14px; color: var(--p-dim); }
+.pf-voice audio { width: 100%; height: 40px; }
+
+/* D6: ask, dark */
+.pf-sheet.is-dark .pf-aside-text, .pf-runner { color: var(--p-dim-dark); }
+.pf-runner { position: relative; display: flex; align-items: center; min-height: 44px; font-size: 15px; }
+.pf-runner span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-runner select { position: absolute; inset: 0; width: 100%; opacity: 0; font-size: 16px; }
+.pf-chip { align-self: flex-start; display: inline-block; margin: 4px 20px 0; padding: 5px 10px; background: var(--p-blue); color: var(--p-paper); font-size: 14px; font-weight: 700; }
+.pf-ask-hint { padding: 12px 20px 0; font-size: 17px; line-height: 1.45; color: var(--p-dim-dark); }
+.pf-suggestions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 16px; }
+.pf-suggestion { min-height: 44px; padding: 0 12px; border: 1px solid var(--p-dim-dark); background: transparent; color: var(--p-paper) !important; font-size: 15px; }
+.pf-suggestion:active { background: var(--p-ink-raised); }
+.pf-ask-thread { display: flex; flex-direction: column; gap: 14px; padding: 12px 20px 16px; }
+.pf-ask-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; color: var(--p-dim-dark); }
+.pf-ask-steps .is-now { color: var(--p-paper); font-weight: 700; }
+.pf-compose.is-dark .pf-compose-input { border: 0; background: var(--p-ink-raised); color: var(--p-paper); }
+.pf-compose.is-dark .pf-compose-input::placeholder { color: var(--p-dim-dark); }
+.pf-sheet.is-dark .phone-result-pic { background: var(--p-paper); }
+
+
+/* D7: a photo */
+.pf-photo-actions { display: flex; flex-direction: column; gap: 10px; padding: 4px 20px 12px; }
+.pf-photo-actions .phone-btn { gap: 10px; width: 100%; }
+.pf-photo-note { padding-bottom: 16px; }
+.pf-photo-chip { align-self: flex-start; display: flex; align-items: center; gap: 10px; margin: 8px 16px 0; padding: 4px 0 4px 4px; background: var(--p-ink); color: var(--p-paper); font-size: 14px; font-weight: 700; max-width: calc(100% - 32px); }
+.pf-photo-chip img { width: 40px; height: 40px; object-fit: cover; flex: none; background: var(--p-paper-deep); }
+.pf-photo-chip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-photo-chip button { width: 44px; height: 40px; flex: none; padding: 0; border: 0; background: transparent; color: var(--p-paper) !important; font-size: 22px; }
+.pf-message-photo { display: block; max-width: 100%; max-height: 220px; margin-top: 8px; border: 1px solid var(--p-rule); }
+.phone-msg-photo { display: block; max-width: 100%; max-height: 200px; margin-bottom: 8px; }
+.pf-mic.is-dark { border: 0; background: var(--p-ink-raised); color: var(--p-paper) !important; }
+.pf-compose-note.is-dark { padding: 8px 16px 0; color: var(--p-dim-dark); }
+
+/* Values both sides set while apart */
+.pf-notes { flex: none; position: relative; z-index: 35; border-bottom: 2px solid var(--p-ink); background: var(--p-paper); max-height: 50%; display: flex; flex-direction: column; }
+.pf-notes-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 20px; border: 0; background: var(--p-ink); color: var(--p-paper) !important; font-size: 15px; text-align: left; }
+.pf-notes-head b { flex: none; font-weight: 800; }
+.pf-notes-list { overflow-y: auto; overscroll-behavior: contain; }
+.pf-note { display: flex; flex-direction: column; gap: 4px; padding: 12px 20px; border-bottom: 1px solid var(--p-rule); font-size: 15px; }
+.pf-note p { color: var(--p-dim); overflow-wrap: anywhere; }
+.pf-note p.is-kept { color: var(--p-ink); font-weight: 700; }
+.pf-note-name { align-self: flex-start; min-height: 36px; padding: 0; border: 0; background: transparent; font-size: 16px; font-weight: 800; text-align: left; }
+.pf-note-kept { font-size: 14px; }
+.pf-note-actions { display: flex; gap: 10px; margin-top: 6px; }
+.pf-note-actions .phone-btn { min-height: 44px; font-size: 15px; }
+.phone-btn.is-plain-ink { background: transparent; color: var(--p-ink); font-weight: 400; padding: 0 10px; }
+
+/* The close button of a sheet that is a panel at the side. Below 700 px the handle does that. */
+.pf-sheet-close { display: none; }
+
+/*
+ * An iPad, or a phone on its side, on the phone app: the sheets are a panel at the side, which the canvas
+ * makes room for, and a panel is closed with its button rather than dragged down.
+ */
+@media (min-width: 700px) {
+  :root[data-phone-origin] .pf-middle { flex-direction: row; }
+  :root[data-phone-origin] .pf-sheet,
+  :root[data-phone-origin] .pf.is-comment .pf-sheet,
+  :root[data-phone-origin] .pf.is-keyboard .pf-sheet { height: auto; max-height: none; width: min(400px, 45%); border-top: 0; border-left: 2px solid var(--p-ink); transform: none !important; }
+  :root[data-phone-origin] .pf-sheet.is-full { position: relative; inset: auto; }
+  :root[data-phone-origin] .pf-handle { display: none; }
+  :root[data-phone-origin] .pf-grab { padding-top: 10px; }
+  :root[data-phone-origin] .pf-sheet-close { display: grid; place-items: center; width: 44px; height: 44px; margin-right: -12px; padding: 0; border: 0; background: transparent; color: inherit !important; font-size: 26px; line-height: 1; }
+  :root[data-phone-origin] .pf.has-sheet .pf-chrome { display: flex; }
+  :root[data-phone-origin] .pf-notes { max-height: 40%; }
+}
+
+/* The full workspace shares the existing document session and uses its own chrome colors. */
+.phone-workspace-view { display: inline-flex; align-items: center; gap: 6px; flex: none; min-width: 0; font: inherit; }
+.phone-workspace-view > span { font-size: 12px; }
+.phone-workspace-view > select { min-height: 44px; max-width: min(42vw, 170px); padding: 0 22px 0 8px; font: inherit; font-size: 14px; color: inherit; background: transparent; border: 1px solid currentColor; }
+.pf-top .phone-workspace-view > span { display: none; }
+.pf-full-workspace .pf-canvas { background: var(--canvas-bg); }
+.phone-workspace-home { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; color: var(--ui-fg); background: var(--ui-bg); }
+.phone-workspace-home-view { display: flex; justify-content: flex-end; flex: none; padding: 4px 12px; border-bottom: 1px solid var(--ui-border); }
+.phone-workspace-home > .home { flex: 1; min-height: 0; height: auto; }
+@media(max-width:360px){ .pf-top { gap: 4px; } .pf-top .phone-workspace-view select { max-width: 132px; font-size: 12px; padding-left: 4px; } }
+
+/* Each edge is independent on foldables and resized app scenes. These are browser safe areas, not a hinge API. */
+.pf-middle { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); box-sizing: border-box; }
+.pf-full-workspace .pf-middle { padding-bottom: env(safe-area-inset-bottom, 0px); }

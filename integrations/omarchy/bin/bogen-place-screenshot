@@ -1,0 +1,82 @@
+#!/bin/bash
+# Managed by Bogen integrations/omarchy.
+# Puts the newest `omarchy capture` screenshot, an image you choose in Omarchy's image
+# picker with --pick, or the image given as an argument, into the Bogen file you are
+# working on.
+set -u
+
+URL=${BOGEN_URL:-http://127.0.0.1:29990}
+
+tell() { omarchy-notification-send --app-name=Bogen -i bogen -u normal "$@"; }
+fail() {
+  tell "$1" "${2:-}"
+  echo "bogen-place-screenshot: $1${2:+: $2}" >&2
+  exit 1
+}
+
+screenshot_dir() {
+  [[ -f ${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs ]] && source "${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs"
+  printf '%s\n' "${OMARCHY_SCREENSHOT_DIR:-${XDG_PICTURES_DIR:-$HOME/Pictures}}"
+}
+
+pick=0
+if [[ ${1:-} == --pick ]]; then
+  pick=1
+  shift
+fi
+
+image=${1:-}
+if ((pick)); then
+  dir=${image:-$(screenshot_dir)}
+  [[ -d $dir ]] || fail "No such folder" "$dir"
+  command -v omarchy-menu-images >/dev/null || fail "Omarchy's image picker is not here"
+  # It prints the chosen path, and nothing when you press Escape.
+  image=$(omarchy-menu-images --filterable --show-labels "$dir" 2>/dev/null)
+  [[ -n $image ]] || exit 0
+elif [[ -z $image ]]; then
+  image=$(find "$(screenshot_dir)" -maxdepth 1 -type f -name 'screenshot-*.png' -printf '%T@ %p\n' 2>/dev/null |
+    sort -rn | head -n1 | cut -d' ' -f2-)
+fi
+[[ -n $image && -f $image ]] || fail "No screenshot to place" "Take one with omarchy capture first."
+
+curl -fsS -m 2 -o /dev/null "$URL/api/status" 2>/dev/null || fail "Bogen server is not running"
+
+type=$(file -b --mime-type -- "$image")
+asset=$(curl -fsS -m 30 -X POST -H "Content-Type: $type" --data-binary "@$image" "$URL/api/assets" 2>/dev/null) ||
+  fail "Could not upload the screenshot" "$image"
+src=$(jq -r '.src // empty' <<<"$asset")
+name=$(basename -- "$image")
+
+# Placing a layer is an MCP tool. Without a file_id it lands in the file the person
+# has open in the editor, which is the point of this key.
+SESSION=""
+mcp() {
+  curl -fsS -m 15 -X POST "$URL/mcp" -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' -H "Mcp-Session-Id: $SESSION" "$@" 2>/dev/null
+}
+
+place() {
+  local alt=${name//[^[:alnum:]._-]/ } style="" call result
+  # Top-level layers otherwise take the width of a desktop page. Keep the real size.
+  [[ $(file -b -- "$image") =~ ([0-9]+)\ x\ [0-9]+ ]] && style=" style=\"width:${BASH_REMATCH[1]}px\""
+  SESSION=$(curl -fsS -m 5 -X POST "$URL/mcp" -o /dev/null -D - -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' -H 'X-Bogen-Agent: Screenshot' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"bogen-place-screenshot","version":"1"}}}' 2>/dev/null |
+    tr -d '\r' | awk 'tolower($1) == "mcp-session-id:" { print $2 }')
+  [[ -n $SESSION ]] || return 1
+  mcp -o /dev/null -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+  call=$(jq -cn --arg html "<img src=\"$src\" alt=\"$alt\"$style>" \
+    '{jsonrpc: "2.0", id: 2, method: "tools/call", params: {name: "html_write", arguments: {html: $html}}}')
+  result=$(mcp -d "$call")
+  curl -fsS -m 5 -X DELETE "$URL/mcp" -H "Mcp-Session-Id: $SESSION" -o /dev/null 2>/dev/null
+  jq -e '.result and (.result.isError | not)' <<<"$result" >/dev/null
+}
+
+if place; then
+  tell "Screenshot placed" "$name"
+  exit 0
+fi
+
+# Uploaded, but no file is open in an editor to take it. The clipboard still works.
+wl-copy --type "$type" <"$image" 2>/dev/null
+tell "Screenshot ready" "No file is open in Bogen. Paste it onto the canvas."

@@ -1,0 +1,50 @@
+<style>
+  .page { display: flex; flex-direction: column; width: 100%; font-family: Georgia, serif; color: #1d1b16; background: #f6f1e7 }
+  .top { display: flex; align-items: center; justify-content: space-between; padding: 24px 96px; gap: 48px }
+  .logo { font-size: 22px; font-weight: 700 }
+  .links { display: flex; gap: 32px; font-size: 16px; white-space: nowrap }
+  .cta { padding: 12px 24px; background: #1d1b16; color: #f6f1e7; border-radius: 999px; white-space: nowrap }
+  .hero { display: flex; gap: 64px; padding: 96px; align-items: center }
+  .hero-copy { display: flex; flex-direction: column; gap: 24px; width: 600px }
+  .hero h1 { font-size: 72px; line-height: 80px; letter-spacing: -0.02em }
+  .hero p { font-size: 20px; line-height: 30px }
+  .hero img { width: 560px; height: 420px; border-radius: 16px; background: #d9cdb4 }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; padding: 96px }
+  .feature { display: flex; flex-direction: column; gap: 12px }
+  .feature h3 { font-size: 30px }
+  .pricing { display: flex; gap: 32px; padding: 80px 96px; justify-content: center }
+  .plan { display: flex; flex-direction: column; gap: 16px; width: 380px; height: 420px; padding: 40px; border: 1px solid #1d1b16; border-radius: 12px }
+  .plan strong { font-size: 48px }
+  .footer { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; padding: 64px 96px }
+</style>
+<div class="page">
+  <header class="top">
+    <div class="logo">Kiln and Co.</div>
+    <nav class="links"><a href="#">Workshops</a><a href="#">Studio</a><a href="#">Shop</a><a href="#">Journal</a><a href="#">About</a></nav>
+    <a class="cta" href="#">Book a class</a>
+  </header>
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Clay, fire and a long table in Leipzig</h1>
+      <p>Evening and weekend workshops for people who have never thrown a pot, and for those who have thrown a few hundred.</p>
+      <a class="cta" href="#">See the schedule</a>
+    </div>
+    <img alt="A potter's wheel">
+  </section>
+  <section class="features">
+    <div class="feature"><h3>Small groups</h3><p>Six people at most, so the teacher sees every hand.</p></div>
+    <div class="feature"><h3>Our own glazes</h3><p>Mixed in the back room from recipes we have kept for years.</p></div>
+    <div class="feature"><h3>Two firings</h3><p>Your pieces come out of the kiln twice before you take them home.</p></div>
+  </section>
+  <section class="pricing">
+    <div class="plan"><h3>Taster</h3><strong>45 EUR</strong><p>One evening on the wheel.</p></div>
+    <div class="plan"><h3>Course</h3><strong>260 EUR</strong><p>Six weeks, one evening each.</p></div>
+    <div class="plan"><h3>Studio</h3><strong>90 EUR</strong><p>A month of open studio time.</p></div>
+  </section>
+  <footer class="footer">
+    <div><p>Kiln and Co.</p></div>
+    <div><p>Karl-Heine-Strasse 12</p></div>
+    <div><p>hello@kiln.example</p></div>
+    <div><p>Open Tuesday to Sunday</p></div>
+  </footer>
+</div>

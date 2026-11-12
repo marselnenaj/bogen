@@ -1,0 +1,96 @@
+/*
+ * The Agents tab: who works now on top, one part under it (Activity, Settings, Devices). Everything here is scoped
+ * to the tab, fits a 240px sidebar at any UI scale and in either direction, and uses the editor's own colours.
+ */
+
+.agents-panel { min-width: 0; }
+.agents-panel .hint { overflow-wrap: break-word; }
+
+/* Now: the agents of this file, and the Follow switch */
+.agents-now { display: flex; flex-direction: column; gap: 2px; padding: 6px 4px; min-width: 0; }
+.agents-now .agent-list { list-style: none; margin: 0; padding: 0; border-bottom: 0; display: flex; flex-direction: column; }
+.agents-now .agent-row { height: auto; min-height: var(--row); padding-block: 0; padding-inline: 6px 2px; gap: 6px; min-width: 0; }
+.agent-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--fg-3); flex: none; }
+.agent-dot.is-working { background: var(--ui-accent); }
+.agents-now .agent-status { flex: none; max-inline-size: 45%; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
+.agents-now .agent-row .icon-btn { width: 22px; height: 22px; flex: none; }
+.agents-none { display: flex; align-items: center; min-height: var(--row); padding-inline: 6px; }
+.agents-none .run-link { text-align: start; }
+.agents-error { padding-inline: 6px; overflow-wrap: anywhere; }
+.agents-panel .agent-follow { align-items: flex-start; line-height: 1.4; min-width: 0; }
+.agents-panel .agent-follow input { flex: none; margin: 2px 0 0; }
+.agents-panel .agent-follow span { min-width: 0; overflow-wrap: break-word; }
+.agents-now .agent-follow { padding: 4px 6px; border-bottom: 0; }
+
+/* The part switch stays in reach while the part scrolls. */
+.agents-switch { position: sticky; top: 0; z-index: 2; padding: 6px 8px; background: var(--ui-bg); border-block: 1px solid var(--ui-border); }
+.agents-parts.segmented { height: auto; min-height: var(--row); }
+.agents-parts .segment { min-height: calc(var(--row) - 4px); gap: 4px; padding: 2px 6px; line-height: 1.25; text-align: center; white-space: normal; overflow-wrap: break-word; hyphens: auto; }
+.agents-part-label { min-width: 0; }
+.agents-part-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ui-accent); flex: none; }
+
+/* A part */
+.agents-pane { container-type: inline-size; display: flex; flex-direction: column; min-width: 0; }
+.agents-pane > * { min-width: 0; }
+.agents-pane > :last-child { border-bottom: 0; }
+.agents-pane .section-plain, .agents-pane .feed { padding: 8px 8px 10px; }
+.agents-pane .feed-title { height: auto; min-height: 22px; flex-wrap: wrap; align-items: baseline; align-content: center; column-gap: 4px; line-height: 1.35; }
+.agents-pane .queue-count { margin: 0; }
+
+/* Text and edges follow the reading direction. */
+.agents-pane .queue-main, .agents-pane .feed-row, .agents-pane .run-head, .agents-pane .run-link, .agents-pane .bf-item { text-align: start; }
+.agents-pane .queue-pos, .agents-pane .check-case-verdict { text-align: end; }
+.agents-pane .step-head, .agents-pane .run-actions { margin-left: 0; margin-inline-start: -6px; }
+.agents-pane .run-detail { padding-left: 0; padding-inline-start: 12px; }
+.agents-pane .step-detail { padding-left: 0; padding-inline-start: 16px; }
+.agents-pane .bf-fix { padding-left: 0; padding-inline-start: 13px; }
+.agents-pane .step-open:not(.is-open):dir(rtl) svg { transform: scaleX(-1); }
+.agents-pane .check-case { grid-template-columns: minmax(0, 1fr) minmax(0, auto); padding-left: 0; padding-inline-start: 8px; border-left: 0; border-inline-start: 2px solid var(--ui-border); overflow-wrap: break-word; }
+.agents-pane .check-case.is-ok { border-inline-start-color: var(--ui-accent); }
+.agents-pane .check-case.is-bad { border-inline-start-color: var(--ui-danger); }
+.agents-pane .check-runner-head { overflow-wrap: anywhere; }
+
+/* Long device names and states wrap instead of pushing the sidebar wider. */
+.agents-pane .sync-peer-line, .agents-pane .phone-row { flex-wrap: wrap; column-gap: 6px; row-gap: 0; min-width: 0; overflow-wrap: anywhere; }
+.agents-pane .sync-peer-line .hint, .agents-pane .phone-row .hint { margin-left: 0; margin-inline-start: auto; }
+.agents-pane .conflict-name { overflow-wrap: anywhere; }
+.agents-pane .section-plain .agent-follow { padding: 4px 0; border-bottom: 0; }
+.agents-pane .run-result-shots img, .agents-pane .run-result-none { flex: 0 1 96px; width: auto; min-width: 0; }
+
+/* Shown where Sync would be until Sync has something; a moment late, so it does not flash while Sync loads. */
+[data-testid="sync-section"] + .agents-no-sync { display: none; }
+.agents-no-sync { animation: agents-later 0s .6s both; }
+@keyframes agents-later { from { visibility: hidden; } to { visibility: visible; } }
+
+/* Models: the kind above its choice in a narrow sidebar, beside it with room, aligned over the runner's rows. */
+.agents-pane .run-settings-runner { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 2px; margin: 0; }
+.agents-pane .run-settings-runner + .run-settings-runner { margin-top: 8px; }
+.agents-pane .run-settings-name { height: auto; min-height: 20px; overflow-wrap: anywhere; }
+.agents-pane .run-settings-row { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 1px; align-items: center; min-width: 0; }
+.agents-pane .run-settings-row + .run-settings-row { margin-top: 3px; }
+.agents-pane .run-settings-kind { width: auto; min-width: 0; font-size: 11.5px; line-height: 1.3; overflow-wrap: break-word; }
+.agents-pane .run-settings-row > .field { height: var(--row-sm); min-width: 0; }
+.agents-pane .run-settings-row .run-choice { flex-wrap: wrap; row-gap: 2px; }
+.agents-pane .run-settings-row .run-choice > * { flex: 1 1 6em; }
+.agents-pane .run-settings-row .run-choice > :first-child { flex: 1.5 1 8em; }
+.agents-pane .run-choice-problem { display: block; font-size: 12px; line-height: 1.4; color: var(--ui-fg-2); overflow-wrap: anywhere; }
+@container (min-width: 300px) {
+  .agents-pane .run-settings-runner { grid-template-columns: fit-content(40%) minmax(0, 1fr); column-gap: 8px; }
+  .agents-pane .run-settings-name { grid-column: 1 / -1; }
+  .agents-pane .run-settings-row { grid-column: 1 / -1; grid-template-columns: subgrid; }
+  .agents-pane .run-settings-kind { font-size: 12px; }
+}
+
+/* Connecting a client: folded under its title. */
+.agents-pane .agents-connect { display: block; padding: 8px 8px 10px; border-bottom: 1px solid var(--ui-border); }
+.agents-pane .agents-connect > * + * { margin-top: 6px; }
+.agents-pane .agents-connect .connect-row { min-width: 0; }
+.agents-pane .agents-connect .connect-name { overflow-wrap: break-word; }
+.agents-pane .agents-fold { display: flex; align-items: center; list-style: none; gap: 4px; height: auto; min-height: 22px; margin-inline: -4px; padding-inline: 4px; border-radius: 3px; cursor: default; }
+.agents-pane .agents-fold::-webkit-details-marker { display: none; }
+.agents-pane .agents-fold:hover { background: var(--hover); }
+.agents-pane .agents-fold > span { min-width: 0; overflow-wrap: break-word; }
+.agents-fold-mark { flex: none; color: var(--fg-3); transition: transform .1s; }
+.agents-pane details:not([open]) > .agents-fold:dir(rtl) .agents-fold-mark { transform: scaleX(-1); }
+.agents-pane details[open] > .agents-fold .agents-fold-mark { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .agents-fold-mark { transition: none; } }

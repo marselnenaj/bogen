@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Bogen</title>
+  <!-- The brand mark, as large as the square allows: the blue sheet, its fold in blue deep, and >_ in paper. -->
+  <g transform="translate(-4.6 -1.9) scale(2.6)">
+    <path d="M10 4H66L92 30V96H10Z" fill="#2b3df2"/>
+    <path d="M66 4V30H92Z" fill="#1b27a8"/>
+    <path d="M26 48 48 64 26 80" fill="none" stroke="#f4f2ec" stroke-width="9" stroke-linejoin="miter"/>
+    <rect x="55" y="73" width="25" height="10.5" fill="#f4f2ec"/>
+  </g>
+</svg>

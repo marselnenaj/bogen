@@ -1,0 +1,25 @@
+.recent-changes { display: flex; align-items: center; gap: 10px; flex: none; min-height: 32px; padding: 2px 10px; border-bottom: 1px solid var(--ui-border); color: var(--ui-fg); background: var(--ui-bg); font-size: 12px; }
+.recent-toggle { display: inline-flex; flex: none; align-items: center; gap: 5px; min-height: 28px; color: var(--ui-fg-2); }
+.recent-toggle:hover, .recent-latest:hover { color: var(--ui-fg); text-decoration: underline; }
+.recent-latest { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: start; }
+.recent-time { margin-inline-start: auto; flex: none; color: var(--ui-fg-2); font-size: 11px; }
+.recent-popover { overscroll-behavior: contain; }
+.recent-list-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; }
+.recent-entry { padding: 9px 8px; border-top: 1px solid var(--ui-border); }
+.recent-entry p { margin: 0; }
+.recent-summary { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.recent-meta { color: var(--ui-fg-2); font-size: 11px; margin-top: 3px !important; }
+.recent-locations { display: flex; flex-wrap: wrap; gap: 3px 10px; }
+.recent-location { text-align: start; text-decoration: underline; font-size: 12px; min-height: 28px; overflow-wrap: anywhere; }
+.recent-location:disabled { opacity: .5; text-decoration: none; cursor: default; }
+.page-edit-time { flex: none; margin-inline-start: 6px; color: var(--ui-fg-2); font-size: 10px; font-weight: 400; }
+.file-recent { grid-column: 1; min-width: 0; font-size: 11px; color: var(--ui-fg-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+a.file-recent:hover { text-decoration: underline; color: var(--ui-fg); }
+.file-list .file:has(.file-recent) { height: auto; min-height: 54px; padding-block: 5px; }
+.file-list .file-recent { grid-column: 1 / 4; grid-row: 2; }
+.history-location { display: block; color: var(--ui-fg-2); font-size: 11px; overflow-wrap: anywhere; }
+.pf .recent-changes { font-family: var(--p-sans); }
+.pf-page-row:has(.page-edit-time) { flex-wrap: wrap; gap: 2px 10px; padding-block: 8px; }
+.pf-page-row .page-edit-time { order: 3; flex-basis: 100%; margin-inline-start: 0; }
+@media(pointer:coarse) { .recent-toggle, .recent-latest, .recent-location { min-height: 44px; } }
+@media(max-width:540px) { .recent-changes { gap: 7px; padding-inline: 8px; flex-wrap: wrap; } .recent-toggle { font-size: 11px; } .recent-latest { flex: 1; } .recent-time { display: none; } }

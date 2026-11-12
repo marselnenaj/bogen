@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Managed by Bogen integrations/omarchy -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-bogen">
+    <comment>Bogen design file</comment>
+    <icon name="bogen"/>
+    <glob pattern="*.bogen"/>
+  </mime-type>
+</mime-info>

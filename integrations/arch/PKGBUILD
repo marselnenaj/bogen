@@ -1,0 +1,31 @@
+# Maintainer: Marsel Nenaj <hello at bogen dot dev>
+# Built from the npm tarball that scripts/release-npm.mjs packs. scripts/release.mjs fills in pkgver and
+# sha256sums for the released tarball (release/v<version>/PKGBUILD, or here with --update-pkgbuild).
+pkgname=bogen-design
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Open source HTML/CSS design canvas for your own coding agent, over MCP'
+# npm installs native helpers such as esbuild for the build host.
+arch=('x86_64' 'aarch64')
+# Preserve prebuilt runtime binaries and their existing notices; no stripping or generated debug packages.
+options=('!strip' '!debug')
+url='https://github.com/marselnenaj/bogen'
+license=('GPL-3.0-or-later')
+depends=('nodejs>=22.18')
+makedepends=('npm')
+optdepends=(
+  'chromium: rendering, exports and Capture (any Chromium-based browser works, see BOGEN_BROWSER)'
+  'ffmpeg: video and AVIF export'
+  'tailscale: sync between your devices'
+)
+source=("https://github.com/marselnenaj/bogen/releases/download/v$pkgver/$pkgname-$pkgver.tgz")
+noextract=("$pkgname-$pkgver.tgz")
+sha256sums=('SKIP')
+
+package() {
+  npm install -g --no-fund --no-audit --prefix "$pkgdir/usr" --cache "$srcdir/npm-cache" "$srcdir/$pkgname-$pkgver.tgz"
+  # npm writes the build path into package.json files, and makes the tree owned by the builder.
+  find "$pkgdir/usr" -name package.json -print0 | xargs -0 sed -i "/_where/d"
+  chown -R root:root "$pkgdir"
+  install -Dm644 "$pkgdir/usr/lib/node_modules/$pkgname/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

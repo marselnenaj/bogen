@@ -1,0 +1,609 @@
+{
+  "version": 1,
+  "collection": "Bogen original art directions",
+  "generator": "OpenAI image_gen, as recorded in the generation inventory",
+  "generationRecord": "docs/design/collection-art-20261109.json",
+  "notice": "AI-generated artwork, not documentary photographs. Portrait and landscape generated independently; delivery-sized images are resampled, not native 4K. Provenance is not a guarantee of exclusivity or third-party rights clearance.",
+  "assets": [
+    {
+      "path": "basalt/landscape.jpg",
+      "sha256": "577a3191f447991c41fc25311ee0054a0bd407763d8bc91f43ef66310d17d413",
+      "kind": "master",
+      "sourceRecord": "basalt/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "basalt/thumb-landscape.webp",
+      "sha256": "2f96ca28bfbf1788bdc1873bf8699a98816af79b223a8c22e416df38120f3604",
+      "kind": "thumbnail",
+      "sourceRecord": "basalt/landscape",
+      "derivedFrom": "basalt/landscape.jpg"
+    },
+    {
+      "path": "basalt/portrait.jpg",
+      "sha256": "c73d05d7db3704b31a5c4b848330dcf9522faf78d37c808d140b8b04464b7ebb",
+      "kind": "master",
+      "sourceRecord": "basalt/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "basalt/thumb-portrait.webp",
+      "sha256": "36d375f5379a9236a01787483f2904edc1564d817cdb4ea7e01159eb293c10ce",
+      "kind": "thumbnail",
+      "sourceRecord": "basalt/portrait",
+      "derivedFrom": "basalt/portrait.jpg"
+    },
+    {
+      "path": "interference/landscape.jpg",
+      "sha256": "ef665f3369e6acc9afb135bccd8cdf25eb5194dde13a53f0036653e0e8e1ff0e",
+      "kind": "master",
+      "sourceRecord": "interference/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "interference/thumb-landscape.webp",
+      "sha256": "6b2e83d0bb92c9ffc97bcb0a0310eccb7ada067b7db3950dc1c25d443d2b6491",
+      "kind": "thumbnail",
+      "sourceRecord": "interference/landscape",
+      "derivedFrom": "interference/landscape.jpg"
+    },
+    {
+      "path": "interference/portrait.jpg",
+      "sha256": "bbaf0a50ec210be11451ae0cccee7ba9a7158d810f1e9de4d078131b6114051d",
+      "kind": "master",
+      "sourceRecord": "interference/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "interference/thumb-portrait.webp",
+      "sha256": "9a3bb0429964b945beb58c5e2aaac247db379381dfe8f63469810e6d6a96e700",
+      "kind": "thumbnail",
+      "sourceRecord": "interference/portrait",
+      "derivedFrom": "interference/portrait.jpg"
+    },
+    {
+      "path": "night-line/landscape.jpg",
+      "sha256": "f1c6e7ce3a7b98d9ed83416cb3974c8361247e0bc4fde9c9c4b18b30321715c4",
+      "kind": "master",
+      "sourceRecord": "night-line/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "night-line/thumb-landscape.webp",
+      "sha256": "a8291aa69860417547dd75a33a625bf0ef6b3a96af73620791028abb50a99214",
+      "kind": "thumbnail",
+      "sourceRecord": "night-line/landscape",
+      "derivedFrom": "night-line/landscape.jpg"
+    },
+    {
+      "path": "night-line/portrait.jpg",
+      "sha256": "ea39a191556a12828bb85f30b3862e9dc5f96cfddb7d1033db4324e9d01c202f",
+      "kind": "master",
+      "sourceRecord": "night-line/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "night-line/thumb-portrait.webp",
+      "sha256": "e0f6d8110dc3ac6c7f36ba9d47d796a8098865f714beb7ef911ef6596a14cb93",
+      "kind": "thumbnail",
+      "sourceRecord": "night-line/portrait",
+      "derivedFrom": "night-line/portrait.jpg"
+    },
+    {
+      "path": "relief-tide/landscape.jpg",
+      "sha256": "736fe71c9cf6376a746adfaa1e5cfe2cb64478cae01ef05450adcaa761148105",
+      "kind": "master",
+      "sourceRecord": "relief-tide/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "relief-tide/thumb-landscape.webp",
+      "sha256": "1789c7fc8205d1e2b5a8d89f228e46d33b9f3727b96f7d3a6c0cb2e0546c3371",
+      "kind": "thumbnail",
+      "sourceRecord": "relief-tide/landscape",
+      "derivedFrom": "relief-tide/landscape.jpg"
+    },
+    {
+      "path": "relief-tide/portrait.jpg",
+      "sha256": "86f428ef9caba9c12faa5e037cf56b710280d10f88eeab4cb630b24901676c8b",
+      "kind": "master",
+      "sourceRecord": "relief-tide/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "relief-tide/thumb-portrait.webp",
+      "sha256": "eb3c191bdd09b9cda29b431075212e0a059396ce6eee371cd60ff078010a4ae7",
+      "kind": "thumbnail",
+      "sourceRecord": "relief-tide/portrait",
+      "derivedFrom": "relief-tide/portrait.jpg"
+    },
+    {
+      "path": "sodium-facade/landscape.jpg",
+      "sha256": "10c30c3ae2ebf87112eb7195bd243e97d7b7f1ec3697cd81166fb1b1311296cc",
+      "kind": "master",
+      "sourceRecord": "sodium-facade/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "sodium-facade/thumb-landscape.webp",
+      "sha256": "44e261139b7130c9bb762a62df969cf15aaf00c5174e822c9ddb093a037f6c2b",
+      "kind": "thumbnail",
+      "sourceRecord": "sodium-facade/landscape",
+      "derivedFrom": "sodium-facade/landscape.jpg"
+    },
+    {
+      "path": "sodium-facade/portrait.jpg",
+      "sha256": "cf1b8a88b31884afb6c541630de60d1530fc4b389f4e51387e2f29e0246ceef6",
+      "kind": "master",
+      "sourceRecord": "sodium-facade/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "sodium-facade/thumb-portrait.webp",
+      "sha256": "d484c3cababca137651d330f562a38e20f80fac0af4181c74f7ca922b3e94a0c",
+      "kind": "thumbnail",
+      "sourceRecord": "sodium-facade/portrait",
+      "derivedFrom": "sodium-facade/portrait.jpg"
+    },
+    {
+      "path": "lead-came/landscape.jpg",
+      "sha256": "4b0576737f0c0bd0b8f65ae19a4a9928cfc4c2bccc738217a22151380fd00b6d",
+      "kind": "master",
+      "sourceRecord": "lead-came/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "lead-came/thumb-landscape.webp",
+      "sha256": "121f1d7679b82c0476c886ad7467217f3e43551ddc6801ff194c1f00cd3b8a1d",
+      "kind": "thumbnail",
+      "sourceRecord": "lead-came/landscape",
+      "derivedFrom": "lead-came/landscape.jpg"
+    },
+    {
+      "path": "lead-came/portrait.jpg",
+      "sha256": "070a89c6f89c1c4b5fe1026e0d279ca7f5e7c080cb4e998d25241d125e1cc587",
+      "kind": "master",
+      "sourceRecord": "lead-came/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "lead-came/thumb-portrait.webp",
+      "sha256": "da6ede6da0d69a80b13714027defc8031563259659586fa5ea7dd389b4a0777e",
+      "kind": "thumbnail",
+      "sourceRecord": "lead-came/portrait",
+      "derivedFrom": "lead-came/portrait.jpg"
+    },
+    {
+      "path": "signal-grammar/landscape.jpg",
+      "sha256": "5d1762aa130a91bc9367830fd796ed9c41f4f003c626d9cc0e7cb980abbf11a7",
+      "kind": "master",
+      "sourceRecord": "signal-grammar/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "signal-grammar/thumb-landscape.webp",
+      "sha256": "58695568ca045c2547ef0502acb1a9d86d9334d156dd9661771405a92396633d",
+      "kind": "thumbnail",
+      "sourceRecord": "signal-grammar/landscape",
+      "derivedFrom": "signal-grammar/landscape.jpg"
+    },
+    {
+      "path": "signal-grammar/portrait.jpg",
+      "sha256": "fa9e57cb63127a786be1f45cdf3c3f4e5ed418632919183129ea067e786406a7",
+      "kind": "master",
+      "sourceRecord": "signal-grammar/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "signal-grammar/thumb-portrait.webp",
+      "sha256": "d4db8566591e3d8b010c6e467792067d70fe843628bccd4119e3b4260243df28",
+      "kind": "thumbnail",
+      "sourceRecord": "signal-grammar/portrait",
+      "derivedFrom": "signal-grammar/portrait.jpg"
+    },
+    {
+      "path": "overprint/landscape.jpg",
+      "sha256": "b9658a71eb8bfd058cf4ef924eaa97d7ed466725bb5344b6ad5062b8818f583f",
+      "kind": "master",
+      "sourceRecord": "overprint/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "overprint/thumb-landscape.webp",
+      "sha256": "317788c939b4e5a7ffc9b50db0a4dcb47d11f20133f3ce0a2cbace0b8182443a",
+      "kind": "thumbnail",
+      "sourceRecord": "overprint/landscape",
+      "derivedFrom": "overprint/landscape.jpg"
+    },
+    {
+      "path": "overprint/portrait.jpg",
+      "sha256": "6f886e593f00157ce4ae29bf934efa3c2f02e999835098d9a4df87f83ce2af13",
+      "kind": "master",
+      "sourceRecord": "overprint/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "overprint/thumb-portrait.webp",
+      "sha256": "e9a85e75aaf475c1014b41ea4d8444249f1e1992f45ed9934de07c8bd7acce5b",
+      "kind": "thumbnail",
+      "sourceRecord": "overprint/portrait",
+      "derivedFrom": "overprint/portrait.jpg"
+    },
+    {
+      "path": "contour-survey/landscape.jpg",
+      "sha256": "e040549d880dda19d64a7f60b96263347bf0598f2b5200f5b98a5ce450059190",
+      "kind": "master",
+      "sourceRecord": "contour-survey/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "contour-survey/thumb-landscape.webp",
+      "sha256": "a921dfc18d89bf77364c882e9c773c8190b7c3511d70300113bb910e97b9b0ed",
+      "kind": "thumbnail",
+      "sourceRecord": "contour-survey/landscape",
+      "derivedFrom": "contour-survey/landscape.jpg"
+    },
+    {
+      "path": "contour-survey/portrait.jpg",
+      "sha256": "797aea795d685bb5100f5b969c3130bef281483330f236af43e1d8aa4b5f505d",
+      "kind": "master",
+      "sourceRecord": "contour-survey/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "contour-survey/thumb-portrait.webp",
+      "sha256": "3d0ef17576bb62b284e24fa0422ec932e4fc89ef181e48dce89f63736c263b5b",
+      "kind": "thumbnail",
+      "sourceRecord": "contour-survey/portrait",
+      "derivedFrom": "contour-survey/portrait.jpg"
+    },
+    {
+      "path": "parcel/landscape.jpg",
+      "sha256": "d3bcf0e89ff8927c1e5967d8b51a1aa35866a2012194330b099136757f37ddfc",
+      "kind": "master",
+      "sourceRecord": "parcel/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "parcel/thumb-landscape.webp",
+      "sha256": "f60322dba157d1bebfdd7ed3a29642d26c1004699dd56081d8b43e38e8154786",
+      "kind": "thumbnail",
+      "sourceRecord": "parcel/landscape",
+      "derivedFrom": "parcel/landscape.jpg"
+    },
+    {
+      "path": "parcel/portrait.jpg",
+      "sha256": "916c9f8fc9c2e7fa97f283bcf16d065da2e9050072668ed54cc5fca1239845ff",
+      "kind": "master",
+      "sourceRecord": "parcel/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "parcel/thumb-portrait.webp",
+      "sha256": "82290429901d207cfa555b3fd60ed6721a12d24c7f054ef7193a6aa261e93cfc",
+      "kind": "thumbnail",
+      "sourceRecord": "parcel/portrait",
+      "derivedFrom": "parcel/portrait.jpg"
+    },
+    {
+      "path": "selvedge/landscape.jpg",
+      "sha256": "2ec66005991d24854b1d973c98e107209cb95f7fc7d6978c9753d2d9da92c413",
+      "kind": "master",
+      "sourceRecord": "selvedge/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "selvedge/thumb-landscape.webp",
+      "sha256": "e5367a21833c810bbbad5ed97262dae89828c9416805b4dc49b639e105deaf54",
+      "kind": "thumbnail",
+      "sourceRecord": "selvedge/landscape",
+      "derivedFrom": "selvedge/landscape.jpg"
+    },
+    {
+      "path": "selvedge/portrait.jpg",
+      "sha256": "f136eb38065e0c3ab6aac54fdd42bf08124e7793b7f198da79ffa7bbf644bd06",
+      "kind": "master",
+      "sourceRecord": "selvedge/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "selvedge/thumb-portrait.webp",
+      "sha256": "5f87c03549be3d25dbb2645fdccfe82cdb73e9c11def78018e16025d8ab2b9a5",
+      "kind": "thumbnail",
+      "sourceRecord": "selvedge/portrait",
+      "derivedFrom": "selvedge/portrait.jpg"
+    },
+    {
+      "path": "terrazzo/landscape.jpg",
+      "sha256": "3fb058c8d54993d85c14c0f7080f4a0f92f645f2c82a838b680062ba7627685d",
+      "kind": "master",
+      "sourceRecord": "terrazzo/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "terrazzo/thumb-landscape.webp",
+      "sha256": "f5ff7c85727e42b686ba4f4c9575e62eb39792a604ccfa786d86aa32c7b1d000",
+      "kind": "thumbnail",
+      "sourceRecord": "terrazzo/landscape",
+      "derivedFrom": "terrazzo/landscape.jpg"
+    },
+    {
+      "path": "terrazzo/portrait.jpg",
+      "sha256": "d2cd3c60d8910ecd9a2036ff0a27e012bb04bb0ffb424d2ff1b94c4d3b54609c",
+      "kind": "master",
+      "sourceRecord": "terrazzo/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "terrazzo/thumb-portrait.webp",
+      "sha256": "8e2b0468b8a235e4db1b17f06a7a3ddbc9fc8689cb45d52406857e90fff1da5a",
+      "kind": "thumbnail",
+      "sourceRecord": "terrazzo/portrait",
+      "derivedFrom": "terrazzo/portrait.jpg"
+    },
+    {
+      "path": "ink-harbour/landscape.jpg",
+      "sha256": "33881a54c54891dee19fdc8778a88c448e97c528ec657600d4dbff915d7e276e",
+      "kind": "master",
+      "sourceRecord": "ink-harbour/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "ink-harbour/thumb-landscape.webp",
+      "sha256": "23bc099e3d1223994d8ab1935bee32b47a365ab963846531c13bba7861a4010e",
+      "kind": "thumbnail",
+      "sourceRecord": "ink-harbour/landscape",
+      "derivedFrom": "ink-harbour/landscape.jpg"
+    },
+    {
+      "path": "ink-harbour/portrait.jpg",
+      "sha256": "11348cf89b3ea537d319b40213e406872c07f8fa786dc3ee3b118f49644bdf6d",
+      "kind": "master",
+      "sourceRecord": "ink-harbour/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "ink-harbour/thumb-portrait.webp",
+      "sha256": "4669a6ddabb768015f99bd6a85d25c6befd2638f2351b85ea962a84ac9e2a31a",
+      "kind": "thumbnail",
+      "sourceRecord": "ink-harbour/portrait",
+      "derivedFrom": "ink-harbour/portrait.jpg"
+    },
+    {
+      "path": "kiln/landscape.jpg",
+      "sha256": "7574c7331ef469474f2ad0e2c0563432dfd3ca4c618364284bd802bec4a3f249",
+      "kind": "master",
+      "sourceRecord": "kiln/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "kiln/thumb-landscape.webp",
+      "sha256": "ab93c74f07c722aea97e9f8c7a0d42744843c98d39b2d5296f2c81b70d81d4f5",
+      "kind": "thumbnail",
+      "sourceRecord": "kiln/landscape",
+      "derivedFrom": "kiln/landscape.jpg"
+    },
+    {
+      "path": "kiln/portrait.jpg",
+      "sha256": "06242e088a8f9ce612f12b7715a2b7e3c6b53fdf865c9e12654c96e10c0d9186",
+      "kind": "master",
+      "sourceRecord": "kiln/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "kiln/thumb-portrait.webp",
+      "sha256": "23a333abe4a01c0f1a8f1025cf7e075e730b1b9ae4dba5104fc8104ce371270f",
+      "kind": "thumbnail",
+      "sourceRecord": "kiln/portrait",
+      "derivedFrom": "kiln/portrait.jpg"
+    },
+    {
+      "path": "fresco-dust/landscape.jpg",
+      "sha256": "36caf2e098e97f8e9416ef8352a87d9eeab52cbe24840fea87a0e6a88cd99813",
+      "kind": "master",
+      "sourceRecord": "fresco-dust/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "fresco-dust/thumb-landscape.webp",
+      "sha256": "40f93520a231b68eb20da7c4bd24a406f98e8ad0046bba35f293402e0e1db5ba",
+      "kind": "thumbnail",
+      "sourceRecord": "fresco-dust/landscape",
+      "derivedFrom": "fresco-dust/landscape.jpg"
+    },
+    {
+      "path": "fresco-dust/portrait.jpg",
+      "sha256": "7df3d85b910fef84b1f4f2dd95e5244e78108e9fa6297ef41aed4612e943659d",
+      "kind": "master",
+      "sourceRecord": "fresco-dust/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "fresco-dust/thumb-portrait.webp",
+      "sha256": "27c5227dd778b01c4e59dd9f69c6e1647b46eaf3ffdc715a15273acda5969ae6",
+      "kind": "thumbnail",
+      "sourceRecord": "fresco-dust/portrait",
+      "derivedFrom": "fresco-dust/portrait.jpg"
+    },
+    {
+      "path": "cyanotype-fern/landscape.jpg",
+      "sha256": "6ca3deaa1c59ff11b122078ec4419a9c1e3562dabdfced971c61bfb1f8be19a9",
+      "kind": "master",
+      "sourceRecord": "cyanotype-fern/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "cyanotype-fern/thumb-landscape.webp",
+      "sha256": "be36e9f0edabca04d3b4da55415584beeaea38b5c978995530e0b2f2ad2755e8",
+      "kind": "thumbnail",
+      "sourceRecord": "cyanotype-fern/landscape",
+      "derivedFrom": "cyanotype-fern/landscape.jpg"
+    },
+    {
+      "path": "cyanotype-fern/portrait.jpg",
+      "sha256": "1789cf027b2a231316b486ad986ba99b6326e8c9ce4e67aae08d6c1e3b5f6b2b",
+      "kind": "master",
+      "sourceRecord": "cyanotype-fern/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "cyanotype-fern/thumb-portrait.webp",
+      "sha256": "01ff7211846ef6eea4265a843425111ef64e686a3df318b1409221a98450f5dd",
+      "kind": "thumbnail",
+      "sourceRecord": "cyanotype-fern/portrait",
+      "derivedFrom": "cyanotype-fern/portrait.jpg"
+    },
+    {
+      "path": "endpaper/landscape.jpg",
+      "sha256": "cb4a1fc8538f8c26d0c83a9f381060f3d1baa42c49b6b466c079c63d7821dc1a",
+      "kind": "master",
+      "sourceRecord": "endpaper/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "endpaper/thumb-landscape.webp",
+      "sha256": "296098801b70af3adbc21d95cd1807c2ceb75c3dce0512b88c8bfbd00d23a914",
+      "kind": "thumbnail",
+      "sourceRecord": "endpaper/landscape",
+      "derivedFrom": "endpaper/landscape.jpg"
+    },
+    {
+      "path": "endpaper/portrait.jpg",
+      "sha256": "c6a884bd5517fa7cf591b671d2006e90c320da27e3fd825a0aa808ddb9e7b004",
+      "kind": "master",
+      "sourceRecord": "endpaper/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "endpaper/thumb-portrait.webp",
+      "sha256": "70a48b7c031848b4ecff72f9af71f7200487308b7fee63d0ec11cc4b0bc6ae13",
+      "kind": "thumbnail",
+      "sourceRecord": "endpaper/portrait",
+      "derivedFrom": "endpaper/portrait.jpg"
+    },
+    {
+      "path": "oxblood/landscape.jpg",
+      "sha256": "449d26444312a44211af30018c42a1561d72cb212b683711430996ba4cf07585",
+      "kind": "master",
+      "sourceRecord": "oxblood/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "oxblood/thumb-landscape.webp",
+      "sha256": "52dc59f74be0aed011036e056725531f806e37e6da391de733b48b973599a3fa",
+      "kind": "thumbnail",
+      "sourceRecord": "oxblood/landscape",
+      "derivedFrom": "oxblood/landscape.jpg"
+    },
+    {
+      "path": "oxblood/portrait.jpg",
+      "sha256": "7f4600bb9e2f66112133873ee347c8787c8a6471cf634ea44d1f882a3548264a",
+      "kind": "master",
+      "sourceRecord": "oxblood/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "oxblood/thumb-portrait.webp",
+      "sha256": "90db71ae857c848c688f015ee052461638ba18482888cad858c9611dd57166fd",
+      "kind": "thumbnail",
+      "sourceRecord": "oxblood/portrait",
+      "derivedFrom": "oxblood/portrait.jpg"
+    },
+    {
+      "path": "paste-up/landscape.jpg",
+      "sha256": "fc243c2ce863709fe4838933bf6f4b21c85b7888ced8dbecf92cf48b767a3e29",
+      "kind": "master",
+      "sourceRecord": "paste-up/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "paste-up/thumb-landscape.webp",
+      "sha256": "6b3611276d46bbe33996110e95d2288828d41a03196535bd184835a4d35b83af",
+      "kind": "thumbnail",
+      "sourceRecord": "paste-up/landscape",
+      "derivedFrom": "paste-up/landscape.jpg"
+    },
+    {
+      "path": "paste-up/portrait.jpg",
+      "sha256": "ced9140030f349af09ea46a0b9e1f2c1f31e0eca7383b58c50308ec6a89a9c7d",
+      "kind": "master",
+      "sourceRecord": "paste-up/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "paste-up/thumb-portrait.webp",
+      "sha256": "b642d9b062de3d316adb46bf86602c0e7a7745ff4af469c3610a5493ba7bc167",
+      "kind": "thumbnail",
+      "sourceRecord": "paste-up/portrait",
+      "derivedFrom": "paste-up/portrait.jpg"
+    },
+    {
+      "path": "glasshouse/landscape.jpg",
+      "sha256": "45c34bc7a4e9434ea871cc8a01a06c993d4f1527c79e8b6543725af487ee2963",
+      "kind": "master",
+      "sourceRecord": "glasshouse/landscape",
+      "generatedPixels": "1672x941",
+      "deliveredPixels": "3840x2160"
+    },
+    {
+      "path": "glasshouse/thumb-landscape.webp",
+      "sha256": "99ad1372879e8c797e84e301152a101c372d47fabe70eda32ab8d779dad49052",
+      "kind": "thumbnail",
+      "sourceRecord": "glasshouse/landscape",
+      "derivedFrom": "glasshouse/landscape.jpg"
+    },
+    {
+      "path": "glasshouse/portrait.jpg",
+      "sha256": "be86dea921d2519a30112908b45eeab4d972d2792ac643d23871ea45b663ad27",
+      "kind": "master",
+      "sourceRecord": "glasshouse/portrait",
+      "generatedPixels": "941x1672",
+      "deliveredPixels": "2160x3840"
+    },
+    {
+      "path": "glasshouse/thumb-portrait.webp",
+      "sha256": "066aea1164c34458c8820eae7f478dc92520e7f827905a12e9c740eb5f0427c5",
+      "kind": "thumbnail",
+      "sourceRecord": "glasshouse/portrait",
+      "derivedFrom": "glasshouse/portrait.jpg"
+    }
+  ]
+}

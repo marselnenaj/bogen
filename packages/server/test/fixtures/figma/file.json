@@ -1,0 +1,265 @@
+{
+  "name": "Fixture from the public docs",
+  "version": "1",
+  "schemaVersion": 0,
+  "document": {
+    "id": "0:0",
+    "name": "Document",
+    "type": "DOCUMENT",
+    "children": [
+      {
+        "id": "0:1",
+        "name": "Landing",
+        "type": "CANVAS",
+        "backgroundColor": { "r": 0.96, "g": 0.96, "b": 0.96, "a": 1 },
+        "children": [
+          {
+            "id": "1:1",
+            "name": "Hero frame",
+            "type": "FRAME",
+            "absoluteBoundingBox": { "x": 100, "y": 200, "width": 800, "height": 500 },
+            "size": { "x": 800, "y": 500 },
+            "relativeTransform": [[1, 0, 100], [0, 1, 200]],
+            "clipsContent": true,
+            "blendMode": "PASS_THROUGH",
+            "layoutMode": "VERTICAL",
+            "itemSpacing": 16,
+            "primaryAxisAlignItems": "CENTER",
+            "counterAxisAlignItems": "CENTER",
+            "primaryAxisSizingMode": "FIXED",
+            "counterAxisSizingMode": "FIXED",
+            "paddingLeft": 40, "paddingRight": 40, "paddingTop": 32, "paddingBottom": 32,
+            "layoutSizingHorizontal": "FIXED",
+            "layoutSizingVertical": "FIXED",
+            "cornerRadius": 24,
+            "fills": [
+              { "blendMode": "NORMAL", "type": "SOLID", "color": { "r": 0.0627, "g": 0.0627, "b": 0.0784, "a": 1 } },
+              {
+                "blendMode": "NORMAL", "type": "GRADIENT_LINEAR", "opacity": 0.5,
+                "gradientHandlePositions": [{ "x": 0, "y": 0 }, { "x": 1, "y": 1 }, { "x": -0.5, "y": 0.5 }],
+                "gradientStops": [
+                  { "position": 0, "color": { "r": 1, "g": 0, "b": 0.4, "a": 1 } },
+                  { "position": 1, "color": { "r": 0, "g": 0.4, "b": 1, "a": 1 } }
+                ]
+              }
+            ],
+            "strokes": [{ "blendMode": "NORMAL", "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1, "a": 0.25 } }],
+            "strokeWeight": 2,
+            "strokeAlign": "INSIDE",
+            "effects": [
+              { "type": "DROP_SHADOW", "visible": true, "radius": 24, "spread": 2, "offset": { "x": 0, "y": 8 }, "color": { "r": 0, "g": 0, "b": 0, "a": 0.4 }, "blendMode": "NORMAL" },
+              { "type": "INNER_SHADOW", "visible": true, "radius": 4, "offset": { "x": 0, "y": 1 }, "color": { "r": 1, "g": 1, "b": 1, "a": 0.2 }, "blendMode": "NORMAL" },
+              { "type": "BACKGROUND_BLUR", "visible": true, "radius": 16 },
+              { "type": "NOISE", "visible": true, "radius": 1 },
+              { "type": "DROP_SHADOW", "visible": false, "radius": 99, "offset": { "x": 99, "y": 99 }, "color": { "r": 1, "g": 0, "b": 0, "a": 1 } }
+            ],
+            "children": [
+              {
+                "id": "1:2",
+                "name": "Title",
+                "type": "TEXT",
+                "absoluteBoundingBox": { "x": 300, "y": 300, "width": 400, "height": 76 },
+                "size": { "x": 400, "y": 76 },
+                "relativeTransform": [[1, 0, 200], [0, 1, 100]],
+                "layoutSizingHorizontal": "HUG",
+                "layoutSizingVertical": "HUG",
+                "characters": "Ship with Bogen",
+                "fills": [{ "blendMode": "NORMAL", "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1, "a": 1 } }],
+                "effects": [{ "type": "DROP_SHADOW", "visible": true, "radius": 2, "offset": { "x": 0, "y": 1 }, "color": { "r": 0, "g": 0, "b": 0, "a": 0.5 } }],
+                "characterStyleOverrides": [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 2, 2, 2, 2],
+                "styleOverrideTable": {
+                  "1": { "fontWeight": 300, "italic": true, "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 0.8, "b": 0, "a": 1 } }] },
+                  "2": { "textDecoration": "UNDERLINE", "hyperlink": { "type": "URL", "url": "https://example.com/bogen" } }
+                },
+                "style": {
+                  "fontFamily": "Inter", "fontPostScriptName": "Inter-Bold", "fontWeight": 700, "fontSize": 64,
+                  "textAlignHorizontal": "CENTER", "textAlignVertical": "TOP", "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "letterSpacing": -1.28, "lineHeightPx": 76, "lineHeightPercent": 118.75, "lineHeightUnit": "PIXELS", "textCase": "ORIGINAL"
+                }
+              },
+              {
+                "id": "1:3",
+                "name": "Row",
+                "type": "FRAME",
+                "absoluteBoundingBox": { "x": 340, "y": 400, "width": 320, "height": 44 },
+                "size": { "x": 320, "y": 44 },
+                "layoutMode": "HORIZONTAL",
+                "layoutWrap": "WRAP",
+                "itemSpacing": 8,
+                "counterAxisSpacing": 4,
+                "primaryAxisAlignItems": "SPACE_BETWEEN",
+                "counterAxisAlignItems": "BASELINE",
+                "layoutSizingHorizontal": "FILL",
+                "layoutSizingVertical": "HUG",
+                "layoutGrow": 0,
+                "layoutAlign": "STRETCH",
+                "fills": [],
+                "strokes": [{ "type": "SOLID", "color": { "r": 0, "g": 1, "b": 0, "a": 1 } }],
+                "individualStrokeWeights": { "top": 0, "right": 0, "bottom": 2, "left": 0 },
+                "paddingBottom": 6,
+                "children": [
+                  {
+                    "id": "1:4",
+                    "name": "Button",
+                    "type": "INSTANCE",
+                    "componentId": "9:9",
+                    "absoluteBoundingBox": { "x": 340, "y": 400, "width": 140, "height": 44 },
+                    "size": { "x": 140, "y": 44 },
+                    "layoutSizingHorizontal": "FILL",
+                    "layoutSizingVertical": "FIXED",
+                    "layoutGrow": 1,
+                    "rectangleCornerRadii": [8, 8, 0, 0],
+                    "fills": [{
+                      "type": "GRADIENT_RADIAL",
+                      "gradientHandlePositions": [{ "x": 0.5, "y": 0.5 }, { "x": 1, "y": 0.5 }, { "x": 0.5, "y": 1 }],
+                      "gradientStops": [
+                        { "position": 0, "color": { "r": 1, "g": 1, "b": 1, "a": 1 } },
+                        { "position": 1, "color": { "r": 0, "g": 0, "b": 0, "a": 1 } }
+                      ]
+                    }],
+                    "strokes": [{ "type": "SOLID", "color": { "r": 0, "g": 0, "b": 1, "a": 1 } }],
+                    "strokeWeight": 1,
+                    "strokeAlign": "OUTSIDE",
+                    "children": []
+                  },
+                  {
+                    "id": "1:5",
+                    "name": "Secondary",
+                    "type": "RECTANGLE",
+                    "absoluteBoundingBox": { "x": 490, "y": 400, "width": 170, "height": 44 },
+                    "size": { "x": 170, "y": 44 },
+                    "layoutSizingHorizontal": "FIXED",
+                    "layoutSizingVertical": "FIXED",
+                    "fills": [{
+                      "type": "GRADIENT_ANGULAR",
+                      "gradientHandlePositions": [{ "x": 0.5, "y": 0.5 }, { "x": 0.5, "y": 0 }, { "x": 1, "y": 0.5 }],
+                      "gradientStops": [
+                        { "position": 0, "color": { "r": 1, "g": 0, "b": 0, "a": 1 } },
+                        { "position": 1, "color": { "r": 0, "g": 0, "b": 1, "a": 1 } }
+                      ]
+                    }],
+                    "strokes": [{ "type": "SOLID", "color": { "r": 1, "g": 0, "b": 1, "a": 1 } }],
+                    "strokeWeight": 2,
+                    "strokeAlign": "CENTER",
+                    "strokeDashes": [4, 2]
+                  }
+                ]
+              },
+              {
+                "id": "1:6",
+                "name": "Photo",
+                "type": "RECTANGLE",
+                "absoluteBoundingBox": { "x": 400, "y": 460, "width": 200, "height": 100 },
+                "size": { "x": 200, "y": 100 },
+                "layoutSizingHorizontal": "FIXED",
+                "layoutSizingVertical": "FIXED",
+                "cornerRadius": 12,
+                "fills": [{ "type": "IMAGE", "scaleMode": "FILL", "imageRef": "img-photo-ref" }],
+                "strokes": []
+              },
+              {
+                "id": "1:7",
+                "name": "Icon",
+                "type": "VECTOR",
+                "absoluteBoundingBox": { "x": 480, "y": 570, "width": 40, "height": 40 },
+                "size": { "x": 40, "y": 40 },
+                "layoutSizingHorizontal": "FIXED",
+                "layoutSizingVertical": "FIXED",
+                "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1, "a": 1 } }],
+                "fillGeometry": [{ "path": "M0 0L40 0L40 40L0 40Z", "windingRule": "NONZERO" }]
+              },
+              {
+                "id": "1:8",
+                "name": "Floating badge",
+                "type": "ELLIPSE",
+                "absoluteBoundingBox": { "x": 860, "y": 210, "width": 30, "height": 30 },
+                "size": { "x": 30, "y": 30 },
+                "layoutPositioning": "ABSOLUTE",
+                "opacity": 0.8,
+                "blendMode": "MULTIPLY",
+                "fills": [{ "type": "SOLID", "color": { "r": 0, "g": 1, "b": 0, "a": 1 } }],
+                "effects": [{ "type": "LAYER_BLUR", "visible": true, "radius": 4 }]
+              },
+              {
+                "id": "1:9",
+                "name": "Hidden note",
+                "type": "TEXT",
+                "visible": false,
+                "absoluteBoundingBox": { "x": 0, "y": 0, "width": 10, "height": 10 },
+                "characters": "Hidden",
+                "style": { "fontFamily": "Inter", "fontSize": 10, "fontWeight": 400, "textAutoResize": "NONE", "textTruncation": "ENDING", "maxLines": 2 }
+              }
+            ]
+          },
+          {
+            "id": "2:1",
+            "name": "Free layout",
+            "type": "FRAME",
+            "absoluteBoundingBox": { "x": 1000, "y": 200, "width": 400, "height": 300 },
+            "size": { "x": 400, "y": 300 },
+            "fills": [{ "type": "SOLID", "color": { "r": 0.95, "g": 0.95, "b": 0.92, "a": 1 } }],
+            "children": [
+              {
+                "id": "2:2",
+                "name": "Group of things",
+                "type": "GROUP",
+                "absoluteBoundingBox": { "x": 1020, "y": 220, "width": 200, "height": 100 },
+                "size": { "x": 200, "y": 100 },
+                "fills": [],
+                "children": [
+                  {
+                    "id": "2:3",
+                    "name": "Tilted",
+                    "type": "RECTANGLE",
+                    "absoluteBoundingBox": { "x": 1020, "y": 220, "width": 200, "height": 100 },
+                    "size": { "x": 180, "y": 40 },
+                    "relativeTransform": [[0.866, 0.5, 20], [-0.5, 0.866, 20]],
+                    "fills": [{ "type": "SOLID", "color": { "r": 0.1, "g": 0.2, "b": 0.8, "a": 1 } }]
+                  }
+                ]
+              },
+              {
+                "id": "2:4",
+                "name": "Middle aligned",
+                "type": "TEXT",
+                "absoluteBoundingBox": { "x": 1020, "y": 400, "width": 200, "height": 80 },
+                "size": { "x": 200, "y": 80 },
+                "characters": "UPPER and centred",
+                "fills": [{ "type": "SOLID", "color": { "r": 0.1, "g": 0.1, "b": 0.1, "a": 1 } }],
+                "style": { "fontFamily": "Space Grotesk", "fontWeight": 500, "fontSize": 18, "textAlignHorizontal": "RIGHT", "textAlignVertical": "CENTER", "textAutoResize": "NONE", "textCase": "UPPER", "textDecoration": "NONE", "lineHeightPx": 24, "lineHeightUnit": "INTRINSIC_%" }
+              },
+              {
+                "id": "2:5",
+                "name": "Slice ignored",
+                "type": "SLICE",
+                "absoluteBoundingBox": { "x": 1020, "y": 220, "width": 10, "height": 10 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "0:2",
+        "name": "Components",
+        "type": "CANVAS",
+        "children": [
+          {
+            "id": "3:1",
+            "name": "Grid",
+            "type": "COMPONENT",
+            "absoluteBoundingBox": { "x": 0, "y": 0, "width": 300, "height": 200 },
+            "size": { "x": 300, "y": 200 },
+            "layoutMode": "GRID",
+            "gridColumnCount": 3,
+            "gridRowCount": 2,
+            "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1, "a": 1 } }],
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "components": {},
+  "componentSets": {},
+  "styles": {}
+}

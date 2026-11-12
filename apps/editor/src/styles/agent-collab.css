@@ -1,0 +1,66 @@
+/* The agent loop with people: files on comments, steps under a thread, the queue, undo of a run, what a run changed. */
+
+.comment-file.is-doc { width: auto; max-width: 160px; padding: 0 20px 0 6px; display: flex; align-items: center; }
+.comment-doc { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ui-fg-2); min-width: 0; }
+.comment-doc span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.message-docs { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 4px; }
+.message-doc { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; height: 22px; padding: 0 6px; border: 1px solid var(--ui-border); border-radius: 3px; font-size: 12px; color: var(--ui-fg); text-decoration: none; }
+.message-doc span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.message-doc:hover { background: var(--hover); }
+
+.thread-run-box { display: flex; flex-direction: column; }
+.thread-run-reason { font-size: 12px; color: var(--ui-fg-2); padding-left: 19px; }
+.thread-steps { list-style: none; margin: 2px 0 0; padding: 0 0 0 19px; display: flex; flex-direction: column; gap: 1px; font-size: 12px; color: var(--ui-fg-2); }
+.thread-steps li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thread-steps li.is-now { color: var(--ui-fg); }
+
+/* The same under a comment on the phone, at its sizes. */
+.pf-run-box { display: flex; flex-direction: column; gap: 4px; }
+.pf-run-reason { font-size: 14px; color: var(--p-dim); margin: 0; }
+.pf-run-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--p-dim); }
+.pf-run-steps li.is-now { color: var(--p-ink); font-weight: 600; }
+
+.queue-count { font-weight: 400; color: var(--ui-fg-2); margin-left: 4px; }
+.queue-row { display: flex; align-items: flex-start; gap: 4px; font-size: 12px; padding: 2px 0; }
+.queue-row .run-dot { margin-top: 6px; }
+.queue-row.is-running .run-dot { background: var(--ui-accent); }
+.queue-pos { width: 12px; flex: none; text-align: right; color: var(--fg-3); line-height: 18px; }
+.queue-main { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; padding: 0 2px; border-radius: 3px; }
+.queue-main:hover { background: var(--hover); }
+.queue-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 18px; }
+.queue-meta { color: var(--ui-fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.queue-reason { color: var(--ui-fg-2); }
+.queue-row .icon-btn { width: 20px; height: 20px; flex: none; }
+
+/* What a run changed, under its last words: layers that select, before and after, and Undo this run. */
+.prompt-turn { display: contents; }
+.run-result { display: flex; flex-direction: column; gap: 4px; padding: 4px 0 6px; font-size: 12px; }
+.run-result-layers { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.run-result-label { color: var(--ui-fg-2); }
+.run-result-layer { height: 20px; max-width: 160px; padding: 0 6px; border: 1px solid var(--ui-border); border-radius: 3px; font-size: 12px; color: var(--ui-accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.run-result-layer:hover { background: var(--hover); text-decoration: underline; }
+.run-result-layer.is-gone { color: var(--fg-3); text-decoration: line-through; line-height: 18px; }
+.run-result-more { color: var(--ui-fg-2); }
+.run-result-shots { display: flex; align-items: center; gap: 6px; color: var(--fg-3); }
+.run-result-shots img, .run-result-none { width: 96px; height: 64px; object-fit: contain; border: 1px solid var(--ui-border); border-radius: 3px; background: var(--ui-bg-3); }
+.run-result-none { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--fg-3); }
+.run-result-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.run-result-undo { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 6px; border-radius: 3px; font-size: 12px; color: var(--ui-fg); }
+.run-result-undo:hover:not(:disabled) { background: var(--hover); }
+.run-result-note { color: var(--ui-fg-2); }
+
+.run-result.is-phone { font-size: 15px; gap: 8px; padding: 8px 0; color: inherit; }
+.run-result.is-phone .run-result-label, .run-result.is-phone .run-result-more, .run-result.is-phone .run-result-note { color: inherit; opacity: .7; }
+.run-result.is-phone .run-result-layer { height: 36px; max-width: 220px; padding: 0 10px; font-size: 15px; color: inherit; border-color: currentColor; border-radius: 0; line-height: 34px; }
+.run-result.is-phone .run-result-shots img, .run-result.is-phone .run-result-none { width: 128px; height: 88px; border-radius: 0; }
+.run-result.is-phone .run-result-undo { min-height: 44px; padding: 0 12px; border: 2px solid currentColor; border-radius: 0; font-size: 15px; font-weight: 700; color: inherit; }
+
+.agents-check .btn { align-self: flex-start; margin: 4px 0; }
+.check-runner { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.check-runner-head { font-size: 12.5px; font-weight: 500; }
+.check-case { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; font-size: 12px; padding: 2px 0 2px 8px; border-left: 2px solid var(--ui-border); }
+.check-case.is-ok { border-left-color: var(--ui-accent); }
+.check-case.is-bad { border-left-color: var(--ui-danger); }
+.check-case-verdict { color: var(--ui-fg-2); text-align: right; }
+.check-case-detail { grid-column: 1 / -1; color: var(--ui-fg-2); }

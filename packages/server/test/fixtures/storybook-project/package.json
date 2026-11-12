@@ -1,0 +1,17 @@
+{
+  "name": "storybook-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "storybook": "storybook dev -p 6006"
+  },
+  "dependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@storybook/react-vite": "^9",
+    "storybook": "^9",
+    "tailwindcss": "^4"
+  }
+}
