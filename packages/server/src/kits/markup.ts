@@ -1,4 +1,4 @@
-import { iconSvg } from '@bogen/core/icons';
+import { hasIcon, iconSvg } from '@bogen/core/icons';
 import type { Variant } from './types.ts';
 
 /**
@@ -47,6 +47,8 @@ export const ICONS = {
 
 /** An icon as an svg layer in the text colour. */
 export function icon(name: string, size: number, layerName = 'Icon', strokeWidth = 2): string {
+  // A name that is not in the set would draw nothing, unseen: say so while the kit is written.
+  if (!hasIcon(name)) throw new Error(`Kit error: there is no Lucide icon "${name}".`);
   const svg = iconSvg(name, { strokeWidth }).replace('width="100%" height="100%"', `width="${size}" height="${size}"`);
   return svg.replace('<svg', `<svg data-name="${escapeHtml(layerName)}" style="flex-shrink: 0"`);
 }

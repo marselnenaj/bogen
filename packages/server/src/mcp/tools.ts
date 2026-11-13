@@ -9,10 +9,12 @@ import { registerDataTools } from './tools-data.ts';
 import { registerCodeTools } from './tools-code.ts';
 import { registerCustomCheckTools } from './tools-custom-checks.ts';
 import { registerCheckTools } from './tools-check.ts';
+import { registerComplianceTools } from './tools-compliance.ts';
 import { registerDesignTools } from './tools-design.ts';
 import { registerDesignKnowledgeTools } from './tools-design-knowledge.ts';
 import { registerDriftTools } from './tools-drift.ts';
 import { registerFileTools } from './tools-files.ts';
+import { registerFontTools } from './tools-fonts.ts';
 import { registerImageTools } from './tools-images.ts';
 import { registerCanvasPlanTools } from './tools-canvas-plan.ts';
 import { registerLayoutTools } from './tools-layout.ts';
@@ -43,6 +45,7 @@ export function registerAllTools(server: McpServer, app: BogenServer, session: S
   registerDesignTools(define);
   registerDesignKnowledgeTools(define);
   registerImageTools(define);
+  registerFontTools(define);
   registerComponentTools(define);
   registerCodeTools(define);
   registerLibraryTools(define);
@@ -50,6 +53,7 @@ export function registerAllTools(server: McpServer, app: BogenServer, session: S
   registerCanvasPlanTools(define);
   registerLiveTools(define);
   registerCheckTools(define);
+  registerComplianceTools(define);
   registerPrototypeTools(define);
   registerCustomCheckTools(define);
   registerProposalTools(define);

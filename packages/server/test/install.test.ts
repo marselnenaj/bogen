@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { install } from '../src/install.ts';
+import { install, selfCommand } from '../src/install.ts';
 
 describe('install, with no client CLIs on PATH', () => {
   const saved = { HOME: process.env.HOME, PATH: process.env.PATH, XDG: process.env.XDG_CONFIG_HOME, CODEX: process.env.CODEX_HOME };
@@ -73,5 +73,16 @@ describe('install, with no client CLIs on PATH', () => {
     const results = await install(['cursor', 'zed'], { command, onlyDetected: true });
     expect(results.find((r) => r.client === 'cursor')!.skipped).toBeUndefined();
     expect(results.find((r) => r.client === 'zed')!.skipped).toBe(true);
+  });
+
+  it('names the command install.sh wrote for this script when bogen is not on PATH', () => {
+    const script = join(home, '.local', 'share', 'bogen-app', 'lib', 'node_modules', 'bogen-design', 'dist', 'cli.js');
+    expect(selfCommand(script).args.slice(-2)).toEqual([script, 'mcp']);
+    mkdirSync(join(home, '.local', 'bin'), { recursive: true });
+    const wrapper = join(home, '.local', 'bin', 'bogen');
+    writeFileSync(wrapper, `#!/bin/sh\n# Written by Bogen's install.sh.\nnode='/usr/bin/node'\nexec "$node" '${script}' "$@"\n`);
+    expect(selfCommand(script)).toEqual({ command: wrapper, args: ['mcp'] });
+    // A wrapper for another copy is not this one.
+    expect(selfCommand(join(home, 'elsewhere', 'dist', 'cli.js')).command).toBe(process.execPath);
   });
 });

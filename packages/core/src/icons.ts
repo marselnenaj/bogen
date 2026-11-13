@@ -30,11 +30,19 @@ export function hasIcon(name: string): boolean {
 
 /** Icons by name and common words, best first. */
 export function searchIcons(query: string, limit = 60): string[] {
-  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const names = iconNames();
+  return rankIconNames(iconNames(), query, limit);
+}
+
+/**
+ * Names of a set ranked for a query, by the words of the name and common words for them, best first. A name may
+ * join its words with dashes or underscores, as Material Symbols does.
+ */
+export function rankIconNames(names: string[], query: string, limit = 60): string[] {
+  const words = query.trim().toLowerCase().split(/[\s_]+/).filter(Boolean);
   if (!words.length) return names.slice(0, limit);
   const scored: { name: string; score: number }[] = [];
-  for (const name of names) {
+  for (const original of names) {
+    const name = original.replace(/_/g, '-');
     let score = 0;
     for (const word of words) {
       let best = 0;
@@ -54,12 +62,12 @@ export function searchIcons(query: string, limit = 60): string[] {
       }
       score += best;
     }
-    if (score) scored.push({ name, score: score - name.length / 100 });
+    if (score) scored.push({ name: original, score: score - name.length / 100 });
   }
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map((s) => s.name);
 }
 
-function distance(a: string, b: string): number {
+export function iconNameDistance(a: string, b: string): number {
   let row = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
     const next = [i];
@@ -73,7 +81,7 @@ function distance(a: string, b: string): number {
 export function closestIcons(name: string, limit = 6): string[] {
   const direct = searchIcons(name, limit);
   if (direct.length) return direct;
-  return iconNames().map((n) => ({ n, d: distance(name, n) })).sort((a, b) => a.d - b.d).slice(0, limit).map((x) => x.n);
+  return iconNames().map((n) => ({ n, d: iconNameDistance(name, n) })).sort((a, b) => a.d - b.d).slice(0, limit).map((x) => x.n);
 }
 
 export interface IconOptions { strokeWidth?: number; color?: string }

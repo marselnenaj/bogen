@@ -2,7 +2,7 @@
 
 **Give your agent a canvas.**
 
-<a href="https://github.com/marselnenaj/bogen/releases/latest"><img src="https://img.shields.io/badge/version-0.1.0-2b3df2" alt="Version 0.1.0"></a>
+<a href="https://github.com/marselnenaj/bogen/releases/latest"><img src="https://img.shields.io/badge/version-0.2.0-2b3df2" alt="Version 0.2.0"></a>
 
 Bogen is an open-source design tool where you and your coding agent edit the same canvas. Every layer is real
 HTML and CSS. Connect Claude Code, Codex or another MCP client, then work on a website, an app interface or an
@@ -22,9 +22,12 @@ On Omarchy, with **Node 22.18 or newer** and a Chromium-based browser installed:
 
 ```sh
 curl -fsSL https://bogen.dev/install.sh | bash
-bogen install claude-code    # For Codex, use: bogen install codex
 bogen open
 ```
+
+At the end the installer lists the coding agents it finds (Claude Code, Codex and others) and asks to connect each
+one; Enter means yes. Run `bogen setup` later to connect another, or set `BOGEN_AGENTS=claude-code,codex` (or `all`,
+`none`) to answer ahead.
 
 The installer verifies the release checksum and signature, installs for your user, and sets up the Omarchy
 launcher, bar widget and background service. It never uses `sudo`. [Read the script](install.sh), or pass
@@ -71,7 +74,8 @@ while it works. It can take screenshots of the result and run design checks befo
 For a larger change, the agent can place a proposal beside the current design. Compare the two and decide what
 stays. Agent edits have their own undo, so reverting an agent's work does not undo yours.
 
-Claude Code and Codex have been tested with real runs. Other MCP clients can use `bogen mcp` over stdio or connect
+Claude Code and Codex have been tested with real runs. A session that was open before Bogen was connected does not
+have its tools yet: start a new one. Other MCP clients can use `bogen mcp` over stdio or connect
 to `http://127.0.0.1:29990/mcp`. The [agent guide](docs/guide/agents.md) lists the setup commands and which clients
 have been tried. The [MCP reference](docs/guide/reference/mcp-tools.md) lists the tools.
 

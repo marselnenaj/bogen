@@ -2,49 +2,73 @@ import { ANTI_SLOP_POLICY } from './anti-slop.ts';
 /** Bogen-authored operating guidance. No network, citations or outside instructions are needed to use it. */
 export interface DesignDecision {
   id: string; title: string; when: string; action: string; check: string; repair: string; exception: string;
+  /** The likely failure in a few words, so that a model can recognise it in a screenshot. */
+  failure: string;
 }
 export interface DesignPlaybook {
   id: string; name: string; aliases: string[]; responsive: boolean; goal: string;
+  /** What a strong piece of this medium contains: the bar against simple work, in concrete terms. */
+  ambition: string[];
   brief: string[]; states: string[]; deliver: string[];
   review: { id: 'priority' | 'content' | 'context'; question: string }[];
   decisions: DesignDecision[];
 }
 function book(id: string, name: string, aliases: string[], responsive: boolean, goal: string, brief: string[], states: string[], deliver: string[], review: string[], lines: string): DesignPlaybook {
-  return { id, name, aliases, responsive, goal, brief, states, deliver,
+  return { id, name, aliases, responsive, goal, ambition: AMBITION[id] ?? [], brief, states, deliver,
     review: review.map((question, i) => ({ id: (['priority', 'content', 'context'] as const)[i]!, question })),
     decisions: lines.trim().split('\n').map((line, i) => {
       const fields = line.split('|').map(s => s.trim());
       if (fields.length !== 7 || fields.some(s => !s)) throw new Error(`Incomplete design decision ${id}:${i + 1}`);
       const [title, when, action, check, repair, exception] = fields;
       // The seventh field states the likely failure, so a model can recognize it in a screenshot.
-      return { id: `${id}-${i + 1}`, title: title!, when: when!, action: action!, check: check!, repair: `${fields[6]}: ${repair}`, exception: exception! };
+      return { id: `${id}-${i + 1}`, title: title!, when: when!, action: action!, check: check!, repair: `${fields[6]}: ${repair}`, exception: exception!, failure: fields[6]! };
     }),
   };
 }
 
+/** What a strong piece of each medium holds, as things a screenshot can show. The bar against simple work. */
+const AMBITION: Record<string, string[]> = {
+  foundations: ['One idea that organises the piece, still visible in a blurred screenshot.', 'Type set, not only sized: a scale, tightened display type, chosen line breaks, running text at 45 to 75 characters.', 'Real content at its real length, including the longest name and the empty case.'],
+  websites: ['A first screen that shows the product or its world large: its real screen, output or object, not a mock card in a corner.', 'Each section in the form its content has (a timeline, a table of real values, a drawn mechanism, one large quote), so that no two sections share a skeleton.', 'Specific copy in quantity: names, units, prices and conditions from the brief; a closing action that names its outcome; the narrow width designed, not squeezed.'],
+  'mobile-apps': ['The primary task within thumb reach on the first screen, with real data in it.', 'The states the task has, drawn: empty, loading, error, success, long text, offline.', 'Platform detail: safe areas, system bars, 44pt targets, native controls where the platform has them.'],
+  'desktop-apps': ['A working surface: the object being edited fills the window, with its tools around it.', 'Selection, hover, focus, disabled and multi-select states shown, with shortcuts where they exist.', 'Realistic volume: forty rows, long names and mixed states, not three tidy samples.'],
+  forms: ['Each field with its real label, format hint and the error it shows, drawn.', 'The flow as screens: start, a field in error, review, success.', 'Defaults and autofill where a person expects them, and one primary action per step.'],
+  ecommerce: ['The goods large and real: photographs or drawings of the actual product, prices with currency and tax, stock and delivery dates.', 'The choice a buyer makes, side by side: variants, sizes, comparison.', 'Cart, a checkout error and the confirmation as states.'],
+  dashboards: ['Answers before charts: the two or three questions the reader asks, each answered by a chart with labelled axes, units and a time range.', 'Data that looks real: variance, an outlier, a gap, and a note on what changed.', 'Density with order: tabular figures aligned, colour kept for status, filters, and the empty and loading states.'],
+  'pitch-decks': ['One message per slide, set large, with the evidence that proves it beside it.', 'One visual system across slides, with a recurring device taken from the subject.', 'Each slide judged at 960px wide: no text under the viewing size.'],
+  social: ['One visual idea: a real photograph or drawn scene used as a metaphor for what the product does, filling the frame, not a stock mood or a flat ground.', 'A headline of two to six words that turns on the picture, set in its calm area and readable at 390px, with the brand inside the scene and a small logo in a corner.', 'One colour treatment per image (duotone, black and white with one coloured object, night with one light), and no chips, cards, feature bullets or gradients.'],
+  email: ['A single 600px column that still reads with images off.', 'One action as a button that works in every client, and a plain-text version.', 'The sender, subject line and preheader written as part of the design.'],
+  documentation: ['A reading layout: 60 to 75 characters a line, clear heading levels, navigation and contents on the page.', 'Real examples: code, commands, screenshots and their output; callouts only for warnings that matter.', 'The longest page, a search result and a not-found state.'],
+  brand: ['A system with a reason: mark, type, colour and voice each traced to the subject.', 'Applied, not only listed: the brand on three or more real touchpoints.', 'Rules a person can follow: clear space, minimum sizes, pairings, and do and do not with real examples.'],
+  motion: ['A storyboard with timing: frames, durations, easing and what each move explains.', 'One orchestrated moment rather than scattered effects, and a reduced-motion version.', 'Start and end frames that work as stills.'],
+  localization: ['The longest language and right-to-left drawn, not assumed.', 'Dates, numbers, currency and names in their real local formats.', 'Layouts that grow: no fixed widths on text.'],
+  themes: ['Every surface the system draws, in the palette: terminals, editor, bar, launcher, lock screen.', 'Contrast checked on what people read most.', 'A background with an idea from the theme\'s name, composed for each screen shape.'],
+  widgets: ['The widget at its real size and density, with live-looking data.', 'Compact, hover, expanded and error states.', 'The host system\'s type, spacing and colours.'],
+};
+
 export const DESIGN_WORKFLOW = {
   antiSlop: ANTI_SLOP_POLICY,
   authorship: 'Original Bogen working guidance; design heuristics, not a claim of empirical proof or automatic taste.',
-  /** What decides whether work is accepted, most important first. An agent reads this before anything else. */
+  /** What decides whether work is accepted, most important first. The server instructions say the same in working order. */
   bar: [
-    'One message, one action. Each screen has one main message and one primary action. A long page gets two or three loud peaks with quiet stretches between. Blur the screenshot: one thing must still lead.',
-    'Type is designed, not just big. At most two families. Five or six sizes from one declared scale, such as 14, 16, 20, 28, 44, 72. On a marketing surface the display size is at least 2.5 times the body size. Large type gets tighter tracking and leading and chosen line breaks. No monospace, capitals or small labels over headings as decoration.',
-    'Spacing comes from one scale, such as 4, 8, 12, 16, 24, 40, 64, 104. The gap between sections is at least twice the gap inside them. Equal things get equal gaps.',
-    'Colour: neutrals and one accent. The accent marks the primary action and what matters, on about a tenth of the surface at most. Text reaches 4.5:1, and text over a picture gets a scrim.',
-    'Show the real thing: the actual product screen, object or data, large enough to read. No drawn window frames, decorative terminals or abstract shapes in its place.',
-    'Copy sells from the customer side: what they get, in words they would use. Not a test report (verified, all checks passed), not a hedge (may help, aims to), not chopped slogans. Every number, name and quote comes from the brief, the file or the brand; otherwise leave it out.',
-    'Neither default look. Not the generated classic: grotesk plus mono, dark with glow, cards and borders around everything, dot grids, tilted cards, gradient text. Not its overcorrection either: warm beige, a serif and forest green. Take type, palette and composition from this subject and say why.',
-    'Decide yourself. Choose the direction, give one sentence of reason per choice and do not hand the choice back. Judge the whole deliverable, not its first screen, and show range instead of one layout repeated.',
-    'Finish: nothing clipped or covered by another layer, no text under 12px, and fixed formats judged at the size they are seen: a 1080px social image shows at about 390px, so 25px there is the floor and 32px is comfortable. No emoji or emoji-like glyphs such as arrows.',
+    'Direction first. Audience, one message and one primary action per screen, an idea taken from the subject\'s own world with two real references, and type and colour chosen for it. A direction that would fit any similar brief is a default, not a choice.',
+    'Show the real thing large: the product\'s screen, output or object, drawn in HTML or SVG or made with an image tool. Type and boxes alone are a wireframe.',
+    'Density and detail: specific content in quantity, real labels, units and long names, and the states the task has (hover, selected, empty, error, loading). Facts only from the brief, the file or the brand.',
+    'Hierarchy you can see blurred: one loud thing per screen, display type at 2.5 times the body or more on a marketing surface, five or six sizes from one scale, large type with tighter tracking and chosen line breaks.',
+    'A layout idea per section, in the form its content has: a curve, a table of real values, a timeline, a drawn mechanism, one large quote. No skeleton repeated down the page, and every section held to the level of the first.',
+    'Spacing from one scale, the gap between sections at least twice the gap inside them. Colour: a palette with roles taken from the subject (ground, ink, supporting colours, an action colour), tinted neutrals, a contrast chosen on purpose; text at 4.5:1, a scrim over pictures.',
+    'Copy from the customer side, in words they would use: not a test report, not a hedge, not chopped slogans.',
+    'Past the first idea: the house looks (one grotesk with monospace labels, dark with glow, cream with terracotta, navy with amber, grey with one accent, hairline-ruled rows, cards around everything) are what a model reaches for first. Use one when the direction chose it, and say why. Decide yourself; do not hand the choice back.',
+    'Finish: nothing clipped or covered, no text under 12px, fixed formats judged at the size they are seen (a 1080px social image shows at about 390px, so 25px is the floor there).',
   ],
   brief: ['Audience and concrete task', 'Artifact and delivery size', 'Real content and unknown facts', 'Brand, language and platform', 'Existing file, branch and scope', 'Observable acceptance criteria'],
   briefPolicy: 'Infer from the request and existing work first. State reversible assumptions. Ask only when a missing answer blocks the task. Do not fabricate claims, product behavior or business data.',
   sequence: [
-    'Brief and point of view. Read the file, tokens, brand and request. Then write down, in your reply or working notes and not on the canvas: the audience, the one idea that carries the piece, the one action, and two or three real products of the same class at top level with what you take from each. Look at real screenshots of them when you have or can capture them; borrow principles, never layouts.',
-    'System before screens. Set the type scale, the spacing scale, neutrals and one accent as tokens (tokens_set, type_scale_set), with at most two families. From here on every value comes from them.',
-    'Choose the information order, navigation and necessary states. Then build one section or task path with real content, look at it with canvas_screenshot and fix what is visibly wrong before the next. Reuse components.',
+    'Direction. Read the file, tokens, brand and request. Sketch three directions in a line each, keep the one only this subject could have, and write it down in your reply: audience and job, the idea with two references, type, colour as named hex values, and a layout sentence per screen.',
+    'System before screens. Set the type scale, the spacing scale and the colours as tokens (tokens_set, type_scale_set), with at most two families. From here on every value comes from them.',
+    'Build one section or task path at a time with real content in quantity, look at it with canvas_screenshot and fix what is visibly wrong before the next. Give each section its own form. Reuse components.',
     'Adapt to the real sizes: responsive_check for pages, the delivery size for fixed media. Do not squeeze a deck or a social image through a website layout.',
-    'Review the whole artboard in a fresh screenshot at scale 1, section by section, not only the first screen. Run design_lint and design_review, and fix each finding or name the reason it stays.',
+    'Review the whole artboard at scale 1, section by section. Run design_lint and design_review; fix every hard finding (an objective defect), and weigh each advisory one against the direction: change it, or keep it and say why.',
     'Score the rubric. Repair the lowest criterion first and look again. Under 32 of 40 after repair, make a second direction with proposal_create and compare the two. Then design_verify with observations and rubric, and report the scores, the measured results and what is open.',
   ],
   priorities: ['P0: task blocked, content lost or a dangerous action ambiguous', 'P1: essential action, content, state or narrow layout missing', 'P2: confusing hierarchy, grouping, density or consistency', 'P3: local visual polish'],
@@ -158,16 +182,16 @@ Sequence variation | Every slide has the same skeleton | Vary composition with t
 Decision ending | The deck stops after features | Restate the opportunity, next step and requested commitment | Find the ask without guessing from earlier slides | Add a concrete ending using supplied facts | Do not invent financing terms or contact information | No actionable close
 One-page adaptation | A deck becomes a leave-behind | Recompose a self-contained argument rather than shrink every slide | Read the page at normal size without narration | Keep only essential claim, mechanism, evidence and next step | Detail belongs in a linked appendix when supplied | Miniature deck collage
 `),
-  book('social', 'Social graphics and launch assets', ['social','carousel','story','tweet','post','social media'], false,
-    'Communicate one credible idea in the actual placement and viewing context.',
-    ['Placement and output size','Audience and message','Real assets and destination'], ['First frame','Supporting frames','Mute viewing','Crop-safe view','Final action'], ['Placement-specific composition','A coherent optional sequence'],
-    ['Is the opening understandable without previous context?','Does each frame add useful real information?','Is essential content legible at the actual placement size?'], `
+  book('social', 'Social graphics, ads and launch assets', ['social','carousel','story','tweet','post','social media','ad','ads','advert','campaign','poster','anzeige','kampagne','plakat'], false,
+    'Make one idea land in a second, in the actual placement: one picture, one turn of phrase, the brand inside it.',
+    ['Placement and output size','Audience and the one thing the product does for them','The visual metaphor: one real scene or object that shows that thing, and where the brand sits inside it','A headline of two to six words with a turn: a second meaning, a pun or a reversal on the picture','The picture and its source','Destination'], ['First frame','Supporting frames','Mute viewing','Crop-safe view','Final action'], ['Placement-specific composition','A coherent optional set'],
+    ['Does the picture carry the idea before the words are read?','Does the headline turn on the picture rather than describe it?','Is it legible and the brand recognisable at the actual placement size?'], `
+Visual metaphor | An ad or campaign image is made | Find one real scene or object that shows what the product does by analogy, such as a container ship for shipping code, and let it fill the frame | Say the metaphor in one sentence without the headline | Replace feature lists, chips and interface cards with that one picture | A product people already want can be the picture itself, large | Logo and claims on a flat ground
+Headline with a turn | The picture needs words | Write two to six words that turn on the picture (a second meaning, a pun, a reversal) and set them in its calm area | Read the headline alone, then with the picture: the picture must add the second meaning | Cut every word the picture already says | A plain offer such as a price or a date can be the headline | Slogan that explains the picture
+Brand in the scene | The brand has to be recognised | Put the name or mark into the scene, on a sign, a sail or a label, and keep a small logo in a corner | Find the brand without reading the corner logo | Move the logo off a banner and into the scene | Strict brand rules can require a fixed lockup | Logo stamped on top
+One treatment | A photograph carries the image | Make the photograph with your own image tool or take the supplied one, asset_upload it, and give it one treatment (duotone in the brand colour, black and white with one coloured object, night with one light) with image_filter and a colour layer in mix-blend-mode | Compare the set: one treatment per image, shared across the set | Remove extra gradients, glows and overlays | A brand photograph can stay natural | Several effects on one picture
 Placement first | The output goes into a feed or story | Choose aspect, safe content area and viewing context before layout | Inspect the final output at typical display size | Recompose rather than crop essential text | Current platform delivery limits need separate release checks | Wrong-format master
-Single message | A graphic carries too many claims | Give the image one useful message and supporting context | Read the headline at thumbnail size | Remove secondary points or make a sequence | A technical diagram can carry detail if the placement permits it | Poster packed with copy
-First-frame context | A viewer enters mid-feed | Name the subject and reason to care immediately | Understand the first frame without the caption | Replace vague teasers with a concrete promise | Established audiences can tolerate less introduction | Context-free hook
 Sequence progression | A carousel repeats itself | Give each frame a distinct role and a useful order | State what new information every frame adds | Merge repeated frames and fix missing transitions | Do not stretch a short idea to fill a fixed count | Repeated headline carousel
-Real product view | A launch uses a screen | Show the relevant part at a readable scale | Identify the advertised capability from the visible UI | Crop nonessential chrome or isolate the task | Label concept UI if it is not shipped | Unreadable app screenshot
-Brand recognition | Several assets belong together | Reuse type, color roles and visual motifs across varied compositions | Compare the first, middle and final assets | Restore shared roles without forcing the same layout | A campaign can intentionally introduce a new motif | Inconsistent campaign identity
 Honest caption | Copy overstates the product | State the real differentiator and a concrete use case | Trace every capability and number to the supplied brief | Remove inflated or unsupported claims | Tone may be expressive without inventing facts | Generic launch hype
 Clear destination | A graphic asks for action | Name the next step and use a supplied destination | Understand what happens after responding | Replace vague CTAs and never fabricate a URL | Some editorial posts aim only to inform | Unclear or fake destination
 `),

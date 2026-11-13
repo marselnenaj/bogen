@@ -54,9 +54,11 @@ export async function startRealServer(options: { editorDir?: string; seed?: Seed
  * `--no-sandbox`; a wrapper that keeps the browser off the network, such as secure-chromium, is given the
  * server's port with `--secure-local-port` and talks over a pipe.
  */
-export async function launch(localPort?: number): Promise<Browser> {
+export async function launch(localPort?: number, options: { fakeMedia?: boolean } = {}): Promise<Browser> {
   const named = process.env.BOGEN_BROWSER ?? join(homedir(), '.local/bin/secure-chromium');
-  const gl = ['--enable-webgl', '--use-gl=swiftshader', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--window-size=1500,960'];
+  // A made-up microphone, allowed without a prompt, for tests of recording. These are media flags, not sandbox flags.
+  const media = options.fakeMedia ? ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] : [];
+  const gl = ['--enable-webgl', '--use-gl=swiftshader', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--window-size=1500,960', ...media];
   const launchSandboxed = async ({ chromiumSandbox }: { chromiumSandbox: true }): Promise<Browser> => {
     if (chromiumSandbox !== true) throw new Error('Browser tests require the Chromium sandbox.');
     const wrapped = /secure-chromium$/.test(named);

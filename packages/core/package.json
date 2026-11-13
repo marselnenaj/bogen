@@ -1,12 +1,13 @@
 {
   "name": "@bogen/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "license": "GPL-3.0-or-later",
   "exports": {
     ".": "./src/index.ts",
     "./icons": "./src/icons.ts",
-    "./css-check": "./src/css-check.ts"
+    "./css-check": "./src/css-check.ts",
+    "./icon-sets": "./src/icon-sets.ts"
   },
   "dependencies": {
     "css-select": "^7",

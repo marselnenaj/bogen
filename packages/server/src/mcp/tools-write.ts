@@ -226,7 +226,11 @@ export function registerWriteTools(define: ToolDefiner): void {
     ctx.touch([id]);
     const plan = readCanvasPlan(room.doc, pageId);
     const screenCount = room.doc.getChildren(pageId).filter(n => n.artboard && !n.hidden).length;
-    return { id, name, page_id: pageId, x: left, y, width, height: height ?? 'hug', ...(screenCount >= 3 || grouping ? { organization: { screens: screenCount, planned_sections: plan.sections.length, layout_pending: Boolean(plan.layout_pending), next: 'Read canvas_plan_get, add this screen to its meaningful section/lane, then canvas_plan_set with dry_run. Do not leave unrelated screens in a row or generic grid.' } } : {}) };
+    // Read at the moment it matters: the first screen of a medium is where a default skeleton starts.
+    const format = FRAME_PRESETS.find((p) => p.w === width && p.h === height)?.group;
+    const medium = format === 'Social' ? 'social' : format === 'Slides' ? 'pitch-decks' : width <= 480 ? 'mobile-apps' : null;
+    const before = `Before the first html_write: write the direction (audience and job, the idea with two references, type, colour, a layout sentence for this screen).${medium ? ` Read design_knowledge action skill discipline ${medium} for what strong work in this format holds.` : ''}`;
+    return { id, name, page_id: pageId, x: left, y, width, height: height ?? 'hug', next: before, ...(screenCount >= 3 || grouping ? { organization: { screens: screenCount, planned_sections: plan.sections.length, layout_pending: Boolean(plan.layout_pending), next: 'Read canvas_plan_get, add this screen to its meaningful section/lane, then canvas_plan_set with dry_run. Do not leave unrelated screens in a row or generic grid.' } } : {}) };
   });
 
   define('html_write', { description: `Write real HTML to the canvas. Each element becomes an editable layer. This is your main drawing tool.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BogenDoc, CRAFT_CRITERION, CRAFT_LIMITS, craftFindings, designReview, importHtml, type CraftRule } from '../src/index.ts';
+import { BogenDoc, CRAFT_CRITERION, CRAFT_HARD, CRAFT_LIMITS, craftFindings, designReview, importHtml, type CraftRule } from '../src/index.ts';
 import { CONSIDERED, CRAFT_TOKENS, GENERATED } from './fixtures/design-craft.ts';
 
 function build(html: string, options: { style?: Record<string, string>; attrs?: Record<string, string>; name?: string; tokens?: boolean; template?: boolean; theme?: boolean } = {}) {
@@ -29,7 +29,7 @@ describe('craft checks on a whole page', () => {
     const { doc, id } = build(GENERATED, { tokens: true });
     const found = craftFindings(doc, id);
     expect(found.map((f) => f.rule).sort()).toEqual([
-      'all-caps', 'boxes', 'centred', 'decorative-mono', 'default-gradient', 'eyebrow', 'font-families', 'glow', 'heavy-type', 'loud-type',
+      'boxes', 'caps-label', 'centred', 'decorative-mono', 'default-gradient', 'eyebrow', 'font-families', 'glow', 'heavy-type', 'loud-type',
       'nested-boxes', 'pattern-background', 'primary-actions', 'text-on-image', 'tilt', 'type-scale', 'window-chrome',
     ]);
     for (const f of found) {
@@ -213,29 +213,32 @@ describe('each craft check has a testable line', () => {
 
   it('viewing size: under 9px where it is seen, a social image at 390px and a slide at 960px; a web page at its own width', () => {
     const social = { style: { width: '1080px', height: '1080px' } };
+    // These boards are about the viewing size; the picture an ad needs is tested on its own.
+    const seen = (html: string, o?: Parameters<typeof build>[1]) => rules(html, o).filter((r) => r !== 'no-picture');
     const f = finding('<h1 style="font-size:96px">Launch day</h1><p style="font-size:20px">Small print nobody reads</p>', 'viewing-size', social)!;
     expect(f.numbers).toEqual({ texts: 1, need: 25, smallest: 20 });
     expect(f.message).toContain('shows at 7.2px');
-    expect(rules('<h1 style="font-size:96px">Launch day</h1><p style="font-size:25px">Readable</p>', social)).toEqual([]);
-    expect(rules('<p style="font-size:16px">Footnote</p>', { style: { width: '1920px', height: '1080px' }, attrs: { 'data-bogen-discipline': 'pitch-decks' } })).toEqual(['viewing-size']);
-    expect(rules('<p style="font-size:16px">Footnote</p>', { style: { width: '1920px', height: '1080px' }, name: 'Slide 3' })).toEqual(['viewing-size']);
-    expect(rules('<p style="font-size:18px">Footnote</p>', { style: { width: '1920px', height: '1080px' }, name: 'Slide 3' })).toEqual([]);
+    expect(seen('<h1 style="font-size:96px">Launch day</h1><p style="font-size:25px">Readable</p>', social)).toEqual([]);
+    expect(seen('<p style="font-size:16px">Footnote</p>', { style: { width: '1920px', height: '1080px' }, attrs: { 'data-bogen-discipline': 'pitch-decks' } })).toEqual(['viewing-size']);
+    expect(seen('<p style="font-size:16px">Footnote</p>', { style: { width: '1920px', height: '1080px' }, name: 'Slide 3' })).toEqual(['viewing-size']);
+    expect(seen('<p style="font-size:18px">Footnote</p>', { style: { width: '1920px', height: '1080px' }, name: 'Slide 3' })).toEqual([]);
     expect(CRAFT_LIMITS.minSeenPx).toBe(9);
     // A desktop page of the same size is not a slide, and 14px on a web page is fine.
-    expect(rules('<p style="font-size:14px">Footnote</p>', { style: { width: '1920px', height: '1080px' } })).toEqual([]);
-    expect(rules('<p style="font-size:14px">Footnote</p>')).toEqual([]);
+    expect(seen('<p style="font-size:14px">Footnote</p>', { style: { width: '1920px', height: '1080px' } })).toEqual([]);
+    expect(seen('<p style="font-size:14px">Footnote</p>')).toEqual([]);
   });
 
   it('viewing size: what the board or the file says it is decides, and the size is a guess only where nothing says', () => {
     const story = { style: { width: '1080px', height: '1920px' } };
+    const seen = (html: string, o?: Parameters<typeof build>[1]) => rules(html, o).filter((r) => r !== 'no-picture');
     const small = '<h1 style="font-size:96px">Launch day</h1><p style="font-size:14px">Small print</p>';
-    expect(rules(small, story)).toEqual(['viewing-size']);
+    expect(seen(small, story)).toEqual(['viewing-size']);
     // A portrait monitor in a theme file, and a board a template made for a web page, are seen at their own size.
-    expect(rules(small, { ...story, theme: true })).toEqual([]);
-    expect(rules(small, { ...story, attrs: { 'data-bogen-discipline': 'websites' } })).toEqual([]);
+    expect(seen(small, { ...story, theme: true })).toEqual([]);
+    expect(seen(small, { ...story, attrs: { 'data-bogen-discipline': 'websites' } })).toEqual([]);
     // A board that says it is social is read as one, and a discipline of no particular medium says nothing.
-    expect(rules(small, { ...story, theme: true, attrs: { 'data-bogen-discipline': 'social' } })).toEqual(['viewing-size']);
-    expect(rules(small, { ...story, attrs: { 'data-bogen-discipline': 'foundations' } })).toEqual(['viewing-size']);
+    expect(seen(small, { ...story, theme: true, attrs: { 'data-bogen-discipline': 'social' } })).toEqual(['viewing-size']);
+    expect(seen(small, { ...story, attrs: { 'data-bogen-discipline': 'foundations' } })).toEqual(['viewing-size']);
   });
 
   it('skips what is hidden, and reads a section on its own with the artboard\'s font', () => {
@@ -244,6 +247,176 @@ describe('each craft check has a testable line', () => {
     const section = doc.getChildren(id)[0]!.id;
     expect(craftFindings(doc, section).map((f) => f.rule)).toEqual(['decorative-mono']);
     expect(() => craftFindings(doc, 'missing')).toThrow('No layer with id missing');
+  });
+});
+
+describe('the generated page formulas, each with a testable line', () => {
+  it('every craft rule has a severity and a why; only unreadable text is hard, every matter of taste is advisory', () => {
+    const { doc, id } = build(GENERATED, { tokens: true });
+    for (const f of craftFindings(doc, id)) {
+      expect(f.severity, f.rule).toBe(CRAFT_HARD.includes(f.rule) ? 'hard' : 'advisory');
+      expect(f.why.length, f.rule).toBeGreaterThan(20);
+    }
+    expect([...CRAFT_HARD].sort()).toEqual(['text-on-image', 'viewing-size']);
+  });
+
+  it('caps label: one small letter-spaced capital label is the look; without tracking, or at reading size, it is not', () => {
+    const label = (style: string, text = 'How it works') => `<p style="${style}">${text}</p><h2 style="font-size:40px">Three steps to a paid invoice</h2>`;
+    const f = finding(label('font-size:12px;letter-spacing:0.12em;text-transform:uppercase'), 'caps-label')!;
+    expect(f.severity).toBe('advisory');
+    expect(f.message).toContain('"How it works"');
+    expect(rules(label('font-size:12px;letter-spacing:2px;text-transform:uppercase'))).toEqual(['caps-label']);
+    expect(rules(label('font-size:12px;letter-spacing:0.1em', 'PRICING PLANS'))).toEqual(['caps-label']);
+    // Tracking under 0.04em, sentence case, or a label at reading size.
+    expect(rules(label('font-size:12px;letter-spacing:0.02em;text-transform:uppercase'))).toEqual([]);
+    expect(rules(label('font-size:12px;letter-spacing:0.12em'))).toEqual([]);
+    expect(rules(label('font-size:18px;letter-spacing:0.12em;text-transform:uppercase'))).toEqual([]);
+    // Reported once: not as capitals and as a label over a heading too.
+    const three = ['Features', 'Pricing', 'Contact'].map((t) => `<div>${label('font-size:12px;letter-spacing:0.1em;text-transform:uppercase', t)}</div>`).join('');
+    expect(rules(three)).toEqual(['caps-label']);
+  });
+
+  it('grotesk and mono: one grotesk with monospace on labels and figures; mono on code and commands passes', () => {
+    const sans = `font-family:Inter,sans-serif`, mono = `font-family:'JetBrains Mono',monospace`;
+    const page = (monoTexts: string[]) => `<h1 style="${sans}">Invoices from the job sheet</h1><p style="${sans}">Body copy in the reading face.</p>${monoTexts.map((t) => `<p style="${mono}">${t}</p>`).join('')}`;
+    const f = finding(page(['1,284', 'Paid in 3 days', '98%']), 'grotesk-mono')!;
+    expect(f.severity).toBe('advisory');
+    expect(f.message).toContain('one grotesk (Inter) with a monospace face (JetBrains Mono) on 3 labels and figures');
+    // Not reported twice as decorative monospace.
+    expect(rules(page(['1,284', 'Paid in 3 days', 'Now in beta']))).toEqual(['grotesk-mono']);
+    // Code, commands and file names are what monospace is for.
+    expect(rules(page(['npm install ledgerline', 'invoice.pdf', 'render(page)']))).toEqual([]);
+    expect(rules(page(['1,284', '98%']))).toEqual([]);
+    // A serif and a mono, or three families, are other findings or none.
+    expect(rules(page(['Built for teams', 'Now in beta', '98%']).replaceAll('Inter,sans-serif', "'Fraunces',serif"))).toEqual(['decorative-mono']);
+    // An Omarchy theme sets its interface in the system's mono face.
+    expect(rules(page(['1,284', 'Paid in 3 days', '98%']), { theme: true })).toEqual([]);
+  });
+
+  it('house palette: warm off-white with a red-orange action, or near-black with acid green; other pairings and brand colours pass', () => {
+    const page = (ground: string, fill: string) => `<a href="#t" style="background:${fill};color:#fff">Start the trial</a><p>Words</p>`;
+    const f = finding(page('', '#c4471f'), 'house-palette', { style: { backgroundColor: '#f4f1ea' } })!;
+    expect(f.severity).toBe('advisory');
+    expect(f.criterion).toBe('colour');
+    expect(f.message).toContain('cream-and-terracotta house palette');
+    expect(rules(page('', '#a3e635'), { style: { backgroundColor: '#0b0b0b' } })).toEqual(['house-palette']);
+    // White with orange, cream with blue, and night with a warm accent are other pairings.
+    expect(rules(page('', '#c2410c'), { style: { backgroundColor: '#ffffff' } })).toEqual([]);
+    expect(rules(page('', '#2e4a7d'), { style: { backgroundColor: '#f4f1ea' } })).toEqual([]);
+    expect(rules(page('', '#f2a33a'), { style: { backgroundColor: '#0f1b2d' } })).toEqual([]);
+    // A colour the brand wrote into the file is the brand's choice.
+    const { doc, id } = build(`<a href="#t" style="background:var(--clay);color:#fff">Start the trial</a>`, { style: { backgroundColor: 'var(--paper)' } });
+    doc.setToken('paper', 'color', '#f4f1ea');
+    doc.setToken('clay', 'color', '#c4471f');
+    expect(craftFindings(doc, id).map((x) => x.rule)).toEqual(['house-palette']);
+    doc.meta.set('brandTokens', ['paper', 'clay']);
+    expect(craftFindings(doc, id)).toEqual([]);
+  });
+
+  it('no picture: an ad an agent drew at a social size with type and interface parts only; a picture, a drawing or a declared kind passes', () => {
+    const ad = { style: { width: '1080px', height: '1350px' } };
+    const words = '<h1 style="font-size:120px">Let them sleep.</h1><div style="background:#223"><p style="font-size:32px">Held until 08:30</p></div>';
+    const f = finding(words, 'no-picture', ad)!;
+    expect(f.severity).toBe('advisory');
+    expect(f.message).toContain('metaphor');
+    expect(rules(`<img alt="A lighthouse at dusk" src="https://example.com/a.jpg" style="width:100%;height:1350px;position:absolute;inset:0">${words}`, ad)).not.toContain('no-picture');
+    expect(rules(`<svg width="1080" height="900" viewBox="0 0 1080 900"><path d="M0 800 L1080 100"/></svg>${words}`, ad)).toEqual([]);
+    expect(rules(words, { style: { width: '1080px', height: '1350px', backgroundImage: 'url(https://example.com/a.jpg)' } })).not.toContain('no-picture');
+    // A small logo is not the picture; a template's share card declares its kind; a web page is not an ad.
+    expect(rules(`<img alt="Logo" src="https://example.com/logo.png" style="width:96px;height:96px">${words}`, ad)).toEqual(['no-picture']);
+    expect(rules(words, { ...ad, attrs: { 'data-bogen-discipline': 'social' } })).toEqual([]);
+    expect(rules(words)).toEqual([]);
+  });
+
+  it('one hue: a file of three screens or more in neutrals and one hue, said once; more hues, a brand or pictures pass', () => {
+    const file = (screens: string[], brand = false) => {
+      const doc = new BogenDoc();
+      doc.ensureFirstPage();
+      const page = doc.getPages()[0]!.id;
+      const ids = screens.map((html, i) => {
+        const id = doc.insert(page, { type: 'frame', name: `Screen ${i}`, artboard: true, style: { width: '1440px', backgroundColor: '#f5f5f5' } });
+        doc.insertMany(id, importHtml(html).nodes);
+        return id;
+      });
+      if (brand) doc.meta.set('brandTokens', ['ink']);
+      doc.invalidate();
+      return ids.map((id) => craftFindings(doc, id).filter((f) => f.rule === 'one-hue'));
+    };
+    const blue = (shade: string) => `<p style="color:#222">Text</p><a href="#a" style="background:${shade};color:#fff">Go</a>`;
+    const found = file([blue('#2563eb'), blue('#1d4ed8'), blue('#3b82f6')]);
+    expect(found.map((f) => f.length)).toEqual([1, 0, 0]);
+    expect(found[0]![0]).toMatchObject({ severity: 'advisory', criterion: 'colour', numbers: { screens: 3, hues: 1 } });
+    expect(found[0]![0]!.message).toContain('palette_suggest');
+    // A second hue with a job, two screens, a brand's palette or a photograph pass.
+    expect(file([blue('#2563eb'), blue('#1d4ed8'), `${blue('#3b82f6')}<span style="background:#e0473a;color:#fff">Late</span>`]).flat()).toEqual([]);
+    expect(file([blue('#2563eb'), blue('#1d4ed8')]).flat()).toEqual([]);
+    expect(file([blue('#2563eb'), blue('#1d4ed8'), blue('#3b82f6')], true).flat()).toEqual([]);
+    expect(file([blue('#2563eb'), blue('#1d4ed8'), `${blue('#3b82f6')}<img alt="Harbour" src="https://example.com/a.jpg">`]).flat()).toEqual([]);
+  });
+
+  const section = (inner: string, name = 'Section') => `<section data-name="${name}" style="display:flex;flex-direction:column">${inner}</section>`;
+  const ruled = (n: number) => Array.from({ length: n }, (_, i) => `<div style="border-top:1px solid #ddd;display:flex"><p>Row ${i}</p><p>Value ${i}</p></div>`).join('');
+
+  it('ruled rows: hairlines cutting most sections into rows; a single table passes', () => {
+    const f = finding(section(ruled(4)) + section(ruled(4)) + section(ruled(4)) + section('<p>Closing words</p>'), 'ruled-rows')!;
+    expect(f.severity).toBe('advisory');
+    expect(f.numbers).toEqual({ rules: 12, sections: 3 });
+    // One long table, or rules in half of the sections, is a choice.
+    expect(rules(section(ruled(14)) + section('<p>One</p>') + section('<p>Two</p>'))).toEqual([]);
+    expect(rules(section(ruled(4)) + section(ruled(4)) + section(ruled(4)) + section('<p>a</p>') + section('<p>b</p>') + section('<p>c</p>'))).toEqual([]);
+    // A boxed card is not a rule, and a dashboard is made of rows.
+    expect(rules(section(ruled(4)) + section(ruled(4)) + section(ruled(4)) + section('<p>Closing words</p>'), { attrs: { 'data-bogen-discipline': 'dashboards' } })).toEqual([]);
+  });
+
+  const split = (n: number) => `<div style="display:grid;grid-template-columns:1fr 1fr"><h2>Heading ${n}</h2><div><p>Paragraph ${n} on the right.</p></div></div>`;
+
+  it('split sections: the same heading-left, paragraph-right opening in most sections', () => {
+    const f = finding([1, 2, 3, 4].map((n) => section(split(n), `Part ${n}`)).join(''), 'split-sections')!;
+    expect(f.severity).toBe('advisory');
+    expect(f.numbers).toEqual({ sections: 4, of: 4 });
+    // Three of five, a split with a picture on the right, or a header and a footer, do not count.
+    expect(rules([1, 2, 3].map((n) => section(split(n))).join('') + section('<h2>Own form</h2><p>A</p>') + section('<h2>Own form</h2><p>B</p>'))).toEqual([]);
+    expect(rules([1, 2, 3, 4].map((n) => section(`<div style="display:flex"><h2>Heading ${n}</h2><div><img alt="Product" src="https://example.com/a.png"><p>Caption</p></div></div>`)).join(''))).toEqual([]);
+    expect(rules(`<header>${split(0)}</header>` + [1, 2, 3].map((n) => section(split(n))).join('') + section('<p>Own form</p>'))).toEqual([]);
+  });
+
+  const stat = (figure: string, label: string) => `<div><p style="font-size:48px">${figure}</p><p style="font-size:14px">${label}</p></div>`;
+
+  it('stat row: three big figures over small labels on a page; steps, a timeline and a dashboard pass', () => {
+    const page = (row: string) => `<h1 style="font-size:64px">Invoices from the job sheet</h1><div style="display:flex">${row}</div>`;
+    const f = finding(page(stat('44', 'Files scanned') + stat('13', 'Matches') + stat('98%', 'Paid on time')), 'stat-row')!;
+    expect(f.severity).toBe('advisory');
+    expect(f.message).toContain('"44", "13", "98%"');
+    expect(rules(page(stat('1', 'Photograph') + stat('2', 'Check the total') + stat('3', 'Send the link')))).toEqual([]);
+    expect(rules(page(stat('06:00', 'Doors open') + stat('06:45', 'First bake') + stat('07:30', 'Delivery')))).toEqual([]);
+    expect(rules(page(stat('44', 'Files scanned') + stat('13', 'Matches') + stat('98%', 'Paid on time')), { attrs: { 'data-bogen-discipline': 'dashboards' } })).toEqual([]);
+    // Two figures, or figures no bigger than their labels.
+    expect(rules(page(stat('44', 'Files scanned') + stat('13', 'Matches')))).toEqual([]);
+  });
+
+  it('meta dots: three texts that string facts together with middle dots', () => {
+    const meta = (t: string) => `<p>${t}</p>`;
+    const f = finding(meta('23.10.2026 · AT · Draft') + meta('Kiln 2 · cone 6 · 11 h') + meta('Mara · Studio · Sample'), 'meta-dots')!;
+    expect(f.severity).toBe('advisory');
+    expect(f.numbers).toEqual({ texts: 3 });
+    expect(rules(meta('23.10.2026 · AT') + meta('Kiln 2 · cone 6') + meta('Mara · Studio'))).toEqual([]);
+    expect(rules(meta('23.10.2026 · AT · Draft') + meta('Kiln 2 · cone 6 · 11 h'))).toEqual([]);
+  });
+
+  it('no visual: a page of four sections or more with nothing to look at but type', () => {
+    const text = (n: number) => section(`<h2>Heading ${n}</h2><p>Words about it.</p>`);
+    const page = `<h1>A product page</h1>${[1, 2, 3, 4].map(text).join('')}`;
+    const f = finding(page, 'no-visual')!;
+    expect(f.severity).toBe('advisory');
+    expect(f.criterion).toBe('fit');
+    // A picture, a sized drawing, or a drawn product view with its own surface is something to look at.
+    expect(rules(page + section('<img alt="The firing curve" src="https://example.com/curve.png">'))).toEqual([]);
+    expect(rules(page + section('<svg width="480" height="240" viewBox="0 0 480 240"><path d="M0 200 L480 20" stroke="#000"/></svg>'))).toEqual([]);
+    expect(rules(page + section('<div style="min-height:320px;background:#f4f4f4"><p>Firing 47</p><p>Cone 6</p><p>Peak 1222</p></div>'))).toEqual([]);
+    // An icon is not a picture, and a narrow board or an app screen is not a page.
+    expect(rules(page + section('<svg width="24" height="24" viewBox="0 0 24 24"><path d="M0 0 L24 24"/></svg>'))).toEqual(['no-visual']);
+    expect(rules(page, { style: { width: '390px' } })).toEqual([]);
+    expect(rules([1, 2, 3, 4].map(text).join(''))).toEqual([]);
   });
 });
 

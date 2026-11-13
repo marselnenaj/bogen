@@ -17,6 +17,7 @@ interface UiState {
   /** The export, install and apply dialog of an Omarchy theme file. */
   omarchyThemeOpen: boolean;
   checksOpen: boolean;
+  complianceOpen: boolean;
   /** Find on canvas. With `replace`, it finds the words of text layers, on this page or all of them, and replaces them. */
   find: { open: boolean; query: string; index: number; replace?: boolean; with?: string; matchCase?: boolean; wholeWord?: boolean; allPages?: boolean };
   /** The dialog that renames several layers at once. */
@@ -51,6 +52,7 @@ export const useUi = create<UiState>((set) => ({
   restyleOpen: false,
   omarchyThemeOpen: false,
   checksOpen: false,
+  complianceOpen: false,
   find: { open: false, query: '', index: 0 },
   bulkRename: null,
   gradient: null,

@@ -6,12 +6,18 @@ import type { BogenServer } from '../http/server.ts';
 import { nextArtboardX } from '../mcp/kit.ts';
 import type { Room } from '../sync.ts';
 import { bootstrapKit } from './bootstrap.ts';
+import { carbonKit } from './carbon.ts';
+import { daisyuiKit } from './daisyui.ts';
 import { ionicKit } from './ionic.ts';
 import { combinations } from './markup.ts';
+import { mantineKit } from './mantine.ts';
 import { materialKit } from './material.ts';
+import { picoKit } from './pico.ts';
 import { radixKit } from './radix.ts';
 import { shadcnBaseUiKit, shadcnKit } from './shadcn.ts';
 import type { Kit, KitComponent, KitRole, KitSummary, Variant } from './types.ts';
+import { uswdsKit } from './uswds.ts';
+import { webAwesomeKit } from './web-awesome.ts';
 
 export type { Kit, KitComponent, KitSummary, KitToken, KitRole, Variant } from './types.ts';
 
@@ -20,7 +26,7 @@ export type { Kit, KitComponent, KitSummary, KitToken, KitRole, Variant } from '
  * a code project's components (from-code.ts) or an import of a Storybook. A kit is turned into Bogen components
  * once per device, in a file of its own that publishes them as a library, so that files link it like any other.
  */
-const BUILTIN: Kit[] = [shadcnKit, shadcnBaseUiKit, radixKit, bootstrapKit, materialKit, ionicKit];
+const BUILTIN: Kit[] = [shadcnKit, shadcnBaseUiKit, radixKit, bootstrapKit, materialKit, ionicKit, mantineKit, carbonKit, uswdsKit, daisyuiKit, webAwesomeKit, picoKit];
 const registered = new Map<string, Kit>();
 
 /**
@@ -154,7 +160,7 @@ export function writeKitBoards(doc: BogenDoc, pageId: string, kit: Kit, insertCo
     style: { position: 'absolute', left: `${left}px`, top: '0px', width: '1440px', height: 'fit-content', display: 'flex', flexDirection: 'column', gap: '56px', padding: '64px', boxSizing: 'border-box', backgroundColor: role('background', '#ffffff'), color: role('foreground', '#111111'), fontFamily: role('font', kit.font) },
   });
   add(doc, board, { type: 'text', tag: 'h1', name: 'Kit title', text: kit.name, style: { margin: '0', fontSize: '40px', fontWeight: '600', letterSpacing: '-0.02em' } });
-  add(doc, board, { type: 'text', tag: 'p', name: 'Kit description', text: `${kit.description} Code: ${kit.library.name} (${kit.library.license}). Each component imports from the library when you take code.`, style: { margin: '0', maxWidth: '760px', fontSize: '16px', lineHeight: '1.5', opacity: '0.7' } });
+  add(doc, board, { type: 'text', tag: 'p', name: 'Kit description', text: `${kit.description} Code: ${kit.library.name} (${kit.library.license}). ${kit.components.every((c) => c.handoff.element) ? 'Each component is written as the library\'s own markup when you take code.' : 'Each component imports from the library when you take code.'}`, style: { margin: '0', maxWidth: '760px', fontSize: '16px', lineHeight: '1.5', opacity: '0.7' } });
   doc.invalidate();
   const mains = writeKitComponents(doc, board, kit, insertCode);
   const boards = [board];

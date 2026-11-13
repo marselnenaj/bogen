@@ -915,6 +915,7 @@ export function BrandPage({ brandId }: { brandId: string }) {
         <button type="button" className="btn btn-quiet" title={t('Brand system file')} onClick={openSystemFile} data-testid="brand-template-system"><FilePlus2 size={14} /> {t('Brand system file')}</button>
         <button type="button" className="btn btn-quiet" onClick={() => void download('md')} data-testid="brand-export-md"><Download size={14} /> {t('Markdown')}</button>
         <button type="button" className="btn btn-quiet" onClick={() => void download('pdf')} data-testid="brand-export-pdf"><Download size={14} /> PDF</button>
+        <a className="btn btn-quiet" href={`/api/files/${brandId}/download`} download data-testid="brand-export-bogen"><Download size={14} /> .bogen</a>
         {notice ? <div className="error" role="alert" dir="auto" style={{ flexBasis: '100%' }} data-testid="brand-page-error">{notice}</div> : null}
       </header>
       <div className="bp-body">

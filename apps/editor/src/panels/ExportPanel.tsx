@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { exportDocument } from '@bogen/core';
 import { Download, Plus, Trash2 } from 'lucide-react';
 import { unionRects } from '../canvas/geometry.ts';
@@ -6,6 +6,8 @@ import { rectOf } from '../canvas/measure.ts';
 import { useSnapVersion } from '../doc/hooks.ts';
 import { session } from '../doc/session.ts';
 import { downloadBlob, resolveAsset } from '../lib/api.ts';
+import { brandApi, type FileBrand } from '../lib/brand-api.ts';
+import { onServerEvent } from '../lib/events.ts';
 import { useEditor } from '../state/store.ts';
 import { phoneOrigin } from '../lib/phone.ts';
 import { ui } from '../state/ui.ts';
@@ -237,7 +239,38 @@ export function ExportPanel() {
         </div>
       ) : null}
 
-      {fileId ? <a className="btn btn-quiet export-bogen" href={`/api/files/${fileId}/download`} download data-testid="export-bogen"><Download size={13} /> {t('Download {extension} file', { extension: '.bogen' })}</a> : null}
+      {fileId ? <BogenDownload fileId={fileId} /> : null}
+    </div>
+  );
+}
+
+/**
+ * The whole file as a .bogen file. A file linked to a brand takes the brand along by default, so that it arrives with
+ * its brand on another device; the person can leave it out.
+ */
+function BogenDownload({ fileId }: { fileId: string }) {
+  const t = useT();
+  const [brand, setBrand] = useState<FileBrand | null>(null);
+  const [include, setInclude] = useState(true);
+  const [asked, setAsked] = useState(0);
+  useEffect(() => onServerEvent((e) => { if (e.t === 'brand' || e.t === 'files') setAsked((n) => n + 1); }), []);
+  useEffect(() => {
+    let live = true;
+    brandApi.ofFile(fileId).then((b) => { if (live) setBrand(b); }, () => { if (live) setBrand(null); });
+    return () => { live = false; };
+  }, [fileId, asked]);
+  const note = brand?.link ? brand.note : null;
+  const here = Boolean(note && !note.missing);
+  return (
+    <div className="export-bogen-group">
+      {here ? (
+        <label className="import-check" data-testid="export-bogen-brand">
+          <input type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} data-testid="export-bogen-brand-toggle" />
+          <span dir="auto">{t('Include its brand, {name}', { name: note?.name ?? t('brand') })}</span>
+        </label>
+      ) : null}
+      <a className="btn btn-quiet export-bogen" href={`/api/files/${fileId}/download${here && !include ? '?brand=0' : ''}`} download data-testid="export-bogen"><Download size={13} /> {t('Download {extension} file', { extension: '.bogen' })}</a>
+      {note?.missing ? <div className="hint" data-testid="export-bogen-brand-missing">{t('Its brand is not on this device, so the file goes without it.')}</div> : null}
     </div>
   );
 }

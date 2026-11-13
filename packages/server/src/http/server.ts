@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { z } from 'zod';
-import { addFontFaces, cleanRunLanguage, newId, setInteractionRecord, Y, BogenDoc } from '@bogen/core';
+import { addFontFaces, cleanRunLanguage, getGlyphFont, newId, setInteractionRecord, Y, BogenDoc } from '@bogen/core';
 import { Runs, type RunEnd } from '../agents.ts';
 import { handleBrandRoute } from '../brand-http.ts';
 import { exampleList, runTemplate, EXAMPLES } from '../templates/index.ts';
@@ -37,7 +37,7 @@ import { Races } from '../race.ts';
 import { RunSettingsStore, EFFORT_ID, MODEL_ID } from '../run-settings.ts';
 import { RUNNER_IDS, MAX_DIRECTION_LANES } from '@bogen/core';
 import { agentRoutes } from './agent-routes.ts';
-import { packBogenFile, unpackBogenFile } from '../bogen-file.ts';
+import { exportBogen, importBogen } from '../bogen-transfer.ts';
 import { CommentRuns } from '../comment-runs.ts';
 import { ReplyTargets } from '../reply-targets.ts';
 import { EventHub, type BogenEvent } from '../events.ts';
@@ -76,6 +76,7 @@ import { nextArtboardX } from '../mcp/kit.ts';
 import { atomicWrite, DEFAULT_PORT, errorMessage, HttpError } from '../util.ts';
 import { UpdateWatch } from '../updates.ts';
 import { MAX_COLORS, MIN_COLORS, VECTORIZE_DETAILS, vectorizeAsset } from '../vectorize.ts';
+import { buildGlyphFontInto } from '../glyph-font-build.ts';
 import { FULL_VERSION, VERSION } from '../version.ts';
 import { checkRequest, COOKIE, tokenMatches, type GuardOptions } from './security.ts';
 import { serveEditor } from './static.ts';
@@ -93,6 +94,7 @@ import { Shares } from '../shares.ts';
 import { StaticListener } from '../static-listener.ts';
 import { fetchPublic } from '../net-guard.ts';
 import { handleDriftRoutes } from './drift-routes.ts';
+import { handleComplianceRoutes } from './compliance-routes.ts';
 import { MemoryGauge, type MemoryReading } from '../memory-pressure.ts';
 import { prepareRunIntent, settleRunRevision } from '../run-intent.ts';
 import { prepareRunKnowledge } from '../run-knowledge.ts';
@@ -959,6 +961,7 @@ export class BogenServer {
     if (await handleFolders(this, req, res, url)) return;
     if (await handleTomacco(this, req, res, parts, guard)) return;
     if (await handleDriftRoutes(this, req, res, url, parts, fromThisDevice(req, guard))) return;
+    if (await handleComplianceRoutes(this, req, res, parts)) return;
 
     if (a === 'capture' && !b && method === 'POST') {
       const body = await jsonBody(req, CaptureBody);
@@ -1058,6 +1061,20 @@ export class BogenServer {
       return sendJson(res, 200, await this.libraries.status(b, (await this.rooms.get(b)).doc));
     }
 
+    if (a === 'files' && b && c === 'glyph-fonts' && d && e === 'build' && method === 'POST') {
+      // Build font in the editor's Font panel: the same build as font_build, as the person's own step.
+      this.requireFile(b);
+      const room = await this.rooms.get(b);
+      const font = getGlyphFont(room.doc, d);
+      if (!font) throw new HttpError(404, 'That font is not in this file.');
+      try {
+        const { font: next, built } = await buildGlyphFontInto(this.storage, room.doc, font, (fn) => room.doc.transact(fn, 'person:editor'));
+        return sendJson(res, 200, { family: next.family, glyphs: built.glyphs, kerning: built.kerning, otf: next.build!.otf, woff2: next.build!.woff2, notes: built.notes, glyphNotes: built.glyphNotes, empty: built.empty });
+      } catch (err) {
+        throw new HttpError(400, errorMessage(err));
+      }
+    }
+
     if (a === 'files' && b && c === 'checks' && d === 'run' && !e && method === 'POST') {
       this.requireFile(b);
       const body = await jsonBody(req, z.object({ node_id: Id, check_ids: z.array(z.string().min(1).max(80)).min(1).max(8).optional(), expected: z.record(z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/), z.string().max(50000)).refine((value) => Object.keys(value).length <= 8).optional() }));
@@ -1092,7 +1109,7 @@ export class BogenServer {
         return this.importFile(req, res);
       } else {
         if (!FILE_ID.test(b)) throw new HttpError(404, 'No such file.');
-        if (c === 'download' && method === 'GET') return this.downloadFile(b, res);
+        if (c === 'download' && method === 'GET') return this.downloadFile(b, url, res);
         if (!c && method === 'PATCH') {
           const { name } = await jsonBody(req, NameBody);
           this.renameFile(b, name);
@@ -1315,34 +1332,26 @@ export class BogenServer {
     return { nodeId };
   }
 
-  private async downloadFile(id: string, res: ServerResponse): Promise<void> {
-    const entry = this.requireFile(id);
-    const live = this.rooms.peek(id);
-    if (!live) await this.storage.flushDoc(id);
-    const state = live ? Y.encodeStateAsUpdate(live.doc.y) : await this.storage.readDoc(id);
-    const bytes = await packBogenFile(state ?? new Uint8Array(), (name) => this.storage.readAsset(name));
-    const safeName = entry.name.replace(/[^\w .-]+/g, '_').slice(0, 80) || 'design';
-    res.writeHead(200, { 'Content-Type': 'application/x-bogen', 'Content-Disposition': `attachment; filename="${safeName}.bogen"`, 'X-Content-Type-Options': 'nosniff' });
-    res.end(bytes);
+  /** `?brand=0` leaves the linked brand out. What happened to it is in `X-Bogen-Brand`, as URI-encoded JSON. */
+  private async downloadFile(id: string, url: URL, res: ServerResponse): Promise<void> {
+    this.requireFile(id);
+    const out = await exportBogen(this, id, { brand: url.searchParams.get('brand') !== '0' });
+    const safeName = out.name.replace(/[^\w .-]+/g, '_').slice(0, 80) || 'design';
+    res.writeHead(200, {
+      'Content-Type': 'application/x-bogen', 'Content-Disposition': `attachment; filename="${safeName}.bogen"`, 'X-Content-Type-Options': 'nosniff',
+      ...(out.brand ? { 'X-Bogen-Brand': encodeURIComponent(JSON.stringify(out.brand)) } : {}),
+    });
+    res.end(out.bytes);
   }
 
+  /** The answer keeps `id` and `name` of what to open: the file, or the brand when that came on its own. */
   private async importFile(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const raw = await readBody(req, IMPORT_LIMIT);
-    let parsed;
-    try {
-      parsed = unpackBogenFile(raw);
-    } catch (e) {
-      throw new HttpError(400, (e as Error).message);
-    }
-    for (const asset of parsed.assets) await this.storage.putAsset(asset.bytes, Storage.mimeOf(asset.name));
     const header = req.headers['x-bogen-filename'];
-    const name = (typeof header === 'string' ? header : '').replace(/\.bogen$/i, '').trim().slice(0, 200) || 'Imported file';
-    const importedId = newId();
-    await atomicWrite(this.storage.docPath(importedId), parsed.state);
-    const entry = this.storage.create(name, importedId);
-    await this.brands.classify(importedId);
-    this.hub.broadcast({ t: 'files' });
-    sendJson(res, 201, { id: entry.id, name: entry.name });
+    const out = await importBogen(this, raw, typeof header === 'string' ? header : '', 'person:editor');
+    const opened = out.file ?? (out.brand ? { id: out.brand.id, name: out.brand.name } : null);
+    if (!opened) throw new HttpError(400, 'This file is empty.');
+    sendJson(res, 201, { ...opened, kind: out.file ? 'file' : 'brand', ...(out.brand ? { brand: out.brand } : {}) });
   }
 
   private onUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer, guard: GuardOptions = this.guard): void {

@@ -645,9 +645,11 @@ describe('install and uninstall, with a skill', () => {
     expect(text).toMatch(/\n---\n/);
     expect(text).toMatch(/wait_for_event/);
     expect(text).toMatch(/proposal_create/);
-    // About 1,850 tokens: it rides along in every session of the agent, so it stays short; details live in guide_get.
+    // It rides along in every design session, so it stays short; details live in guide_get. Claude Code shows the
+    // server instructions itself, so its skill leaves the design core out.
     expect(text).toMatch(/## Writing copy/);
-    expect(text.length).toBeLessThan(7500);
+    expect(text.length).toBeLessThan(10400);
+    expect(skillText('claude-code').length).toBeLessThan(6500);
   });
 
   it('installs and removes it without touching anything else, and repeats cleanly', async () => {

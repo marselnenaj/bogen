@@ -183,6 +183,12 @@ async function smoke() {
     const reported = read(bin, ['--version'], { env });
     if (!reported.startsWith(version)) fail(`bogen --version says ${reported}, not ${version}`);
     console.log(`  bogen --version: ${reported}`);
+    // The icon sets beyond Lucide are data next to cli.js, read on first use; the package must carry every one.
+    const sets = join(prefix, 'lib', 'node_modules', NAME, 'dist', 'icon-sets');
+    const wanted = readdirSync(join(root, 'packages', 'core', 'src', 'icon-sets')).filter((f) => f.endsWith('.json'));
+    const missing = wanted.filter((f) => !existsSync(join(sets, f)));
+    if (!wanted.length || missing.length) fail(`the installed package has no ${missing.join(', ') || 'icon sets'} in dist/icon-sets`);
+    console.log(`  icon sets: ${wanted.length} files in dist/icon-sets`);
 
     server = spawn(bin, ['serve', '--port', String(port)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
     let log = '';

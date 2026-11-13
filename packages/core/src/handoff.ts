@@ -30,6 +30,15 @@ export interface CodeHandoff {
    * attributes: no JavaScript expressions, since documents come from other people.
    */
   usage?: string;
+  /**
+   * The HTML tag a usage writes instead of an imported component, for a library that is markup: classes of a
+   * stylesheet such as daisyUI or USWDS, plain elements for a classless one such as Pico, or a custom element
+   * such as Web Awesome's `wa-button`. Flags and usage are then HTML (`class`, `for`), which React code writes as
+   * `className` and `htmlFor`, and nothing is imported by name. The same markup works in Vue, Svelte and HTML.
+   */
+  element?: string;
+  /** Modules imported for their side effects, such as the script that defines a custom element. */
+  side?: string[];
 }
 
 const MODULE = /^[@\w][\w@./-]{0,199}$/;
@@ -37,6 +46,9 @@ const IDENT = /^[A-Z][A-Za-z0-9_$]{0,99}$/;
 const PROP = /^[A-Za-z_$][\w$-]{0,99}$/;
 /** One JSX attribute: a bare name, a name with a quoted value, or with a number. */
 const FLAG = /^[A-Za-z][\w-]{0,60}(="[^"{}<>\\\n]{0,100}"|=\{-?\d{1,9}(\.\d{1,6})?\})?$/;
+/** An HTML tag: a plain element, or a custom element with a dash. */
+const ELEMENT = /^[a-z][a-z0-9]{0,30}(-[a-z0-9]{1,30}){0,4}$/;
+const UNSAFE_ELEMENTS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'frame', 'frameset']);
 
 /**
  * The two values in braces a usage may hold, as Base UI needs them: a list of quoted strings, such as
@@ -98,20 +110,51 @@ export function readHandoff(v: unknown): CodeHandoff | undefined {
     if (Object.keys(flags).length) out.flags = flags;
   }
   if (typeof h.usage === 'string' && safeUsage(h.usage)) out.usage = h.usage;
+  if (typeof h.element === 'string' && ELEMENT.test(h.element) && !UNSAFE_ELEMENTS.has(h.element)) out.element = h.element;
+  if (Array.isArray(h.side)) {
+    const side = h.side.filter((m): m is string => typeof m === 'string' && MODULE.test(m) && !m.includes('..')).slice(0, 30);
+    if (side.length) out.side = side;
+  }
   return out;
 }
 
-/** The import line for these handoffs, one per module, names sorted. */
+/**
+ * The import line for these handoffs, one per module, names sorted. A handoff to markup imports no names: only
+ * its side-effect modules, after the named imports.
+ */
 export function handoffImportLines(list: CodeHandoff[]): string[] {
   const byModule = new Map<string, Set<string>>();
+  const side = new Set<string>();
   const add = (from: string, list: string[]) => {
     const names = byModule.get(from) ?? new Set<string>();
     for (const n of list) names.add(n);
     byModule.set(from, names);
   };
   for (const h of list) {
-    add(h.from, [h.name, ...(h.imports ?? [])]);
+    for (const m of h.side ?? []) side.add(m);
+    if (!h.element) add(h.from, [h.name, ...(h.imports ?? [])]);
     for (const m of h.more ?? []) add(m.from, m.imports);
   }
-  return [...byModule].sort(([a], [b]) => a.localeCompare(b)).map(([from, names]) => `import { ${[...names].sort().join(', ')} } from ${JSON.stringify(from)};`);
+  const named = [...byModule].filter(([, names]) => names.size).sort(([a], [b]) => a.localeCompare(b)).map(([from, names]) => `import { ${[...names].sort().join(', ')} } from ${JSON.stringify(from)};`);
+  return [...named, ...[...side].sort().map((m) => `import ${JSON.stringify(m)};`)];
+}
+
+/**
+ * One class attribute per tag in markup a handoff wrote: a usage's own classes, the classes its variant flags add
+ * and the instance's, in that order and once each. `attr` is `class` for HTML, Vue and Svelte, `className` for JSX.
+ * The attributes Bogen writes are quoted without `<` or `>` in them, so a tag ends at its first `>`.
+ */
+export function mergeClassAttrs(markup: string, attr: 'class' | 'className'): string {
+  const pattern = new RegExp(`\\s${attr}="([^"]*)"`, 'g');
+  return markup.replace(/<[A-Za-z][\w.-]*(?:\s[^<>]*)?(?:>|$)/g, (tag) => {
+    const found = [...tag.matchAll(pattern)];
+    if (found.length < 2) return tag;
+    const names = [...new Set(found.flatMap((m) => m[1]!.split(/\s+/).filter(Boolean)))];
+    let first = true;
+    return tag.replace(pattern, () => {
+      if (!first) return '';
+      first = false;
+      return ` ${attr}=${JSON.stringify(names.join(' '))}`;
+    });
+  });
 }

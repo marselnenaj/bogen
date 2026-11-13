@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { accessSync, constants, existsSync } from 'node:fs';
+import { accessSync, constants, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
@@ -32,10 +32,19 @@ function onPath(name: string): boolean {
   return false;
 }
 
-/** How another program starts this CLI: `bogen` if that is what is on PATH, else the exact script. */
-export function selfCommand(): Command {
-  const script = resolve(process.argv[1]!);
+/**
+ * How another program starts this CLI: `bogen` if that is what is on PATH, else the command install.sh wrote for
+ * this very script (it finds Node again after an update of Node), else the exact script.
+ */
+export function selfCommand(script = resolve(process.argv[1]!)): Command {
   if (script.endsWith('dist/cli.js') && onPath('bogen')) return { command: 'bogen', args: ['mcp'] };
+  const wrapper = join(homedir(), '.local', 'bin', 'bogen');
+  try {
+    const text = readFileSync(wrapper, 'utf8');
+    if (text.includes("Written by Bogen's install.sh") && text.includes(`'${script}'`)) return { command: wrapper, args: ['mcp'] };
+  } catch {
+    // No such command.
+  }
   return { command: process.execPath, args: [...process.execArgv, script, 'mcp'] };
 }
 

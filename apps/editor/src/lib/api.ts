@@ -21,9 +21,10 @@ export interface PeerInfo { id: string; name: string; state: 'connected' | 'offl
 export interface UpdateNote { version: string; current: string; notes?: string; how: string }
 export interface Status { version: string; port: number; files: number; agents: StatusAgent[]; peers?: PeerInfo[]; update?: UpdateNote | null }
 export interface UploadedAsset { name: string; src: string; url: string }
+export interface ConversationSummary { id: string; title: string; startedAt: number; updatedAt: number; turns: number; runners: string[]; running: boolean }
 export interface ConversationTurn { runId: string; at: number; runner: string; message: string; reply?: string; layers: string[]; status: 'running' | 'done' | 'failed' | 'stopped' | 'interrupted'; review?: string; nudged?: boolean }
 export interface ExampleEntry { id: string; kind: string; name: string; description: string; brand: string; parts: { key: string; name: string; size: string }[]; colors: string[]; fonts: string[] }
-export interface FontEntry { family: string; source: 'google' | 'local'; category?: string; weights?: number[]; variable?: boolean; axes?: { tag: string; min: number; max: number }[] }
+export interface FontEntry { family: string; source: 'google' | 'local' | 'file'; /** A font made in this file. */ made?: boolean; category?: string; weights?: number[]; variable?: boolean; axes?: { tag: string; min: number; max: number }[] }
 
 const FILES_KEY = 'bogen-phone-files';
 
@@ -57,6 +58,8 @@ export interface ThreadRun { threadId: string; runner: string; status: ThreadRun
 
 export interface CommentTarget { runner: RunnerId; model: string; effort: string; at: number }
 export interface CommentSent { threadId: string; messageId: string; started: string[]; refused?: string; target?: CommentTarget & { how: 'mention' | 'chosen' | 'inherited' } }
+
+export interface GlyphFontBuilt { family: string; glyphs: number; kerning: number; otf: string; woff2: string; notes: string[]; glyphNotes: { name: string; notes: string[] }[]; empty: string[] }
 
 export const api = {
   status: () => json<Status>('/api/status'),
@@ -100,6 +103,8 @@ export const api = {
   startRun: (req: { fileId: string; pageId?: string; nodeIds: string[]; prompt: string; title?: string; runner: string; model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; conversationId?: string; device?: string; images?: string[]; language?: RunLanguage }) => json<{ runId: string }>('/api/runs', body(req)),
   /** The turns of a chat the server keeps, so that one opened again after a reload shows what was said. */
   conversation: (fileId: string, id: string) => json<{ id: string; turns: ConversationTurn[] }>(`/api/runs/conversations/${encodeURIComponent(id)}?fileId=${encodeURIComponent(fileId)}`),
+  /** The chats of a file, the one talked in last first, for the chat panel's list of earlier chats. */
+  conversations: (fileId: string) => json<ConversationSummary[]>(`/api/runs/conversations?fileId=${encodeURIComponent(fileId)}`),
   stopRun: async (id: string) => { await fetch(`/api/runs/${id}/stop`, { method: 'POST' }); },
   /** A comment that asks for an agent. The server writes it, and starts the agent only for a person on its own device. */
   postComment: (req: { fileId: string; text: string; author: string; threadId?: string; pageId?: string; nodeId?: string; x?: number; y?: number; attachments?: { src: string; name?: string; width?: number; height?: number }[]; to?: RunnerId | 'comment'; model?: string; effort?: string }) => json<CommentSent>('/api/comments', body(req)),
@@ -107,6 +112,13 @@ export const api = {
   /** Where each thread's next reply goes: the agent, model and effort of its last request, as the server recorded it. */
   commentTargets: (fileId: string) => json<Record<string, CommentTarget>>(`/api/comments/targets?fileId=${encodeURIComponent(fileId)}`),
   theme: () => json<Theme | null>('/api/theme'),
+  /** Builds a font made in the file. A refusal comes back with the server's reason, which the Font panel shows. */
+  buildGlyphFont: async (fileId: string, fontId: string): Promise<GlyphFontBuilt> => {
+    const res = await fetch(`/api/files/${encodeURIComponent(fileId)}/glyph-fonts/${encodeURIComponent(fontId)}/build`, { method: 'POST' });
+    const out = (await res.json().catch(() => ({}))) as GlyphFontBuilt & { error?: string };
+    if (!res.ok) throw new Error(out.error ?? t('The font could not be built.'));
+    return out;
+  },
   /** Not in the contract yet; callers fall back to the bundled list when this fails. */
   fonts: async (query = ''): Promise<FontEntry[]> => {
     const raw = await json<unknown>(`/api/fonts${query ? `?q=${encodeURIComponent(query)}` : ''}`);

@@ -9,7 +9,8 @@ import { ExamplesSection } from './ExamplesSection.tsx';
 import { OmarchyThemesSection } from './OmarchyThemesSection.tsx';
 import { ThemePresetItem } from './ThemePresetItem.tsx';
 import '../styles/theme-library.css';
-import { DropZone, FigmaDialog, importBogenFile } from './HomeImport.tsx';
+import { DropZone, FigmaDialog, importBogenFile, importResult, type Imported } from './HomeImport.tsx';
+import { editor } from '../state/store.ts';
 import { filesIn, folderTree, joinPath, nextSelection, parentOf, SORTS, sortFiles, type FolderNode, type SortKey } from './folders.ts';
 import { canonicalFiles, fetchCollection, presetSource, unrepresentedPresets, type Collection, type CollectionPreset } from '../lib/theme-library.ts';
 import { homeHeadLevel, textWidth } from './head-fit.ts';
@@ -295,22 +296,32 @@ export function Home() {
   const [figmaOpen, setFigmaOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const openRef = useRef<HTMLInputElement>(null);
+  const [importNote, setImportNote] = useState<{ text: string; href: string } | null>(null);
   const openFiles = async (list: File[]) => {
     setImportError(null);
+    setImportNote(null);
     const bogen = list.filter((f) => /\.bogen$/i.test(f.name));
     if (!bogen.length) {
       setImportError(list[0]?.name ? t('Only .bogen files open here, and {file} is not one.', { file: list[0].name }) : t('Only .bogen files open here, and that is not one.'));
       return;
     }
-    let last: { id: string } | null = null;
+    let last: Imported | null = null;
+    const notes: string[] = [];
     for (const file of bogen) {
       try {
         last = await importBogenFile(file);
+        const { text } = importResult(last);
+        if (text) notes.push(text);
       } catch (e) {
         setImportError((e as Error).message);
       }
     }
-    if (last && bogen.length === 1) location.hash = `#/file/${last.id}`;
+    if (!last) return;
+    const result = importResult(last);
+    if (bogen.length === 1 && !result.stay) {
+      if (result.text) editor().showToast(result.text);
+      location.hash = result.href;
+    } else if (notes.length) setImportNote({ text: notes.join(' '), href: result.href });
   };
   const [files, setFiles] = useState<FileEntry[] | null>(null);
   const [collection, setCollection] = useState<Collection | null>(null);
@@ -566,6 +577,13 @@ export function Home() {
         <main className="home-body">
         <DropZone onFiles={(list) => void openFiles(list)}>
         {importError ? <div className="error" data-testid="home-import-error">{importError}</div> : null}
+        {importNote ? (
+          <div className="home-import-note" role="status" data-testid="home-import-note">
+            <span dir="auto">{importNote.text}</span>
+            <a className="btn" href={importNote.href} onClick={() => setImportNote(null)} data-testid="home-import-open">{t('Open')}</a>
+            <IconButton icon={<X size={13} />} title={t('Close')} onClick={() => setImportNote(null)} />
+          </div>
+        ) : null}
           {/* Examples and brands introduce an unfiltered Home. Theme starts also stay visible in a theme scope. */}
           {!error && files && !narrowed ? <ExamplesSection fileCount={listed?.length ?? 0} /> : null}
           {!error && files && !narrowed ? <BrandsSection /> : null}

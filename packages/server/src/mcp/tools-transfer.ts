@@ -1,3 +1,6 @@
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { basename, dirname, extname, isAbsolute, join } from 'node:path';
 import { getFontFaces, getInteractionRecords } from '@bogen/core';
 import { z } from 'zod';
 import { listDesignBranches } from '@bogen/core';
@@ -6,7 +9,10 @@ import { figmaToken, importFigma } from '../http/transfer-routes.ts';
 import { createCommit, diffCommits, historyList, mergeBranch, restoreCommit, revertChanges, visualDiff } from '../history-ops.ts';
 import { captureSite, type SiteJob } from '../site-capture.ts';
 import { agentOrigin } from '../sync.ts';
-import { fileIdArg, type ToolDefiner } from './kit.ts';
+import { exportBogen, exportNote, importBogen } from '../bogen-transfer.ts';
+import { fileIdArg, type ToolContext, type ToolDefiner } from './kit.ts';
+import { exportLocation, freePath } from './tools-design.ts';
+import { fileCreateGuard } from './tools-files.ts';
 
 const MCP_SITE_LIMIT = 50;
 
@@ -16,7 +22,80 @@ function jobAnswer(job: SiteJob): object {
   return { job_id: job.id, status: 'done', report: job.report };
 }
 
+const BOGEN_LIMIT = 512 * 1024 * 1024;
+
+/** Where a .bogen file goes: the path given, checked like any export, or a free name in the export folder. */
+async function bogenTarget(ctx: ToolContext, name: string, given: string | undefined, overwrite: boolean, hidden: boolean): Promise<string> {
+  const exportRoot = ctx.app.exportDir ?? process.env.BOGEN_EXPORT_DIR ?? join(homedir(), 'Downloads', 'Bogen');
+  const base = name.replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'design';
+  if (!given) {
+    await mkdir(exportRoot, { recursive: true });
+    return freePath(exportRoot, base, 'bogen');
+  }
+  const location = await exportLocation(given, { exportRoot, dataDir: ctx.app.storage.home, hidden });
+  if (/[/\\]$/.test(given) || given === '~' || (await stat(location).then((s) => s.isDirectory(), () => false))) {
+    await mkdir(location, { recursive: true });
+    return freePath(location, base, 'bogen');
+  }
+  if (extname(location).toLowerCase() !== '.bogen') throw new Error('Nothing was exported. The path needs to end in .bogen, or be a folder ending in /.');
+  if (!overwrite && (await stat(location).then(() => true, () => false))) throw new Error(`Nothing was exported. ${location} already exists. Pass overwrite true to replace it, or choose another name.`);
+  await mkdir(dirname(location), { recursive: true });
+  return location;
+}
+
+async function writeBogen(ctx: ToolContext, id: string, options: { brand: boolean; path?: string; overwrite: boolean; allow_hidden: boolean }) {
+  if (ctx.dryRun) throw new Error('Exporting writes a file, so it does not run in a dry run.');
+  const out = await exportBogen(ctx.app, id, { brand: options.brand });
+  const path = await bogenTarget(ctx, out.name, options.path, options.overwrite, options.allow_hidden);
+  await writeFile(path, out.bytes, { flag: options.path && options.overwrite ? 'w' : 'wx' });
+  const note = exportNote(out);
+  return { path, bytes: out.bytes.length, kind: out.kind, ...(out.brand ? { brand: out.brand } : {}), ...(note ? { note } : {}) };
+}
+
 export function registerTransferTools(define: ToolDefiner): void {
+  define('file_export', { description: 'Write a whole file as a .bogen file, for another device or person: every page, comment, branch and asset, and the brand it links to with that brand\'s own assets, so the design arrives with its brand. Pass brand false to leave the brand out. Goes to the Bogen export folder, or to path. Only when the person asked for the file itself; for pictures or code use export_file or code_get.' }, {
+    brand: z.boolean().default(true).describe('Include the brand the file links to. Without it, the file links to a brand the other device may not have.'),
+    path: z.string().min(1).max(4096).optional().describe('An absolute path under the home folder (~/ works) ending in .bogen, or a folder ending in /. Leave out for the Bogen export folder.'),
+    overwrite: z.boolean().default(false),
+    allow_hidden: z.boolean().default(false).describe('With path: allow a hidden folder. Only when the person asked for it.'),
+    file_id: fileIdArg,
+  }, async ({ brand, path, overwrite, allow_hidden, file_id }, ctx) => {
+    const room = await ctx.room(file_id);
+    return writeBogen(ctx, room.id, { brand, path, overwrite, allow_hidden });
+  });
+
+  define('brand_export', { description: 'Write a brand on its own as a .bogen file: its whole document, versions, brandbook, examples and assets. Importing it on another device adds the brand there under the same id, so files linked to it find it. Goes to the Bogen export folder, or to path.' }, {
+    brand_id: z.string(),
+    path: z.string().min(1).max(4096).optional().describe('An absolute path under the home folder ending in .bogen, or a folder ending in /.'),
+    overwrite: z.boolean().default(false),
+    allow_hidden: z.boolean().default(false),
+  }, async ({ brand_id, path, overwrite, allow_hidden }, ctx) => {
+    ctx.app.brands.requireBrand(brand_id);
+    return writeBogen(ctx, brand_id, { brand: true, path, overwrite, allow_hidden });
+  });
+
+  define('file_import', { description: 'Open a .bogen file from this machine as a new file, the current one for this session. A brand it carries is added to this device; if this device has that brand already, the one here is kept as it is and the file links to it, and the result says when the two differ. Tell the person that. A .bogen file of a brand alone adds only the brand. Only when the person asked.' }, {
+    path: z.string().min(1).max(4096).describe('An absolute path to a .bogen file (~/ works).'),
+    name: z.string().min(1).max(200).optional().describe('The new file\'s name. Leave out for the name of the .bogen file.'),
+  }, async ({ path, name }, ctx) => {
+    if (ctx.dryRun) throw new Error('file_import makes a file, so it does not run in a dry run.');
+    const expanded = path === '~' || path.startsWith('~/') ? join(homedir(), path.slice(1)) : path;
+    if (!isAbsolute(expanded)) throw new Error('path must be absolute, such as /home/you/Downloads/site.bogen or ~/Downloads/site.bogen.');
+    if (extname(expanded).toLowerCase() !== '.bogen') throw new Error('Only .bogen files open here.');
+    const info = await stat(expanded).catch(() => null);
+    if (!info?.isFile()) throw new Error(`There is no file at ${expanded}.`);
+    if (info.size > BOGEN_LIMIT) throw new Error('This file is larger than 512 MB.');
+    fileCreateGuard(ctx, name);
+    const out = await importBogen(ctx.app, await readFile(expanded), name ?? basename(expanded), agentOrigin(ctx.agent));
+    if (out.file) ctx.session.fileId = out.file.id;
+    return {
+      ...(out.file ? { file_id: out.file.id, name: out.file.name } : {}),
+      ...(out.brand ? { brand: out.brand } : {}),
+      ...(out.brand?.differs ? { next: 'Tell the person the brand here was kept and differs from the one in the file. brand_diff and brand_versions show what this device has.' } : {}),
+    };
+  });
+
+
   define('site_capture', { description: 'Capture a whole public website into a file: one page per route, one artboard per width and colour scheme. Finds routes through sitemap.xml and links on the same origin, up to a limit, and reports what it took and what it skipped. Same-page anchors keep working in exports. Self-hosted fonts come along. It can take minutes, so it answers after wait_seconds even if it is still working; then ask site_capture_status. Only public sites: the person can capture a local dev server with `bogen capture --site`.' }, {
     url: z.string().url(),
     widths: z.array(z.number().int().min(200).max(4000)).min(1).max(4).default([1440]).describe('Such as [1440, 768, 390].'),

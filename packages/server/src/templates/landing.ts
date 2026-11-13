@@ -48,6 +48,8 @@ function page(k: BrandKit, width: number, defineButtons: boolean, defineParts: b
       h('p', { ...k.font(k.type('lead')), color: p.fg, maxWidth: '620px' }, t(f.positioning || 'One or two sentences on what it does and for whom.'), { 'data-name': 'Positioning' }),
       h('div', { display: 'flex', gap: k.space(12), flexWrap: 'wrap', justifyContent: mobile ? 'flex-start' : 'flex-end' }, heroButtons, { 'data-name': 'Actions' }),
     ], { 'data-name': 'Under the headline' }),
+    // The product itself, large: a placeholder to fill with the real screen, object or output, never left out.
+    h('img', { width: '100%', height: mobile ? '240px' : '640px', objectFit: 'cover', borderRadius: k.radius() }, '', { 'data-name': 'Product view', alt: 'The product itself: its real screen, object or output' }),
   ], undefined, { paddingTop: mobile ? k.space(48) : k.space(88) }) });
   if (defineButtons) for (const kind of ['primary', 'quiet']) {
     const def = buttons.defs.find((d) => 'component' in d && d.component.name === `Button / ${kind} / ${mobile ? 'default' : 'large'}`);

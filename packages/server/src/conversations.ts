@@ -31,6 +31,23 @@ export interface Turn {
 
 export interface Conversation { id: string; fileId: string; startedAt: number; updatedAt: number; turns: Turn[] }
 
+/** A conversation in a list of a file's chats: what it is called, when, who answered, and how long it is. */
+export interface ConversationSummary { id: string; title: string; startedAt: number; updatedAt: number; turns: number; runners: RunnerId[]; running: boolean }
+
+/** A chat's name: the first thing the person said in it, on one line. */
+export function conversationSummary(c: Conversation): ConversationSummary {
+  const first = c.turns[0];
+  return {
+    id: c.id,
+    title: first ? cut(oneLine(first.message), 120) : '',
+    startedAt: c.startedAt,
+    updatedAt: c.updatedAt,
+    turns: c.turns.length,
+    runners: [...new Set(c.turns.map((t) => t.runner))],
+    running: c.turns.some((t) => t.status === 'running'),
+  };
+}
+
 const MAX_CONVERSATIONS = 40;
 const MAX_TURNS = 60;
 const MAX_LAYERS = 60;
@@ -118,6 +135,11 @@ export class Conversations implements RunObserver {
     const book = this.books.get(fileId) ?? { list, timer: null, write: Promise.resolve() };
     this.books.set(fileId, book);
     return book;
+  }
+
+  /** The chats of a file, the one talked in last first. */
+  async list(fileId: string): Promise<ConversationSummary[]> {
+    return (await this.book(fileId)).list.filter((c) => c.turns.length).map(conversationSummary);
   }
 
   async get(fileId: string, id: string): Promise<Conversation | undefined> {

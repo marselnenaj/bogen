@@ -1,6 +1,6 @@
 {
   "name": "bogen-design",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "license": "GPL-3.0-or-later",
   "bin": {
@@ -19,15 +19,18 @@
   "dependencies": {
     "@bogen/core": "*",
     "@modelcontextprotocol/sdk": "^1.32",
+    "axe-core": "4.14.0",
     "esbuild": "^0.28",
     "imagetracerjs": "1.2.6",
     "lib0": "^0.2",
     "mp4-muxer": "^5.2.2",
+    "opentype.js": "^2.0.0",
     "pdf-lib": "^1.17",
     "puppeteer-core": "*",
     "smol-toml": "*",
     "tailwindcss": "^4.3.3",
     "webm-muxer": "^5.1.4",
+    "woff2-encoder": "^2.0.0",
     "ws": "^8",
     "y-protocols": "^1",
     "yjs": "^13.6",

@@ -18,6 +18,7 @@ Usage:
   bogen open                                                  Open the editor, starting the server if needed
   bogen welcome                                               Open the welcome file, made anew if you deleted it
   bogen mcp                                                   MCP over stdio, for agents; starts the server if needed
+  bogen setup [--agents <claude-code,codex|all|none>]         Find your agents, connect the ones you pick, and say what to do next
   bogen install <claude-code|codex|cursor|vscode|opencode|gemini|zed|grok|hermes|omp|--all>
                                                               Add Bogen to an MCP client
   bogen uninstall <client>                                    Take Bogen out of an MCP client again, skill included
@@ -28,10 +29,13 @@ Usage:
   bogen capture <url> | --site <url> [--widths 1440,768,390] [--schemes dark,light] [--limit 30] [--no-fonts]
                                                               Capture a page, or a whole site with one page per route
   bogen import figma <file url> [--token <t>] [--save-token]  Import through Figma's REST API with your own token
+  bogen export <file or brand> [<file.bogen>] [--no-brand] [--force]
+                                                              Write a .bogen file, with the brand the file links to
+  bogen import <file.bogen>                                   Open a .bogen file here, and add the brand it carries
   bogen replay <file> [--page <name>] [--format mp4|webm|gif] [--speed 2] [--max-idle 1.5] [--from <change>] [--to <change>]
                [--run <id>] [--width 1920] [--height 1080] [--fps 30] [--camera auto|grow|fit|follow] [--no-captions] [--no-cursors] [-o <file>]
                                                               Film how a page was built, step by step, from its history
-  bogen export-folder <file> <folder>                         Write a design as a folder of text, for Git
+  bogen export-folder <file> <folder> [--no-brand]            Write a design as a folder of text, for Git, its brand in brand/
   bogen import-folder <folder>                                Make a new file from such a folder
   bogen diff <folder A> <folder B> [--json]                   What changed between two design folders
   bogen git init|commit|log|restore <file> [<dir>]            Keep the design folder in a real Git repository. Never pushes
@@ -61,6 +65,7 @@ Environment:
   FIGMA_TOKEN        For \`import figma\`: a Figma personal access token
   BOGEN_PEER_TOKEN   For \`peer add\`: the other device's token, to keep it off the command line
   BOGEN_BROWSER      Path to a Chromium-based browser
+  BOGEN_AGENTS       For \`setup\`: the agents to connect without asking, as for --agents
   BOGEN_EXPORT_DIR   Where export_file writes (default ~/Downloads/Bogen)
   BOGEN_UPDATE_CHECK off turns every update check off, also the ones you ask for
   BOGEN_UPDATE_URL   Where releases are fetched from (default the latest GitHub release)
@@ -175,6 +180,8 @@ async function main(): Promise<void> {
       'insecure-allow-any-host': { type: 'boolean' },
       dir: { type: 'string' },
       'dry-run': { type: 'boolean' },
+      'no-brand': { type: 'boolean' },
+      force: { type: 'boolean' },
       site: { type: 'string' },
       widths: { type: 'string' },
       schemes: { type: 'string' },
@@ -202,6 +209,7 @@ async function main(): Promise<void> {
       'no-cursors': { type: 'boolean' },
       runner: { type: 'string' },
       model: { type: 'string' },
+      agents: { type: 'string' },
     },
   });
   const conn = connectionFromEnv(portArg(values.port));
@@ -234,10 +242,17 @@ async function main(): Promise<void> {
     }
     case 'export-folder': {
       const [file, dir] = positionals;
-      if (!file || !dir) fail('Usage: bogen export-folder <file id or name> <folder>');
+      if (!file || !dir) fail('Usage: bogen export-folder <file id or name> <folder> [--no-brand]');
       await ensure(conn);
       const { exportFolder } = await import('./cli-transfer.ts');
-      return exportFolder(conn, file, dir, (line) => process.stdout.write(`${line}\n`));
+      return exportFolder(conn, file, dir, values, (line) => process.stdout.write(`${line}\n`));
+    }
+    case 'export': {
+      const [file, target] = positionals;
+      if (!file) fail('Usage: bogen export <file or brand, id or name> [<file.bogen>] [--no-brand] [--force]');
+      await ensure(conn);
+      const { exportBogenFile } = await import('./cli-transfer.ts');
+      return exportBogenFile(conn, file, target, values, (line) => process.stdout.write(`${line}\n`));
     }
     case 'import-folder': {
       const [dir] = positionals;
@@ -254,7 +269,13 @@ async function main(): Promise<void> {
     }
     case 'import': {
       const [kind, url] = positionals;
-      if (kind !== 'figma' || !url) fail('Usage: bogen import figma <file url> [--token <figma token>] [--save-token] [--name <file name>]');
+      if (kind && kind !== 'figma') {
+        if (url) fail('Usage: bogen import <file.bogen>');
+        await ensure(conn);
+        const { importBogenFile } = await import('./cli-transfer.ts');
+        return importBogenFile(conn, kind, (line) => process.stdout.write(`${line}\n`));
+      }
+      if (kind !== 'figma' || !url) fail('Usage: bogen import <file.bogen>\n       bogen import figma <file url> [--token <figma token>] [--save-token] [--name <file name>]');
       await ensure(conn);
       const { figmaImport } = await import('./cli-transfer.ts');
       return figmaImport(conn, url, values, values.token, (line) => process.stdout.write(`${line}\n`));
@@ -331,6 +352,20 @@ async function main(): Promise<void> {
       if (!res.ok || !out.id) fail(String(out.error ?? res.status));
       openUrl(`${conn.token ? `${conn.url}/?token=${encodeURIComponent(conn.token)}` : conn.url}#/file/${out.id}`);
       process.stdout.write(`${out.created ? 'Made the welcome file again' : 'Opening the welcome file'}: ${conn.url}/#/file/${out.id}\n`);
+      return;
+    }
+    case 'setup': {
+      const { setup, terminalQuestions } = await import('./setup.ts');
+      const agents = values.agents ?? (process.env.BOGEN_AGENTS?.trim() || undefined);
+      // Asks only a person at a terminal, and only when nobody said which agents already.
+      const questions = agents === undefined && process.stdin.isTTY ? terminalQuestions() : null;
+      try {
+        process.exitCode = await setup({ agents }, { write: (text) => process.stdout.write(text), ...(questions ? { ask: questions.ask } : {}) });
+      } catch (e) {
+        fail(errorMessage(e));
+      } finally {
+        questions?.close();
+      }
       return;
     }
     case 'install': {

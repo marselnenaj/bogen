@@ -78,11 +78,6 @@
 .editor > .workspace .panel { min-height: 0; }
 .editor[data-short] > .workspace .panel-head { height: 26px; }
 
-/* ---------------------------------------------------------------- prompt, over the canvas */
-
-.editor > .workspace > .stage > .prompt { max-width: calc(100% - 16px); max-height: calc(100% - 16px); overflow: auto; }
-.editor[data-short] > .workspace > .stage > .prompt .prompt-messages { max-height: min(220px, 28vh); }
-
 /* ---------------------------------------------------------------- dialogs in a low window */
 
 /* A dialog starts nearer the top and never runs past the bottom; its body scrolls and its head and actions stay. */

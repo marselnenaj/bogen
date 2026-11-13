@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -226,6 +226,30 @@ describe('transcribers', () => {
     expect(await findTranscriber({ ...env, BOGEN_WHISPER_MODEL: join(dir, 'missing.bin') })).toBeNull();
     expect(await findTranscriber({ ...env, BOGEN_TRANSCRIBER: 'off' })).toBeNull();
     expect(await findTranscriber({ PATH: '/nonexistent', HOME: '/nonexistent' })).toBeNull();
+  });
+
+  it('find Voxtype with a Whisper model it already has, and run it locally whatever its own settings say', async () => {
+    const data = mkdtempSync(join(tmpdir(), 'bogen-voice-data-'));
+    dirs.push(data);
+    const voxtype = script('voxtype', [
+      'echo "$@" > "$(dirname "$0")/args"',
+      'for a; do last="$a"; done; test -s "$last" || exit 3',
+      `echo 'Loading audio file: "x.wav"'`, `echo 'Audio format: 16000 Hz, 1 channel(s), Int'`, `echo 'Processing 32000 samples (2.00s)...'`, 'echo', `echo ' Make the footer ink.'`,
+    ].join('\n'));
+    const ffmpeg = script('ffmpeg', 'for a; do last="$a"; done; printf RIFF > "$last"');
+    const env = { PATH: join(voxtype, '..'), HOME: '/nonexistent', XDG_DATA_HOME: data, BOGEN_FFMPEG: ffmpeg };
+    expect(await findTranscriber(env)).toBeNull();
+    const models = join(data, 'voxtype', 'models');
+    mkdirSync(models, { recursive: true });
+    writeFileSync(join(models, 'ggml-base.en.bin'), Buffer.alloc(2_000_000));
+    const found = await findTranscriber(env);
+    expect(found).toMatchObject({ kind: 'voxtype', name: 'Voxtype' });
+    const audio = join(data, 'note.webm');
+    writeFileSync(audio, AUDIO);
+    expect(cleanTranscript(await found!.run(audio))).toBe('Make the footer ink.');
+    const args = readFileSync(join(voxtype, '..', 'args'), 'utf8');
+    expect(args).toContain('--engine whisper --whisper-mode local --model base.en transcribe');
+    expect(await findTranscriber({ ...env, BOGEN_FFMPEG: 'none' })).toBeNull();
   });
 
   it('name the type of a body without its parameters, and clean up what they print', () => {

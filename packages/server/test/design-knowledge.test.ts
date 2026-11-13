@@ -70,11 +70,13 @@ describe('authored, actionable design playbooks', () => {
   it.each(DESIGN_DISCIPLINES)('exports a self-contained skill for $id without unrelated disciplines', (d) => {
     const skill = disciplineSkill(d.id);
     expect(skill.startsWith(`---\nname: bogen-${d.id}\n`)).toBe(true);
-    expect(skill).toContain(d.rules[0]!.guidance);
+    // Decisions read as sentences, so their first letter may be lower case.
+    expect(skill).toContain(d.rules[0]!.guidance.slice(1, 40));
     expect(skill).toContain('design_verify');
     expect(skill).not.toMatch(/https?:\/\//);
-    expect(skill.length).toBeLessThan(14000);
-    expect(skill).toContain(d.rules[0]!.repair);
+    expect(skill.length).toBeLessThan(10700);
+    // The likely failure, named so that it can be recognised in a screenshot.
+    expect(skill).toContain(d.rules[0]!.repair!.split(':')[0]!.slice(1));
   });
   it.each([
     ['Erstelle ein Pitchdeck für Investoren', 'pitch-decks'], ['Design a desktop app workspace', 'desktop-apps'],

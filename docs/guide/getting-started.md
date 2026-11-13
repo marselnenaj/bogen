@@ -12,7 +12,7 @@ This page takes you from nothing to a running canvas, a first file and a first a
 Optional:
 
 - **ffmpeg**, for video export when the browser cannot encode, and for AVIF with transparency.
-- **Claude Code or Codex**, for the prompt bar and for `@claude` and `@codex` in comments.
+- **Claude Code or Codex**, for the chat beside the canvas and for `@claude` and `@codex` in comments.
 - **Tailscale**, to [sync with your other devices](devices.md).
 
 This release targets **Omarchy desktop on Arch Linux**. The phone is a companion to your own host, not a standalone mobile server; see the [FAQ](faq.md#what-does-it-run-on).
@@ -103,12 +103,29 @@ are made up. Your agent finds the same examples with `template_list` and makes o
 
 ## 4. Connect your agent
 
+The install script ends with this step. To run it again, for instance after installing another agent:
+
+```sh
+bogen setup
+```
+
+It lists the agents it finds on this computer, says which ones have Bogen already, and asks to
+connect each of the others (Enter means yes). Running it again is safe. Without a terminal it asks
+nothing and prints the commands. `--agents claude-code,codex` (or `all`, or `none`), or the same in
+`BOGEN_AGENTS`, connects those without asking. To connect one client by name:
+
 ```sh
 bogen install claude-code     # or codex, cursor, vscode, opencode, gemini, zed, grok, hermes, omp, or --all
 ```
 
-Then ask your agent, in its own window: "Design a pricing page in Bogen." Keep the canvas open to
-watch it draw. [Agents](agents.md) explains what it can do, and how to undo what it did.
+A session that was open before does not have Bogen's tools yet: restart the agent or start a new
+session. In Claude Code and Codex, `/mcp` then lists `bogen`. Ask your agent, in its own window:
+"Design a pricing page in Bogen." Keep the canvas open to watch it draw. [Agents](agents.md)
+explains what it can do, and how to undo what it did.
+
+If your agent installs Bogen for you, it runs the script with `BOGEN_AGENTS` set to its own client,
+checks with `bogen doctor`, and asks you to restart the session. The steps it follows are at
+[bogen.dev/agent](https://bogen.dev/agent).
 
 If you have the `claude` or `codex` CLI installed, you can also stay in the canvas: press Ctrl+K,
 type what you want, and Bogen runs your CLI with only Bogen's tools.

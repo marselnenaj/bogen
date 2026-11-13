@@ -1430,6 +1430,14 @@ export class PeerManager {
 
   // ---------------------------------------------------------------- deleting
 
+  /**
+   * Whether this device holds a delete of this id, its own or one a paired device sent. Something made anew under that
+   * id would be taken for the deleted file and go again at the next sync, so it needs an id of its own.
+   */
+  wasDeleted(id: string): boolean {
+    return this.tombstones.has(id);
+  }
+
   /** Called before a local delete. Without peers nothing is kept, and deleting works as it always did. */
   async recordDelete(id: string): Promise<void> {
     if (!this.started || !this.links.size) return;

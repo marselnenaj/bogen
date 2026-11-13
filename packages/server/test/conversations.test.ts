@@ -74,6 +74,15 @@ describe('the conversation store', () => {
     expect(next.context).toContain('codex answered (cut off): (nothing)');
     expect(next.prompt).toBe('Make it bigger');
     expect((await reopened.prepare(req('New', 'claude', { conversationId: 'other' }))).context).toBeUndefined();
+    // The file's chats as a list, named by what was said first, the one talked in last first.
+    reopened.started('run5', req('Another   chat\nabout the footer', 'codex', { conversationId: 'c2' }));
+    await new Promise((r) => setTimeout(r, 20));
+    const list = await reopened.list('file1');
+    expect(list.map((c) => [c.id, c.title, c.turns, c.runners, c.running])).toEqual([
+      ['c2', 'Another chat about the footer', 1, ['codex'], true],
+      ['c1', 'Draw a hero', 2, ['claude', 'codex'], false],
+    ]);
+    reopened.ended({ runId: 'run5', fileId: 'file1', runner: 'codex', status: 'done' });
     await reopened.forget('file1');
     expect(await new Conversations(home, new EventHub()).get('file1', 'c1')).toBeUndefined();
   });

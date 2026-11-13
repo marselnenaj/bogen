@@ -84,6 +84,11 @@ await build({
 const collection = join(root, 'assets', 'omarchy-collection');
 if (existsSync(collection)) cpSync(collection, join(dist, 'omarchy-collection'), { recursive: true });
 
+// The icon sets beyond Lucide are data, read on first use (src/icon-set-files.ts), so they stay out of cli.js.
+const iconSets = join(root, '..', 'core', 'src', 'icon-sets');
+if (!existsSync(join(iconSets, 'tabler.json'))) throw new Error(`No icon sets in ${iconSets}. Run scripts/gen-icon-sets.ts.`);
+cpSync(iconSets, join(dist, 'icon-sets'), { recursive: true });
+
 if (existsSync(join(editor, 'index.html'))) {
   cpSync(editor, join(dist, 'editor'), { recursive: true });
   console.log('Bundled dist/cli.js, dist/shader-runtime.js and the editor.');

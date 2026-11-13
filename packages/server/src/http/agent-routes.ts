@@ -98,7 +98,14 @@ export async function agentRoutes(app: BogenServer, req: IncomingMessage, res: S
       send(res, 200, await runQueue(app));
       return true;
     }
-    // The turns of one chat, for a prompt bar or a phone that opens again after a reload.
+    // The chats of a file, for the chat panel's list of earlier chats.
+    if (b === 'conversations' && !c) {
+      const key = url.searchParams.get('fileId') ?? '';
+      if (!/^[\w-]{1,80}$/.test(key)) throw new HttpError(400, 'Say which file.');
+      send(res, 200, await app.conversations.list(key));
+      return true;
+    }
+    // The turns of one chat, for the chat panel or a phone that opens again after a reload.
     if (b === 'conversations' && c && !d) {
       const key = url.searchParams.get('fileId') ?? '';
       if (!/^[\w-]{1,80}$/.test(key) || !Id.safeParse(c).success) throw new HttpError(400, 'Say which file and which conversation.');

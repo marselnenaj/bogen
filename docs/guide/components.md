@@ -104,11 +104,27 @@ inspector.
 | Bootstrap 5 | Web | 17, in every theme colour | `react-bootstrap` | Bootstrap MIT (The Bootstrap Authors); React Bootstrap MIT |
 | Material 3 | Phone, 412 wide | 19, among them the top app bar, navigation bar, FAB and chips | `@mui/material` | Material Design 3 Apache-2.0 (Google); MUI MIT; Roboto Apache-2.0 |
 | Ionic, iOS mode | Phone, 393 wide | 14, among them grouped lists, the toolbar, the tab bar and the action sheet | `@ionic/react` | MIT (Drifty Co.) |
+| Mantine | Web | 17, among them the segmented control, notification and nav link | `@mantine/core` | MIT (Vitaly Rtishchev) |
+| Carbon | Web, dense | 16, among them a data table, the overflow menu, inline notifications and tiles, in the White and Gray 100 themes | `@carbon/react` | Apache-2.0 (IBM); IBM Plex OFL |
+| USWDS | Web, public services | 16, among them alerts, the step indicator, the summary box and tile checkboxes; light only, as USWDS has no dark theme | markup with `usa-*` classes | Public domain and CC0-1.0 (GSA); Public Sans OFL |
+| daisyUI | Web, Tailwind CSS | 16, among them stats, menu and navbar, in five styles of each colour | markup with daisyUI classes | MIT (Pouya Saadeghi) |
+| Web Awesome | Web components | 17, among them the rating, slider, callout and details | markup with `wa-*` elements and their imports | MIT (Fonticons, Inc.), free package only |
+| Pico CSS | Web, classless | 18, plain semantic HTML: buttons, forms, `article`, `details`, `dialog`, tables | the HTML itself, with Pico's stylesheet imported | MIT (Pico) |
 
 Bogen draws every kit itself, from the public documentation and how the components behave, with no
-source code copied. The iOS-mode kit uses no assets, fonts or names of any platform vendor; its font
-is Inter. Paid kits such as Tailwind Plus and platform vendors' own UI kits are not included, and
-nor is anything whose licence is unclear. The licences are listed in `THIRD_PARTY_NOTICES.md` too.
+source code copied. The token values are read from each library's published package. The iOS-mode kit
+uses no assets, fonts or names of any platform vendor; its font is Inter. No kit ships a project's or
+company's logo, and the USWDS kit has no government banner, flag or seal. Paid kits such as Tailwind
+Plus and platform vendors' own UI kits are not included, and nor is anything whose licence is
+unclear. [Licences](licences.md) says what may ship of each candidate system and why; the licences
+are listed in `THIRD_PARTY_NOTICES.md` too.
+
+**Markup kits.** daisyUI, USWDS, Pico CSS and Web Awesome are markup rather than React components, so
+their code is the markup their docs write: `<button class="btn btn-primary">`, `<input aria-invalid="true">`,
+`<wa-button variant="brand">` with `import "@awesome.me/webawesome/dist/components/button/button.js"`.
+The variant classes join the component's own in one class attribute. In React it is JSX
+(`className`, `htmlFor`, `defaultChecked`); in Vue, Svelte and HTML the same markup works as it is.
+Your project loads the library's stylesheet (and for USWDS its script) as the library's docs say.
 
 **Your brand on a kit.** The kit's tokens have roles such as primary, background, border, the body
 font and the radius. `kit_use` with `from_brand` sets them from the file's [brand](brand.md), and
@@ -152,7 +168,9 @@ components. Kits made elsewhere, such as from a Storybook, register with the ser
 Limits: the kits draw closed states only, so a dialog, a menu or a select shows open as a static
 picture, and overlays do not open in the preview. Usages with several parts are templates, so a Select
 always lists the same two items in code. Icons in the drawings are Lucide; in code, Material uses
-`@mui/icons-material` and shadcn `lucide-react`. A newer version of a kit in a later Bogen comes as a
+`@mui/icons-material` and shadcn and Mantine `lucide-react`. A markup kit's variant can add one
+attribute, so an error state marks the input and not its group (USWDS's `usa-form-group--error`), and
+some states only show after input in the real library, such as Web Awesome's invalid field. A newer version of a kit in a later Bogen comes as a
 new library file, and files keep the version they linked.
 
 ## Code components from your repo

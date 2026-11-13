@@ -1,0 +1,76 @@
+/* The Accessibility and legal check (panels/ComplianceDialog.tsx), drawn first on the page "Accessibility" of the
+   Bogen Brand System file. */
+.compliance-scrim { padding: 16px; place-items: center; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
+.compliance-dialog { width: 1180px; max-width: 100%; height: 820px; max-height: 100%; display: flex; flex-direction: column; }
+.compliance-dialog .compliance-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.compliance-dialog .compliance-head label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ui-fg-2); }
+.compliance-dialog select, .compliance-dialog input { min-height: 28px; padding: 4px 8px; border: 1px solid var(--ui-border); background: var(--ui-bg-2); color: var(--ui-fg); border-radius: var(--radius); font: inherit; font-size: 13px; }
+.compliance-dialog .compliance-spacer { flex: 1; }
+.compliance-dialog .compliance-layout { flex: 1; display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 0; }
+.compliance-dialog .compliance-nav { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-right: 1px solid var(--ui-border); overflow-y: auto; }
+.compliance-dialog .compliance-nav > button { display: flex; justify-content: space-between; text-align: left; padding: 8px; border: 0; background: transparent; color: inherit; font: inherit; border-radius: var(--radius); cursor: pointer; }
+.compliance-dialog .compliance-nav > button:hover { background: var(--hover); }
+.compliance-dialog .compliance-nav > button.is-active { background: var(--active); }
+.compliance-dialog .compliance-nav > button > span { color: var(--ui-fg-2); }
+.compliance-dialog .compliance-nav > button > span.is-bad { color: var(--ui-danger); }
+.compliance-dialog .compliance-nav hr { border: 0; border-top: 1px solid var(--ui-border); margin: 8px 0; width: 100%; }
+.compliance-dialog .compliance-nav p { margin: auto 0 0; padding: 8px; font-size: 12px; line-height: 1.45; color: var(--ui-fg-2); }
+.compliance-dialog .compliance-main { overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.compliance-dialog .compliance-main h3 { font-size: 13px; margin: 12px 0 0; }
+.compliance-dialog .compliance-status h2 { margin: 0; font-size: 22px; font-weight: 600; }
+.compliance-dialog .compliance-status p, .compliance-dialog .compliance-intro, .compliance-dialog .compliance-empty { margin: 0; color: var(--ui-fg-2); font-size: 14px; line-height: 1.5; }
+.compliance-dialog .compliance-numbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--ui-border); }
+.compliance-dialog .compliance-numbers > div { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; min-width: 0; }
+.compliance-dialog .compliance-numbers > div + div { border-left: 1px solid var(--ui-border); }
+.compliance-dialog .compliance-numbers span { font-size: 12px; color: var(--ui-fg-2); }
+.compliance-dialog .compliance-numbers strong { font-size: 20px; font-weight: 600; }
+.compliance-dialog .compliance-bar { display: flex; height: 8px; gap: 2px; }
+.compliance-dialog .compliance-bar span { flex-basis: 0; }
+.compliance-dialog .compliance-bar [data-part=failed] { background: var(--ui-danger); }
+.compliance-dialog .compliance-bar [data-part=passed] { background: var(--ui-accent); }
+.compliance-dialog .compliance-bar [data-part=needs_person] { background: color-mix(in oklab, var(--ui-fg) 25%, transparent); }
+.compliance-dialog .compliance-bar [data-part=not_applicable] { background: var(--ui-bg-3); }
+.compliance-dialog .compliance-row { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--ui-border); }
+.compliance-dialog .compliance-id { font-family: var(--ui-mono); font-size: 12px; color: var(--ui-fg-2); padding-top: 2px; }
+.compliance-dialog [data-status=failed] .compliance-id { color: var(--ui-danger); }
+.compliance-dialog .compliance-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; line-height: 1.45; }
+.compliance-dialog .compliance-body > strong { font-weight: 600; }
+.compliance-dialog .compliance-reason, .compliance-dialog .compliance-test, .compliance-dialog .compliance-source, .compliance-dialog .compliance-marked { color: var(--ui-fg-2); font-size: 12px; }
+.compliance-dialog .compliance-test { font-size: 13px; }
+.compliance-dialog .compliance-source { overflow-wrap: anywhere; }
+.compliance-dialog .compliance-evidence { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.compliance-dialog .compliance-evidence li { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+.compliance-dialog .compliance-evidence em { color: var(--ui-fg-2); font-style: normal; }
+.compliance-dialog .compliance-mark { display: flex; flex-direction: column; gap: 6px; }
+.compliance-dialog .compliance-mark label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ui-fg-2); }
+.compliance-dialog .compliance-results, .compliance-dialog .compliance-filter { display: flex; flex-wrap: wrap; }
+.compliance-dialog .compliance-results button, .compliance-dialog .compliance-filter button { min-height: 26px; padding: 0 10px; background: transparent; color: var(--ui-fg); border: 1px solid var(--ui-border); font: inherit; cursor: pointer; }
+.compliance-dialog .compliance-results button + button, .compliance-dialog .compliance-filter button + button { border-left: 0; }
+.compliance-dialog .compliance-results button.is-active, .compliance-dialog .compliance-filter button.is-active { background: var(--ui-accent); color: var(--ui-accent-fg); border-color: var(--ui-accent); font-weight: 600; }
+.compliance-dialog .compliance-results button:focus-visible, .compliance-dialog .compliance-filter button:focus-visible, .compliance-dialog .compliance-nav > button:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.compliance-dialog .compliance-stale { margin: 0; padding: 8px 12px; background: var(--accent-soft); font-size: 13px; }
+.compliance-dialog .compliance-error { margin: 0; color: var(--ui-danger); }
+.compliance-dialog .compliance-notes { margin: 0; padding-left: 18px; color: var(--ui-fg-2); font-size: 12px; }
+.compliance-dialog .compliance-statement { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; }
+.compliance-dialog .compliance-statement-draft { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.compliance-dialog .compliance-sheet { background: #f4f2ec; color: #0e0e0c; padding: 28px 32px; font-size: 14px; line-height: 1.5; }
+.compliance-dialog .compliance-sheet h1 { font-size: 20px; margin: 0 0 8px; }
+.compliance-dialog .compliance-sheet h2 { font-size: 15px; margin: 14px 0 4px; }
+.compliance-dialog .compliance-sheet p, .compliance-dialog .compliance-sheet ul { margin: 0 0 8px; }
+.compliance-dialog .compliance-sheet .draft { color: #5f5d55; font-size: 12px; }
+.compliance-dialog .compliance-sheet mark { background: #ffe08a; color: #0e0e0c; padding: 0 2px; }
+.compliance-dialog .compliance-fields { display: flex; flex-direction: column; gap: 12px; }
+.compliance-dialog .compliance-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ui-fg-2); }
+.compliance-dialog .compliance-fields p { margin: 0; font-size: 12px; color: var(--ui-fg-2); line-height: 1.45; }
+@media (max-width: 760px) {
+  .compliance-dialog .compliance-layout { grid-template-columns: minmax(0, 1fr); }
+  .compliance-dialog .compliance-nav { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--ui-border); }
+  .compliance-dialog .compliance-nav p, .compliance-dialog .compliance-nav hr { display: none; }
+  .compliance-dialog .compliance-numbers, .compliance-dialog .compliance-statement { grid-template-columns: minmax(0, 1fr); }
+  .compliance-dialog .compliance-numbers > div + div { border-left: 0; border-top: 1px solid var(--ui-border); }
+  .compliance-dialog .compliance-main { padding: 16px; }
+}
+.compliance-dialog .compliance-legal .compliance-row { grid-template-columns: 96px minmax(0, 1fr); }
+.compliance-dialog .compliance-legal .compliance-id { font-family: inherit; }
+.compliance-dialog .compliance-legal [data-state=look] .compliance-id { color: var(--ui-fg); font-weight: 600; }
+.compliance-dialog .compliance-body > button { align-self: flex-start; }

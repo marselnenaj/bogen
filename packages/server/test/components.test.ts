@@ -284,6 +284,32 @@ describe('design system over MCP', () => {
     expect(computed[icon.id].box.width).toBe(32);
   });
 
+  it('icons: searches and places the other sets, stroked and filled, and none of their logos', async () => {
+    expect((await call(agent, 'icon_search', { query: 'home', set: 'tabler' })).icons[0]).toBe('tabler:home');
+    expect((await call(agent, 'icon_search', { query: 'house', set: 'phosphor' })).icons[0]).toBe('phosphor:house');
+    expect((await call(agent, 'icon_search', { query: 'add home', set: 'material-symbols' })).icons[0]).toBe('material-symbols:add_home');
+    // Every set takes turns in a search of all of them.
+    const all = (await call(agent, 'icon_search', { query: 'home', set: 'all', limit: 12 })).icons as string[];
+    for (const set of ['phosphor:', 'tabler:', 'heroicons:', 'heroicons-solid:', 'material-symbols:']) expect(all.some((n) => n.startsWith(set)), set).toBe(true);
+    expect(all).toContain('house');
+    // Logos are other companies' trademarks, so the sets leave them out.
+    expect((await call(agent, 'icon_search', { query: 'github', set: 'all' })).icons.filter((n: string) => /logo|brand/.test(n))).toEqual([]);
+    const page = await call(agent, 'page_create', { name: 'More icons' });
+    const board = await call(agent, 'artboard_create', { name: 'B', page_id: page.id, width: 300, height: 100 });
+    const { doc } = await room();
+    const outline = await call(agent, 'icon_insert', { name: 'heroicons:home', parent_id: board.id });
+    expect(doc.getNode(outline.id)!.svg).toMatch(/stroke-width="1.5"/);
+    expect(doc.getNode(outline.id)!.svg).toContain('viewBox="0 0 24 24"');
+    const filled = await call(agent, 'icon_insert', { name: 'material-symbols:home', parent_id: board.id, color: '#123456' });
+    expect(doc.getNode(filled.id)!.svg).toContain('fill="#123456"');
+    expect(doc.getNode(filled.id)!.svg).toContain('viewBox="0 -960 960 960"');
+    expect(doc.getNode(filled.id)!.name).toBe('material-symbols:home');
+    const wrong = await callRaw(agent, 'icon_insert', { name: 'tabler:hom', parent_id: board.id });
+    expect(wrong.isError).toBe(true);
+    expect(wrong.content[0]!.text).toContain('tabler:home');
+    expect((await callRaw(agent, 'icon_insert', { name: 'remix:home', parent_id: board.id })).isError).toBe(true);
+  });
+
   it('batch: components and instances in one atomic step, with references', async () => {
     const out = await call(agent, 'batch', { steps: [
       { tool: 'html_write', args: { html: '<div data-name="Tag" style="padding:4px;display:flex"><span data-name="T">Tag</span></div>' }, as: 'made' },

@@ -156,3 +156,6 @@
 .data-link.is-start { align-self: flex-start; }
 .data-link:disabled { opacity: .5; }
 .data-add { display: flex; flex-direction: column; gap: 6px; padding: 10px; }
+.export-bogen-group { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.home-import-note { display: flex; align-items: center; gap: 8px; margin: 8px 0; padding: 6px 10px; background: var(--ui-bg-3); border-radius: var(--radius); font-size: 12.5px; }
+.home-import-note > span { flex: 1 1 auto; }

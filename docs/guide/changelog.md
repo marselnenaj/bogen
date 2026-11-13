@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.2.0
+
+A chat beside the canvas, fonts your agent draws, more kits and frameworks, accessibility and legal checks, and design guidance that gives agents more to work with.
+
+### Your agent
+
+- A chat with your agent per file, docked between the canvas and the inspector, in place of the floating prompt bar. Ctrl+Alt+3 shows or hides it and the file remembers it; Ctrl+K takes the focus. Answers render as markdown (never as HTML) block by block with the steps as they happen, the list follows new words until you scroll up, and Stop shows the time. Copy, Ask again and Edit sit under the last answer. The selection goes with a message as chips you can take out, and images can be pasted, dropped or attached. The title lists the file's earlier chats, and one opens again to continue. Review modes, runner, model, races, proposals, critiques and Redo this screen work as before. In a narrow window it opens over the canvas. [The chat](agents.md#ask-from-the-canvas-the-chat).
+- Speak instead of typing, in the chat and in every comment box on the desktop: your computer writes it out with its own speech model and the words land in the field to be checked. Voxtype, Omarchy's dictation, is found with a Whisper model it already has. Without a model the chat says how to get one, and a comment keeps a voice note. [Speak instead of typing](agents.md#speak-instead-of-typing).
+- `bogen setup` finds the agents on this computer, says which ones have Bogen, connects the ones you
+  pick and says what to do next. The install script ends with it; `BOGEN_AGENTS` answers ahead.
+
+### Design guidance for agents
+
+- The MCP instructions open with the design core: a direction written out before the first screen (audience and job, an idea from the subject with two references, type, colour as named hex values, a layout sentence per screen), the system as tokens, building with an ambition bar (the real product large, real content in quantity, a layout idea per section, states), and the checks. The design guide adds worked examples and a direction in full; each discipline skill opens with what strong work in its medium holds. The Claude Code skill no longer repeats the instructions. The social playbook covers ads and campaign images: one picture as a visual metaphor, a short headline that turns on it, the brand inside the scene, one colour treatment. Colour is a decision with roles (ground, ink, supporting colours, an action colour, tinted neutrals and a named contrast), and `palette_suggest` gives such palettes from a subject, a seed colour or a stored image, with the WCAG 2 contrast ratio of every text pair.
+- `design_lint` and `design_review` report twenty-nine craft findings for what reads as generated or unfinished: hard for objective defects, advisory with a reason for matters of taste, such as more than two font families, decorative monospace, equally loud type, competing filled actions, glow, tilt, drawn window dots and text on a picture without a scrim. [Design playbooks and verification](design-knowledge.md#craft-checks) lists each line.
+- `design_verify` takes a scored rubric of eight criteria. It does not count while an objective defect stands (overflow, unreadable text, placeholder copy); advisory findings never block or cap, and a kept choice is recorded with its reason; a score above 3 does not hold while measured findings stand against that criterion, and built-in runs do not complete without the rubric.
+
+### Brands
+
+- A file goes to another device with its brand: a `.bogen` file of a linked file carries the brand's
+  whole document and assets unless you clear **Include its brand**, and opening it adds the brand under
+  the same id, or keeps the one that is there and says when the two differ. A brand also goes on its
+  own (**.bogen** on the brand page, `brand_export`, `bogen export <brand>`), and design folders carry
+  it in `brand/`. New: `file_export`, `file_import`, `brand_export`, `bogen export`, `bogen import`.
+
+### Kits, icons and code for more frameworks
+
+- Six more kits: Mantine, Carbon (dense, with a data table), USWDS (for public services, light only), daisyUI, Web Awesome (web components) and Pico CSS (classless HTML). Their tokens are read from each library's package, a brand maps onto them through the same roles, and none ships a project's logo or a government mark. [Component kits](components.md#component-kits).
+- Kits that are markup (daisyUI, USWDS, Pico CSS, Web Awesome) hand off as that markup, one class attribute per tag, with the scripts of custom elements imported; React gets it as JSX.
+- `icon_search` and `icon_insert` reach Phosphor, Tabler Icons, Heroicons (outline and solid) and Material Symbols next to Lucide, with names such as `tabler:home`, and `set: "all"` searches them together. Logos of other companies are left out.
+- `code_get` and `export_file` write Vue (script setup, TypeScript), Svelte 5 and SwiftUI: a file per component with typed props and its variants, instances as usages, tokens in light and dark, motion that honours reduced motion, and what the format could not say. Every Vue and Svelte file is compiled in the tests; SwiftUI is checked with `swiftc -parse`. [Vue, Svelte and SwiftUI](export-and-code.md#vue-svelte-and-swiftui).
+- [Licences](licences.md) says what Bogen may ship of each candidate design system, icon set and export target, and what it must not use.
+- In a set of a kit, each member's text props now come into code with that member's own text.
+
+### Fonts of your own
+
+- Agents draw fonts: `font_create` makes a page of glyph cells on one em grid with guides, `font_glyphs_set` writes glyphs from SVG path data, `font_kerning_set` kerns, and `font_build` makes an OTF and a WOFF2 that text in the file uses at once and exports carry. `font_specimen` sets a waterfall, a pangram, your words and spacing strings to judge it by, and `fonts_made` lists the fonts made in a file. [Fonts of your own](fonts.md) has the details.
+- A font can start from a traced drawing (`image_vectorize`, then `from_layer`) or from an open font whose own licence allows changes, under a new name that keeps clear of its Reserved Font Names. A proprietary font is refused.
+- On a glyph page the inspector shows the Font panel: Build font, downloads, a preview line in the current build, metrics and every glyph. Built fonts come first in the font list, marked Made here.
+- `guide_get fonts` tells agents how to make a display face hold together: one stem weight, overshoot, optical corrections and spacing with control characters.
+
+### Accessibility and legal requirements
+
+- `compliance_check` and the editor's **Accessibility and legal check** check a page against EN 301 549 V3.2.1, WCAG 2.2 AA, WCAG 2.1 AA, the European Accessibility Act with the Austrian BaFG, or the WZG for public bodies, criterion by criterion: failed with layers and fixes, passed, not applicable, or needs a person with a short test. They run axe-core in the renderer, text and non-text contrast, reflow at 320 CSS px, the text spacing override, language of page and parts, and form labels, errors and autocomplete.
+- The score never claims conformance while a criterion failed or is open; the automated pass rate is reported apart. A person marks what only a person can decide, and the marks are stored in the file with their name and the date.
+- `compliance_statement` drafts the Erklärung zur Barrierefreiheit in German and English in the EU model's sections, with the FFG's complaint procedure under the WZG and the Sozialministeriumservice under the BaFG, and the fields a person fills in marked. The report exports as HTML or PDF.
+- With `legal: true`, reminders with sources for what a design can show of other duties: Impressum and privacy links, consent banners, embeds and remote Google Fonts, order button wording, prices, discounts, urgency, green claims, ad and AI labels, picture licences. [Accessibility and other legal requirements](compliance-law.md) says what each law asks, as read on 13 November 2026. A technical aid, not legal advice.
+
 ## 0.1.0
 
 The first version. Everything below is new. [The canvas](canvas.md) and the other guides say where a

@@ -5,7 +5,7 @@ already have. There are two ways in:
 
 - **Your agent connects to Bogen.** You work in Claude Code, Codex or another MCP client, and it
   draws through Bogen's MCP tools. It can work with no editor open.
-- **Bogen starts your agent.** From the canvas, Ctrl+K or a comment that mentions `@claude` or
+- **Bogen starts your agent.** From the chat beside the canvas (Ctrl+K), or a comment that mentions `@claude` or
   `@codex` runs your own `claude` or `codex` CLI with only Bogen's tools.
 
 ## Connect a client
@@ -21,8 +21,32 @@ switching views does not start an agent check or a model run. Inspector tabs wra
 in a narrow sidebar; use the arrow keys, Home or End while a tab has keyboard focus.
 
 ```sh
+bogen setup
+```
+
+`bogen setup` finds the clients below on this computer, shows which ones have Bogen, and asks to
+connect each of the others; Enter means yes. The install script runs it at the end. It asks only at a
+terminal: elsewhere it prints the `bogen install` command for each client instead.
+`--agents claude-code,codex`, `--agents all` (every client it finds) or `--agents none`, or the same
+in `BOGEN_AGENTS`, answers without a question. It ends with what to do next. To connect one client
+by name:
+
+```sh
 bogen install claude-code
 ```
+
+A client reads its MCP servers when a session starts, so a session that was open before does not have
+Bogen's tools: restart the client or start a new session. In Claude Code and Codex, `/mcp` then lists
+`bogen`.
+
+An agent that installs Bogen for a person runs the script with its own client named, then checks:
+
+```sh
+curl -fsSL https://bogen.dev/install.sh | BOGEN_AGENTS=claude-code bash
+bogen doctor
+```
+
+and tells the person to restart the session, since its own session started before Bogen was there.
 
 | Client | What `bogen install` does |
 | --- | --- |
@@ -113,7 +137,7 @@ Everything a person can do in a file, through the tools in the [MCP tool referen
   rhythm, type hierarchy and copy, with safe fixes applied in one step (`design_lint`; see
   [Copy that does not sound generated](#copy-that-does-not-sound-generated)); widths and optional mobile browser height changes (`responsive_check`, `viewport_heights`); pixel differences (`visual_diff`); the brand
   (`brand_check`, whose `why.raise` says what would raise the score most and on which layers);
-  accessibility (`a11y_audit`, see [Accessibility audit](#accessibility-audit)); drift
+  accessibility (`a11y_audit`, see [Accessibility audit](#accessibility-audit), and `compliance_check`, see [Accessibility and legal check](#accessibility-and-legal-check)); drift
   from the live site (`drift_check`).
 - **Adapt and prototype:** narrower versions of an artboard as media rules or linked artboards
   (`responsive_variant`), and prototypes with variables and interactions (`variable_set`,
@@ -143,12 +167,30 @@ correctly, but have not been run as slash commands in a real client yet.
 Agents leave locked layers alone. Unlocking needs a tool call the instructions tell them to make
 only when you ask.
 
-## Ask from the canvas: Ctrl+K
+## Ask from the canvas: the chat
 
-Press Ctrl+K, type what you want and press Enter. Bogen runs your own `claude` or `codex` CLI on
+Each file has a chat with your agent, docked between the canvas and the inspector. Press **Ctrl+K**
+to open it with the focus in its field, type what you want and press **Enter**; **Shift+Enter** adds
+a line. **Ctrl+Alt+3** (or the sparkle button in the toolbar) shows or hides it, and the file
+remembers whether it was open. Drag its left edge to make it wider or narrower; it follows the UI
+scale and your Omarchy theme like the other panels. In a window too narrow for it beside the canvas it
+opens over the canvas instead, and Esc closes it there. Bogen runs your own `claude` or `codex` CLI on
 your plan, with no API key. The run sees your file, page and selection.
 
-- Pick the runner, the model and the effort in the bar. The model list comes from the CLI itself
+- What you select goes with the message, as chips above the field. A chip's cross leaves that layer
+  out of this message; selecting something else brings the selection back.
+- Paste, drop or attach up to four images, and they go with the message for the agent to look at.
+  The layers button on an image's chip rebuilds it as layers instead (see
+  [Rebuild an image as layers](#rebuild-an-image-as-layers)).
+- The answer arrives as the CLI writes it, a block at a time, with the steps it takes as they happen
+  and **Stop** with the time the run has taken. It is shown as markdown: paragraphs, lists, code,
+  bold and links (web links only; HTML in an answer stays text). The list follows new words until you
+  scroll up to read; then **Jump to the latest** brings you back.
+- Under an answer: what the run changed (see [What a run changed](#what-a-run-changed)), its steps,
+  **Copy**, and on the last one **Ask again** and **Edit your message**. Up in an empty field also takes
+  your last message back. A failed run says why, with **Try again** and **Edit the message**.
+- The microphone speaks instead of typing; see [Speak instead of typing](#speak-instead-of-typing).
+- Pick the runner, the model and the effort in the chat. The model list comes from the CLI itself
   (`claude --help`, `codex debug models`). Your choice is remembered.
 - Pick where the work lands: **Change it** works on the layers, **Propose** works on a copy for
   you to accept, **3 directions** races several runs side by side (see [A race of agents](#a-race-of-agents)),
@@ -160,9 +202,37 @@ your plan, with no API key. The run sees your file, page and selection.
   been tried.
 - One run per file at a time, and at most sixteen at once.
 
-Runs of both CLIs have been made for real through the same route the bar uses. On 2 November 2026 a
+Runs of both CLIs have been made for real through the same route the chat uses. On 2 November 2026 a
 real Codex run in **Propose** mode took 16 s and changed only the copy, which was then accepted. The
-bar itself has been tested against stand-in CLIs.
+chat itself has been tested against stand-in CLIs (`apps/editor/test/e2e/chat-panel.ts`), never with a
+real model.
+
+### Speak instead of typing
+
+The microphone in the chat and in every comment box records you, and your computer writes it out with
+a speech model you installed. The words land in the field; nothing is sent until you check them and
+press Enter. While it records you see the time and the level; **Write it out** (it has the focus, so
+Enter or Space stops) ends the recording, the cross or Esc throws it away, and it stops by itself after
+three minutes.
+
+The recording goes to Bogen's server on this computer and nowhere else: no speech service, no Bogen
+server, no other device. Bogen finds a model by looking, never by installing or downloading one, in this
+order: a command of your own in `BOGEN_TRANSCRIBER`, whisper.cpp with a model file, Voxtype (Omarchy's
+dictation, with a Whisper model it already downloaded, always run locally whatever its own settings say),
+and faster-whisper with a cached model. See [Privacy](privacy.md#voice-notes).
+
+- **No model yet:** the chat says so and how to get one, and records nothing, since an agent cannot
+  hear a recording. On Omarchy, pick Voxtype in the Omarchy menu under Setup, Defaults, Dictation, or run
+  `omarchy-install-dictation-voxtype`; then **Check again**. In a comment the recording is kept as a voice
+  note that plays on this computer; add a line if an agent should act on it.
+- **Microphone blocked:** allow it for Bogen in the browser's site settings and try again. The editor runs
+  on `127.0.0.1`, which the browser treats as a secure page, so it can ask.
+
+The chat and the comment boxes are tested with a stand-in model and Chromium's made-up microphone. The
+Voxtype path was run once on 13 November 2026, on an Omarchy machine with Voxtype's `ggml-base.en`: an
+8-second English clip (WebM, as the browser records) was written out in 0.9 s, word for word except for
+the names, which came out as "Bogan" and "Omarchi". That model only reads English; a multilingual one
+(`base` or `small`) reads other languages. A real microphone in the editor has not been tried.
 
 Claude model names come from the installed CLI's SDK metadata: the picker shows a version such as **Opus 5.5**, rather than just Opus. Provider aliases remain aliases, so selecting `opus` follows the version that your CLI resolves; a full model id pins a particular model. When metadata is unavailable, Bogen keeps the CLI aliases without inventing a version. Reading this catalog sends no prompt and starts no model turn.
 
@@ -177,7 +247,7 @@ Claude model names come from the installed CLI's SDK metadata: the picker shows 
 | Hermes (`hermes`) | No | `hermes chat` takes MCP servers only from your own `config.yaml`, and `--safe-mode` turns MCP off; its ACP mode documents no per-session limit for its built-in tools. |
 | Oh My Pi (`omp`) | No | `--no-tools` removes only the built-in tools; it still loads your own MCP servers and those it finds in other apps' settings, with no switch for one run. |
 
-The three that Bogen does not run are listed in the bar as not available, with the reason in
+The three that Bogen does not run are listed in the chat as not available, with the reason in
 Settings. Bogen does not fall back to another agent for them, since that would spend another plan.
 `bogen install grok`, `hermes` or `omp` connects them the other way round, so that you use Bogen from
 them.
@@ -187,7 +257,7 @@ but their tools are denied to the run's agent, and so are those of a `bogen` ser
 with `bogen install opencode`. A managed configuration an administrator installed comes after the
 one Bogen passes and may change permissions; that is their policy, and Bogen does not override it.
 Comments and the phone take OpenCode like the others; its model is the one set for it, or OpenCode's
-own default. The newer agents are only looked up on the `PATH` when the bar or Settings list them;
+own default. The newer agents are only looked up on the `PATH` when the chat or Settings list them;
 their version, options and models are asked when you pick one. OpenCode runs have been tested with
 a stand-in CLI only, never with a real model.
 
@@ -198,33 +268,36 @@ MacBook can ask `claude` or `codex` on the PC:
 
 1. On the PC, in the Agents tab under **Other devices**, tick **MacBook may ask agents here**. This only
    works at the PC itself; until then the PC refuses the MacBook's requests.
-2. On the MacBook, the runner list in the Ctrl+K bar now has **Claude Code on PC** and **Codex on PC**. The bar
+2. On the MacBook, the runner list in the chat now has **Claude Code on PC** and **Codex on PC**. The chat
    says where it runs: "runs on PC, its plan, and comes back by sync".
 3. The run happens on the PC, in the PC's copy of the file, with the PC's model choice for the prompt and on the
-   PC owner's plan. Its steps and its reply stream back to the bar, **Stop** stops it there, and its changes
+   PC owner's plan. Its steps and its reply stream back to the chat, **Stop** stops it there, and its changes
    come back through device sync like any other edit. The PC's run history records it with who asked.
    What it changed and **Undo this run** work from the MacBook too, through the PC.
 
-The file must have synced to the PC first; if not, the bar says so. Comments that mention `@claude` on the
+The file must have synced to the PC first; if not, the chat says so. Comments that mention `@claude` on the
 MacBook still run on the MacBook, or not at all when it has no CLI: a comment is part of the document, and
 nothing in a document starts a run on another device. Conversations live on the device that ran them, so after
-a reload the MacBook's bar does not show a chat held on the PC.
+a reload the MacBook's chat does not show a conversation held on the PC.
 
 ## Conversations that remember
 
 Every run starts a fresh CLI, which on its own knows nothing of the message before. So Bogen keeps the
 conversation and tells each run what came before:
 
-- The Ctrl+K bar and Ask on the phone send each message with a conversation id, kept per file on the
+- The chat and Ask on the phone send each message with a conversation id, kept per file on the
   device. The server keeps every turn in `conversations/<fileId>.json` in the data folder, next to the
   run history: what you said, what the agent answered at the end, which CLI it was, and the layers the
   run created or changed.
 - The next run in that conversation gets a short transcript ahead of your message: the last 8 turns,
   at most 6000 characters, newest kept, each with the layer ids it touched. It does not matter which
   CLI ran a turn, so you can switch from Claude to Codex in the middle and Codex knows what Claude did.
-- The conversation survives a reload and a restart of the server. The bar and the phone show it again
-  when they open. **New chat** (next to the mode in the bar, at the top of the thread on the phone)
+- The conversation survives a reload and a restart of the server. The chat and the phone show it again
+  when they open. **New chat** (at the top of the chat, at the top of the thread on the phone)
   starts a new one, and the agent forgets the old one.
+- The chat's title (or the clock button next to it) lists the file's earlier chats, the one talked in last
+  first, with who answered and how long each is. Open one and the next message continues it. A file keeps
+  its last 40.
 - A phone and a computer share a conversation only when they use the same id. Each device keeps its
   own by default.
 - **Run this again** in the run history runs a turn again in its conversation.
@@ -236,7 +309,7 @@ while you stay on one CLI. The transcript costs a few thousand characters of pro
 
 ## A race of agents
 
-**3 directions** in the Ctrl+K bar starts several runs on the same request at once, with runners you
+**3 directions** in the chat starts several runs on the same request at once, with runners you
 pick: Claude and Codex, or two models of one CLI. Each lane has a runner and a model; add up to sixteen
 lanes with **+ Runner**. The bar says how many runs it starts, each on your own plan.
 
@@ -263,7 +336,7 @@ real CLIs at once.
 
 ## Critique
 
-**Critique** in the Ctrl+K bar asks an agent to review the selection or the page, and change nothing.
+**Critique** in the chat asks an agent to review the selection or the page, and change nothing.
 Type what to look at, or just press Enter.
 
 - The run checks with `brand_check` (when the file has a brand), `design_lint`, `responsive_check` at
@@ -280,9 +353,9 @@ Tested with stand-in CLIs that tried to write and to fix; never with a real mode
 
 ## Rebuild an image as layers
 
-Right-click an image layer and choose **Rebuild as layers**, or paste an image into the Ctrl+K bar
-(what you typed goes along as a note). A pasted image is placed on the canvas first, since the run
-compares against it.
+Right-click an image layer and choose **Rebuild as layers**, or paste an image into the chat and press
+the layers button on its chip (what you typed goes along as a note). The image is placed on the canvas
+first, since the run compares against it.
 
 - The run gets the image attached. Codex takes it as `-i <file>`. Claude has no image flag in print
   mode, so the request goes in as one stream-json message (`--input-format stream-json`) with the
@@ -294,7 +367,7 @@ compares against it.
   again, at most three rounds. The image itself stays as it was.
 - **Run this again** in the run history attaches the image again.
 
-One real run on 2 November 2026: `claude` on `haiku` got a 460 by 170 screenshot of the Ctrl+K bar,
+One real run on 2 November 2026: `claude` on `haiku` got a 460 by 170 screenshot of the former prompt bar,
 described what it showed, rebuilt it as seven layers next to it with tokens for its colours, and
 stopped after three rounds of `visual_diff` at 22.5% different pixels, mostly text a few pixels off.
 69 s. Codex's `-i` path is tested with a stand-in CLI only.
@@ -306,6 +379,9 @@ the thread and the layer as context and answers in the thread. Only you resolve 
 the editor or on the phone: an agent cannot, also not when its run ends, and a reply leaves a thread as
 it is. If it needs something from you, it asks in the thread.
 
+- The microphone in the comment box speaks instead of typing, as in the chat (see
+  [Speak instead of typing](#speak-instead-of-typing)). Without a local speech model the recording stays
+  on the comment as a voice note that plays on this computer; an agent asked in the thread does not hear it.
 - One run per file at a time; up to five more mentions wait in line. A file can start at most 20
   runs from comments in ten minutes. Waiting mentions of all files form one queue: see
   [The queue](#the-queue).
@@ -400,7 +476,7 @@ when that happens, and the run history says so on the run, with what it said the
 - A critique never gets a second go, nor does live site mode, and no run gets more than one.
 - The second go is part of the same run: one entry in the run history, and one commit.
 
-Tested with stand-in CLIs that only agree, for both Claude and Codex, in the bar and in comments. With
+Tested with stand-in CLIs that only agree, for both Claude and Codex, in the chat and in comments. With
 real models, [the check](#check-the-agents) has seen both do a polite request on the first try, and the guard
 leave a pure question alone once "ändere nichts" and "antworte nur" were understood as asking for no change.
 
@@ -478,6 +554,26 @@ A saved check with `a11y: true`, or the built-in `builtin:a11y`, runs the same a
 **Design checks** and through `check_run`. Text contrast stays with `design_lint` and
 `brand_check`.
 
+## Accessibility and legal check
+
+`compliance_check` checks a page or an artboard against a profile, criterion by criterion:
+`en-301-549` (EN 301 549 V3.2.1, the version the Official Journal cites), `wcag-2.2-aa`,
+`wcag-2.1-aa`, `eaa-bafg` (European Accessibility Act and the Austrian BaFG) and `wzg` (Austrian
+public bodies). It runs axe-core, `a11y_audit`, text and non-text contrast, reflow at 320 CSS px, the
+text spacing override, the language of the page and its parts, and form labels, errors and
+autocomplete, and gives every A and AA criterion as failed (with layers and fixes), passed, not
+applicable, or needing a person (with a short test). A failure a check found cannot be marked away.
+What only a person can decide stays open until the person marks it in the editor's **Accessibility
+and legal check** (command palette, or **Design checks**); marks are stored in the file with their
+name and the date. The status never says conformant while anything failed or is open, and the
+automated pass rate is reported apart from it. `legal: true` adds reminders of other duties a design
+can show, each with its source, as findings and checklist items, never as a block. `export` writes
+the report as HTML or PDF, and `compliance_statement` drafts the Erklärung zur Barrierefreiheit in
+German and English with the fields a person fills in marked.
+
+It is a technical aid, not legal advice or a certification. What the laws and standards ask, with
+sources, and the map of every criterion: [Accessibility and other legal requirements](compliance-law.md).
+
 ## Proposals: review before it counts
 
 When your agent changes something you care about, it can work in a proposal: a marked copy next to
@@ -495,13 +591,13 @@ One limit: page exports and thumbnails include open proposals.
 
 ## Redo without a mess: revisions
 
-Select a screen and click **Redo this screen…** in the Design inspector, or right-click the screen or one of its children and choose that action. It opens the existing agent prompt scoped to that artboard. Add optional feedback and choose your runner/model, then Send. Opening or cancelling it starts no run. Sending starts a new conversation, so it cannot accidentally resume another screen’s draft. Follow-up messages continue that revision in the same file; an Omarchy theme redo uses its internal branch. The original remains available for review. This is a design redo, not a page/file duplication action.
+Select a screen and click **Redo this screen…** in the Design inspector, or right-click the screen or one of its children and choose that action. It opens the chat scoped to that artboard. Add optional feedback and choose your runner/model, then Send. Opening or cancelling it starts no run. Sending starts a new conversation, so it cannot accidentally resume another screen’s draft. Follow-up messages continue that revision in the same file; an Omarchy theme redo uses its internal branch. The original remains available for review. This is a design redo, not a page/file duplication action.
 
 "Make this page again, I don't like it" used to end up as another page next to the first. Now it
 becomes a **revision**: a named draft copy of the page's artboards (or the ones you selected) next to
 the originals, with the file committed first so there is always a way back.
 
-As you type, the prompt bar says what your message will do: **Redo** goes into a revision, a request
+As you type, the chat says what your message will do: **Redo** goes into a revision, a request
 for a new page makes one, anything else changes the layers in place. One click switches to the other
 choice for that message. When a request arrives without that choice, from the phone, a comment or
 another client, the server reads it the same way.
@@ -541,7 +637,7 @@ same language again continues that branch. A failed or stopped run that changed 
 language withdraws the branch again. Proposals, races, critiques, image rebuilds and live site runs
 cannot hold such a branch, so they refuse it with a reason instead of translating the original.
 
-Every run gets the language: the prompt bar, comments (the file default), the phone, races, runs on a
+Every run gets the language: the chat, comments (the file default), the phone, races, runs on a
 paired device and reruns. The agent is told to translate visible copy, button labels, placeholders, alt
 text and aria labels; to keep brand and product names, URLs, identifiers and prices as they are; to make
 longer text fit instead of cutting it off; and to set `lang` and `dir` on each artboard it writes or
@@ -596,7 +692,7 @@ Ctrl+Z in the editor undoes your own edits, not an agent's.
 ### Undo this run
 
 **Undo this run** takes back everything one run changed, as one step. It is under the agent's reply in
-the Ctrl+K bar, under the thread a comment run answered, on the run in the run history, and on the phone
+the chat, under the thread a comment run answered, on the run in the run history, and on the phone
 under an answer in Ask and in the comment sheet.
 
 - It reverts the run's own entries in the [timeline](history.md) together, in one change by you, which
@@ -608,7 +704,7 @@ under an answer in Ask and in the comment sheet.
 
 ## What a run changed
 
-When a run ends, its reply in the Ctrl+K bar and in the thread says what changed: the layers it changed,
+When a run ends, its reply in the chat and in the thread says what changed: the layers it changed,
 by name, as links that select them and bring them into view (a removed layer is struck through), and a
 small picture of the top-level layer most of them sit in, before and after. The picture is left out when
 nothing visible changed, such as a hidden layer or a name. Pictures of the newest 60 runs per file are
@@ -644,7 +740,7 @@ The Agents tab keeps:
 
 A waiting mention starts when its file has no run going and the server has a free slot. Before, a
 comment that came while four runs were going failed with a note in its thread; now it waits. Runs from
-the prompt still start at once or are refused, since the person waits for them in the bar.
+the prompt still start at once or are refused, since the person waits for them in the chat.
 
 ## Waiting for you: events
 

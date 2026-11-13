@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "dev.bogen.bogen",
   "name": "Bogen",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "Bogen",
   "license": "MIT",
   "description": "Bogen design canvas in the Omarchy bar: server state, agents at work, recent files.",

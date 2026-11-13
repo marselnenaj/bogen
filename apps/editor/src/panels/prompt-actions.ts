@@ -1,5 +1,5 @@
-import { api } from '../lib/api.ts';
-import { conversationFor, conversationTurns, startConversation } from '../lib/conversation.ts';
+import { api, type ConversationTurn } from '../lib/api.ts';
+import { continueConversation, conversationFor, conversationTurns, startConversation } from '../lib/conversation.ts';
 import { agentApi, type LaneChoice } from '../lib/agent-api.ts';
 import { session } from '../doc/session.ts';
 import { placeImage } from '../ops/clipboard.ts';
@@ -7,24 +7,51 @@ import { editor } from '../state/store.ts';
 import { onServerEvent, type ServerEvent } from '../lib/events.ts';
 import { t } from '../i18n/store.ts';
 import type { RunLanguageChoice } from '@bogen/core';
+import type { PromptMessage } from '../state/store.ts';
+import { appendReply, rememberChatOpen } from './chat-state.ts';
 
 const RUNNER_KEY = 'bogen-prompt-runner';
 
-/** Opens the agent prompt, attached to whatever is selected right now. */
-export function startPrompt(): void {
-  const state = editor();
-  state.set({ prompt: { ...state.prompt, open: !state.prompt.open || state.prompt.nodeIds.join() !== state.selection.join(), nodeIds: state.selection, redo: undefined } });
+/** Asks the chat panel to take the focus, once it is there. */
+export const CHAT_FOCUS_EVENT = 'bogen-chat-focus';
+function focusChat(): void {
+  requestAnimationFrame(() => window.dispatchEvent(new Event(CHAT_FOCUS_EVENT)));
 }
 
+/** Shows or hides the chat panel, and remembers it for this file. */
+export function setChatOpen(open: boolean): void {
+  const state = editor();
+  if (state.fileId) rememberChatOpen(state.fileId, open);
+  state.set({ prompt: { ...state.prompt, open, nodeIds: open ? state.selection : state.prompt.nodeIds, ...(open ? {} : { redo: undefined }) } });
+  if (open) focusChat();
+}
+
+export function toggleChat(): void {
+  setChatOpen(!editor().prompt.open);
+}
+
+/** Ask your agent: the chat opens with the focus in its field and what is selected right now going with the message. */
+export function startPrompt(): void {
+  const state = editor();
+  if (state.minimal) state.set({ minimal: false });
+  if (state.prompt.open) {
+    state.set({ prompt: { ...state.prompt, nodeIds: state.selection, redo: undefined } });
+    focusChat();
+  } else setChatOpen(true);
+}
+
+/** What goes with a person's message in the chat, besides its words. */
+export interface SentWith { context?: string[]; runnerLabel?: string; review?: string }
+
 /** `device`: a paired device to run it on, which has the CLI. Its changes come back by sync. */
-export async function sendPrompt(text: string, runner: string, options: { model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; device?: string; language?: RunLanguageChoice } = {}): Promise<void> {
+export async function sendPrompt(text: string, runner: string, options: { model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; device?: string; language?: RunLanguageChoice; images?: string[] } = {}, sent: SentWith = {}): Promise<void> {
   const state = editor();
   const fileId = state.fileId;
   const pageId = state.pageId;
   if (!fileId || !pageId) return;
   const nodeIds = state.prompt.nodeIds;
-  const messages = [...state.prompt.messages, { role: 'user' as const, text }];
-  state.set({ prompt: { ...state.prompt, running: true, messages, runId: null } });
+  const mine: PromptMessage = { role: 'user', text, at: Date.now(), runner: sent.runnerLabel ?? runner, ...(sent.review ? { review: sent.review } : {}), ...(sent.context?.length ? { context: sent.context } : {}), ...(options.images?.length ? { images: options.images } : {}) };
+  state.set({ prompt: { ...state.prompt, running: true, messages: [...state.prompt.messages, mine], runId: null, startedAt: Date.now() } });
   try {
     // The server puts the earlier turns of this chat ahead of the message, so a follow-up knows what came before.
     const { runId } = await api.startRun({ fileId, pageId, nodeIds, prompt: text, runner, conversationId: conversationFor(fileId), ...options });
@@ -32,7 +59,7 @@ export async function sendPrompt(text: string, runner: string, options: { model?
     s.set({ prompt: { ...s.prompt, runId } });
   } catch (err) {
     const s = editor();
-    s.set({ prompt: { ...s.prompt, running: false, messages: [...s.prompt.messages, { role: 'error', text: (err as Error).message }] } });
+    s.set({ prompt: { ...s.prompt, running: false, startedAt: undefined, messages: [...s.prompt.messages, { role: 'error', text: (err as Error).message }] } });
   }
 }
 
@@ -44,19 +71,36 @@ export function newChat(): void {
   state.set({ prompt: { ...state.prompt, messages: [], runId: null } });
 }
 
-/** After a reload, the bar shows the chat the file is in, as the server kept it. */
+/** A chat as the server kept it, as messages for the panel. */
+export function turnMessages(turns: ConversationTurn[]): PromptMessage[] {
+  return turns.flatMap((turn): PromptMessage[] => [
+    { role: 'user', text: turn.message, at: turn.at, runner: turn.runner, ...(turn.review ? { review: turn.review } : {}) },
+    ...(turn.reply ? [{ role: 'agent' as const, text: turn.reply, runId: turn.runId, at: turn.at }] : []),
+    ...(turn.status === 'failed' || turn.status === 'interrupted' ? [{ role: 'error' as const, text: turn.status === 'failed' ? t('The run failed.') : t('The run was cut off.') }] : []),
+    ...(turn.status === 'stopped' ? [{ role: 'note' as const, text: t('Stopped. What it changed so far stays, and Undo this run takes it back.') }] : []),
+  ]);
+}
+
+/** After a reload, the panel shows the chat the file is in, as the server kept it. */
 export async function restoreChat(): Promise<void> {
   const fileId = editor().fileId;
   if (!fileId || editor().prompt.messages.length) return;
   const turns = await conversationTurns(fileId, conversationFor(fileId));
   const state = editor();
   if (!turns.length || state.fileId !== fileId || state.prompt.messages.length || state.prompt.running) return;
-  const messages = turns.flatMap((turn) => [
-    { role: 'user' as const, text: turn.message },
-    ...(turn.reply ? [{ role: 'agent' as const, text: turn.reply, runId: turn.runId }] : []),
-    ...(turn.status === 'failed' || turn.status === 'interrupted' ? [{ role: 'error' as const, text: turn.status === 'failed' ? t('The run failed.') : t('The run was cut off.') }] : []),
-  ]);
-  state.set({ prompt: { ...state.prompt, messages } });
+  state.set({ prompt: { ...state.prompt, messages: turnMessages(turns) } });
+}
+
+/** Goes back to an earlier chat of this file: it shows, and the next message continues it. */
+export async function openChat(id: string): Promise<void> {
+  const state = editor();
+  const fileId = state.fileId;
+  if (!fileId || state.prompt.running) return;
+  continueConversation(fileId, id);
+  const turns = await conversationTurns(fileId, id);
+  const now = editor();
+  if (now.fileId !== fileId || now.prompt.running) return;
+  now.set({ prompt: { ...now.prompt, messages: turnMessages(turns), runId: null } });
 }
 
 /** Several runs on one request, each in its own copy next to the layer. They are followed on the canvas, not here. */
@@ -64,7 +108,7 @@ export async function startRace(text: string, nodeId: string, lanes: LaneChoice[
   const state = editor();
   const { fileId, pageId } = state;
   if (!fileId || !pageId) return;
-  const messages = [...state.prompt.messages, { role: 'user' as const, text }];
+  const messages = [...state.prompt.messages, { role: 'user' as const, text, at: Date.now(), review: 'directions' }];
   state.set({ prompt: { ...state.prompt, messages, runId: null } });
   try {
     const race = await agentApi.startRace({ fileId, pageId, nodeId, prompt: text, lanes, who: session().user.name, ...(language ? { language } : {}) });
@@ -95,7 +139,8 @@ export async function rebuildAsLayers(nodeId: string, options: { note?: string; 
     if (!runner) return void state.showToast(t('Install {claude} or {codex} to rebuild images as layers.', { claude: 'claude', codex: 'codex' }));
     const { model, effort } = (await agentApi.runSettings()).settings.runners[runner]?.prompt ?? {};
     const s = editor();
-    s.set({ prompt: { open: true, nodeIds: [nodeId], running: true, runId: null, messages: [{ role: 'user', text: options.note ? t('Rebuild as layers: {name}. {note}', { name: node.name, note: options.note }) : t('Rebuild as layers: {name}', { name: node.name }) }] } });
+    if (s.fileId) rememberChatOpen(s.fileId, true);
+    s.set({ prompt: { open: true, nodeIds: [nodeId], running: true, runId: null, startedAt: Date.now(), messages: [...s.prompt.messages, { role: 'user', at: Date.now(), runner, text: options.note ? t('Rebuild as layers: {name}. {note}', { name: node.name, note: options.note }) : t('Rebuild as layers: {name}', { name: node.name }) }] } });
     const { runId } = await agentApi.rebuild({ fileId, nodeId, runner, ...(options.note ? { prompt: options.note } : {}), ...(model && model !== 'default' ? { model } : {}), ...(effort && effort !== 'default' ? { effort } : {}) });
     const after = editor();
     after.set({ prompt: { ...after.prompt, runId } });
@@ -116,6 +161,16 @@ export async function pasteImageToRebuild(file: Blob, note: string, runner: stri
   }
 }
 
+/** An image already attached to a chat message, rebuilt as layers instead of going with the message. */
+export async function rebuildStoredImage(src: string, note: string, runner: string): Promise<void> {
+  try {
+    const id = await placeImage(src);
+    await rebuildAsLayers(id, { ...(note ? { note } : {}), ...(runner ? { runner } : {}) });
+  } catch (err) {
+    editor().showToast(t('Could not add the image. {error}', { error: (err as Error).message }));
+  }
+}
+
 export function stopPrompt(): void {
   const { runId } = editor().prompt;
   if (runId) void api.stopRun(runId);
@@ -129,18 +184,19 @@ function onAgent(e: Extract<ServerEvent, { t: 'agent' }>): void {
   if (!prompt.running && !prompt.runId) return;
   const messages = [...prompt.messages];
   if (e.kind === 'text') {
-    const last = messages.at(-1);
-    if (last?.role === 'agent' && (!last.runId || last.runId === e.runId)) messages[messages.length - 1] = { ...last, text: last.text + (e.text ?? ''), runId: e.runId };
-    else messages.push({ role: 'agent', text: e.text ?? '', runId: e.runId });
-    state.set({ prompt: { ...prompt, runId: e.runId, messages } });
+    // Each block of words a CLI writes arrives whole, and is a paragraph of the reply.
+    state.set({ prompt: { ...prompt, runId: e.runId, messages: appendReply(messages, e.runId, e.text ?? '') } });
   } else if (e.kind === 'tool') {
-    messages.push({ role: 'tool', text: e.tool ?? e.text ?? 'tool' });
+    messages.push({ role: 'tool', text: e.tool ?? e.text ?? 'tool', runId: e.runId });
     state.set({ prompt: { ...prompt, runId: e.runId, messages } });
   } else if (e.kind === 'error') {
-    messages.push({ role: 'error', text: e.text ?? t('The run failed.') });
-    state.set({ prompt: { ...prompt, messages, running: false, runId: null } });
+    messages.push({ role: 'error', text: e.text ?? t('The run failed.'), runId: e.runId });
+    state.set({ prompt: { ...prompt, messages, running: false, runId: null, startedAt: undefined } });
   } else {
-    state.set({ prompt: { ...prompt, running: false, runId: null, messages } });
+    // How it ended, when there is something to say: stopped, or the server's own word on its checks.
+    if (e.text === 'Stopped.') messages.push({ role: 'note', text: t('Stopped. What it changed so far stays, and Undo this run takes it back.'), runId: e.runId });
+    else if (e.text) messages.push({ role: 'note', text: e.text, runId: e.runId });
+    state.set({ prompt: { ...prompt, running: false, runId: null, startedAt: undefined, messages } });
   }
 }
 

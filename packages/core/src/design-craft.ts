@@ -17,15 +17,60 @@ export type CraftCriterion = 'hierarchy' | 'type' | 'spacing' | 'colour' | 'cont
 export type CraftRule =
   | 'font-families' | 'decorative-mono' | 'type-scale' | 'loud-type' | 'heavy-type' | 'all-caps' | 'eyebrow' | 'centred'
   | 'boxes' | 'nested-boxes' | 'glow' | 'tilt' | 'window-chrome' | 'pattern-background' | 'default-gradient' | 'gradient-text'
-  | 'primary-actions' | 'text-on-image' | 'viewing-size';
-export interface CraftFinding { rule: CraftRule; criterion: CraftCriterion; nodeId: string; layers: string[]; message: string; numbers?: Record<string, number> }
+  | 'primary-actions' | 'text-on-image' | 'viewing-size'
+  | 'caps-label' | 'grotesk-mono' | 'house-palette' | 'ruled-rows' | 'split-sections' | 'stat-row' | 'meta-dots' | 'no-visual' | 'no-picture' | 'one-hue';
+/**
+ * `hard`: an objective defect, text nobody can read where it is seen. It keeps the rubric from counting as scored until
+ * it is fixed. `advisory`: a choice that often reads as default. It never blocks and never caps a score; it says why
+ * it is often generic, and the agent keeps it when its direction has a reason (`kept` in design_verify).
+ */
+export type CraftSeverity = 'hard' | 'advisory';
+export interface CraftFinding { rule: CraftRule; criterion: CraftCriterion; severity: CraftSeverity; nodeId: string; layers: string[]; message: string; why: string; numbers?: Record<string, number> }
 
 export const CRAFT_CRITERION: Record<CraftRule, CraftCriterion> = {
   'font-families': 'type', 'decorative-mono': 'type', 'type-scale': 'type', 'all-caps': 'type',
   'loud-type': 'hierarchy', 'heavy-type': 'hierarchy', 'primary-actions': 'hierarchy', centred: 'hierarchy',
   eyebrow: 'originality', glow: 'originality', tilt: 'originality', 'window-chrome': 'originality', 'pattern-background': 'originality', 'default-gradient': 'originality', 'gradient-text': 'originality',
   boxes: 'craft', 'nested-boxes': 'craft', 'text-on-image': 'craft', 'viewing-size': 'craft',
+  'caps-label': 'type', 'grotesk-mono': 'originality', 'house-palette': 'colour', 'ruled-rows': 'originality', 'split-sections': 'originality', 'stat-row': 'originality', 'meta-dots': 'content', 'no-visual': 'fit', 'no-picture': 'fit', 'one-hue': 'colour',
 };
+
+/** The objective defects among the craft checks: text that cannot be read where it is seen. Everything else is advisory. */
+export const CRAFT_HARD: readonly CraftRule[] = ['text-on-image', 'viewing-size'];
+
+/** Why an advisory finding often reads as default, in one line, so that the agent can weigh it against its direction. */
+export const CRAFT_WHY: Record<CraftRule, string> = {
+  'font-families': 'A third family rarely adds a voice; it usually blurs the two that are there.',
+  'decorative-mono': 'Monospace on labels is the shorthand of generated product pages for "technical".',
+  'grotesk-mono': 'One grotesk with monospace labels is the most common generated product-page pairing.',
+  'type-scale': 'Sizes this close to a step read as slips rather than a second size.',
+  'loud-type': 'When several texts are equally loud, none leads.',
+  'heavy-type': 'Bold only reads as emphasis against regular text.',
+  'all-caps': 'Capitals everywhere read as a template habit and slow reading.',
+  'caps-label': 'A small tracked capital label over the heading is the eyebrow of generated pages.',
+  eyebrow: 'A label that repeats its heading is template scaffolding.',
+  centred: 'Centring everything removes the common edge that makes a page look structured.',
+  'primary-actions': 'Two actions with the same fill leave the screen without one primary action.',
+  boxes: 'A box around every group stops boxes from grouping anything.',
+  'nested-boxes': 'Boxes inside boxes add edges without adding structure.',
+  glow: 'Coloured glow is the default stand-in for art direction on dark pages.',
+  tilt: 'Tilted cards and screenshots are a stock way to look dynamic.',
+  'window-chrome': 'A drawn window frame is a stock way to say "product" without showing it.',
+  'pattern-background': 'Dot and grid backgrounds are filler texture on generated pages.',
+  'default-gradient': 'The blue-to-purple gradient is the default colour of generated pages.',
+  'gradient-text': 'Gradient-filled headlines are a stock flourish that also costs contrast.',
+  'house-palette': 'Cream with terracotta, and black with acid green, are the house palettes of generated pages.',
+  'ruled-rows': 'Hairline-ruled rows in every section are the broadsheet default.',
+  'split-sections': 'The same heading-left, paragraph-right split in every section is a template rhythm.',
+  'stat-row': 'A strip of big figures over small labels is the stock way to look credible.',
+  'meta-dots': 'Facts strung together with middle dots are template chrome.',
+  'no-visual': 'A page of type and boxes alone often reads as a wireframe.',
+  'no-picture': 'An ad without a picture rarely stops a scroll.',
+  'one-hue': 'Neutrals and one accent is the default palette, not a decision.',
+  'text-on-image': 'Contrast over a picture cannot be measured and changes across it.',
+  'viewing-size': 'Text this small cannot be read at the size the piece is seen.',
+};
+export const craftSeverity = (rule: CraftRule): CraftSeverity => (CRAFT_HARD.includes(rule) ? 'hard' : 'advisory');
 
 /** The numbers the rules use, in one place so that the guidance and the tests quote the same ones. */
 export const CRAFT_LIMITS = {
@@ -44,6 +89,22 @@ export const CRAFT_LIMITS = {
   glowBlurPx: 8, tiltMinDeg: 0.5, tiltMaxDeg: 30, dotMaxPx: 16, tileMaxPx: 64,
   /** The width a fixed format is really seen at, and the smallest text that still reads there. */
   socialViewPx: 390, slideViewPx: 960, minSeenPx: 9,
+  /** A small capital label with added tracking: the eyebrow of generated pages. One is enough to be the look. */
+  capsLabelMaxPx: 14, capsLabelTrackEm: 0.04,
+  /** Monospace on this many texts outside code, most of them not code, next to a single grotesk. */
+  groteskMonoMin: 3,
+  /** Hairline rules that cut most sections into rows: the broadsheet default. */
+  rulesMin: 12, ruledSectionsMin: 3, ruledShare: 0.5,
+  /** Sections that all open with the same heading-left, paragraph-right split. */
+  splitSectionsMin: 4, splitShare: 0.7,
+  /** A row of big figures over small labels, and how much bigger a figure is than its label. */
+  statMin: 3, statRatio: 1.75,
+  /** Texts that join three or more facts with middle dots. */
+  metaDotsMin: 3,
+  /** A page of this many sections with no picture, drawing, video or shader this big. */
+  pageSectionsMin: 4, visualMinPx: 160,
+  /** A file of this many screens whose saturated colours all lie within this many degrees of hue. */
+  oneHueBoards: 3, oneHueSpread: 30,
 } as const;
 
 /**
@@ -82,7 +143,7 @@ export function previewsSystem(doc: BogenDoc): boolean {
  * The rules about a choice a system preview does not make. Its interface face is the system's: Omarchy sets its bar,
  * launcher and terminal in JetBrains Mono, so monospace there is the system, not decoration.
  */
-export const SYSTEM_PREVIEW_EXEMPT: readonly CraftRule[] = ['decorative-mono'];
+export const SYSTEM_PREVIEW_EXEMPT: readonly CraftRule[] = ['decorative-mono', 'grotesk-mono', 'no-visual', 'stat-row'];
 
 /** A text made only of private-use characters is an icon from an icon font (a Nerd Font glyph, a logo glyph), not type. */
 export function isIconGlyph(text: string): boolean {
@@ -105,6 +166,10 @@ const MONO = /mono|courier|consolas|menlo|monaco|\bcode\b|iosevka|\bhack\b|incon
 const CODE_TAGS = new Set(['code', 'pre', 'kbd', 'samp', 'var', 'tt']);
 /** Words that are code, a command or figures: where a monospace face does a job. */
 const CODE_LIKE = /[{}()[\]=<>;$_\\/|`~#@]|--|^[\d\s.,:%+\-x×€£]+$|^(?:npm|npx|pnpm|yarn|bun|git|curl|brew|pip|cargo|docker|sudo|bogen) /u;
+/** Code and commands, without the figures: what a monospace face is for. */
+const COMMAND_LIKE = /[{}()[\]=<>;$_\\/|`~#@]|--|\.\w{1,5}$|^(?:npm|npx|pnpm|yarn|bun|git|curl|brew|pip|cargo|docker|sudo|bogen) /u;
+/** Grotesk and neo-grotesk faces, the usual partner of a monospace face on generated pages. */
+const GROTESK = /grotesk|grotesque|\bsans\b|inter\b|helvetica|arial|geist|roboto|manrope|satoshi|s[oö]hne|suisse|figtree|outfit|sora\b|onest|neue|haas|aktiv|archivo|public sans|work sans|jakarta|instrument|switzer|general sans|sf pro|system-ui|-apple-system/i;
 const HEADING = /^h[1-6]$/;
 const round = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
 const quote = (text: string) => `"${text.replace(/\s+/g, ' ').trim().slice(0, 32)}"`;
@@ -219,7 +284,7 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
   const texts = layers.filter((n) => n.type === 'text' && n.text?.trim());
   const out: CraftFinding[] = [];
   const add = (rule: CraftRule, nodeId: string, layerIds: string[], message: string, numbers?: Record<string, number>) =>
-    system && SYSTEM_PREVIEW_EXEMPT.includes(rule) ? undefined : out.push({ rule, criterion: CRAFT_CRITERION[rule], nodeId, layers: [...new Set(layerIds)].slice(0, 12), message, ...(numbers ? { numbers } : {}) });
+    system && SYSTEM_PREVIEW_EXEMPT.includes(rule) ? undefined : out.push({ rule, criterion: CRAFT_CRITERION[rule], severity: craftSeverity(rule), nodeId, layers: [...new Set(layerIds)].slice(0, 12), message, why: CRAFT_WHY[rule], ...(numbers ? { numbers } : {}) });
 
   // ---- Type
   const byFamily = new Map<string, { name: string; ids: string[] }>();
@@ -243,7 +308,18 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
     add('font-families', root.id, extra.flatMap((f) => f.ids),
       `${used.length} font families on one artboard (${used.map((f) => `${f.name} on ${f.ids.length}`).join(', ')}). ${L.families} are enough: one to read, at most one for display or code. Set the layers in ${list(extra.map((f) => f.name))} in one of the first two.`, { families: used.length });
   }
-  if (monoDecor.length >= 2) {
+  // The pairing itself: one grotesk, and a monospace face on figures and labels rather than on code.
+  const families = [...byFamily.values()];
+  const monoFamily = families.find((f) => MONO.test(f.name));
+  const readingFamily = families.find((f) => f !== monoFamily);
+  const monoOutsideCode = texts.filter((n) => monoFamily?.ids.includes(n.id) && !CODE_TAGS.has(n.tag) && !ancestors(n).some((a) => CODE_TAGS.has(a.tag)));
+  const codeShare = monoOutsideCode.filter((n) => COMMAND_LIKE.test(n.text!.trim())).length / Math.max(1, monoOutsideCode.length);
+  const groteskMono = families.length === 2 && !!monoFamily && !!readingFamily && GROTESK.test(readingFamily.name) && monoOutsideCode.length >= L.groteskMonoMin && codeShare < 0.5;
+  if (groteskMono) {
+    add('grotesk-mono', monoOutsideCode[0]!.id, monoOutsideCode.map((n) => n.id),
+      `The page pairs one grotesk (${readingFamily!.name}) with a monospace face (${monoFamily!.name}) on ${monoOutsideCode.length} labels and figures (${list(monoOutsideCode.map((n) => quote(n.text!)))}): the default look of generated product pages. Choose type for this subject instead: set figures in the reading face with tabular numbers (font-variant-numeric: tabular-nums), and keep monospace for code and commands, or pick a display face with a reason from the subject.`, { layers: monoOutsideCode.length });
+  }
+  if (monoDecor.length >= 2 && !groteskMono) {
     add('decorative-mono', monoDecor[0]!.id, monoDecor.map((n) => n.id),
       `${monoDecor.length} texts are set in a monospace face without being code, a command or figures (${list(monoDecor.map((n) => quote(n.text!)))}). Monospace as decoration is the most common generated look: set them in the reading face, and keep mono for code.`, { layers: monoDecor.length });
   }
@@ -272,13 +348,29 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
         `${count} text ${count === 1 ? 'layer uses a size' : 'layers use sizes'} next to a step of the file's type scale without being on it: ${list(sizes.map(([px, ids]) => `${round(px, 1)}px on ${ids.length}, beside var(--${nearest(px).name}) at ${round(nearest(px).px, 1)}px`), 4)}. Sizes this close cannot be told apart and read as slips: use the token.`, { layers: count, sizes: off.size });
     }
   }
-  const caps = texts.filter((n) => {
+  const capitals = (n: BogenNode) => {
     const text = n.text!.trim();
     const letters = text.replace(/[^\p{L}]/gu, '');
     if (letters.length < 4 || letters.toUpperCase() === letters.toLowerCase()) return false;
     if (inherited(n, 'textTransform') === 'uppercase') return true;
     return letters === letters.toUpperCase() && !(letters.length <= 5 && !/\s/.test(text));
-  });
+  };
+  // The small tracked capital label is its own finding, so that one layer is not reported as capitals and as an eyebrow too.
+  const trackingEm = (n: BogenNode): number => {
+    const v = inherited(n, 'letterSpacing');
+    if (!v || v === 'normal') return 0;
+    const m = /^(-?\d*\.?\d+)(em|px|rem)?$/.exec(v);
+    if (!m) return 0;
+    const value = Number(m[1]);
+    return m[2] === 'em' ? value : (m[2] === 'rem' ? value * 16 : value) / (sizeOf(n) ?? 16);
+  };
+  const capsLabels = texts.filter((n) => composed(n) && capitals(n) && (sizeOf(n) ?? 16) <= L.capsLabelMaxPx && trackingEm(n) >= L.capsLabelTrackEm && n.text!.trim().length <= L.eyebrowMaxChars);
+  if (capsLabels.length) {
+    add('caps-label', capsLabels[0]!.id, capsLabels.map((n) => n.id),
+      `${capsLabels.length} small ${capsLabels.length === 1 ? 'label is' : 'labels are'} set in letter-spaced capitals (${list(capsLabels.map((n) => quote(n.text!)))}), the eyebrow of generated pages. Delete the label where the heading already says it; otherwise set it in sentence case at body size without tracking, or make it real information such as a date or a status.`, { layers: capsLabels.length });
+  }
+  const labelled = new Set(capsLabels.map((n) => n.id));
+  const caps = texts.filter((n) => !labelled.has(n.id) && capitals(n));
   const longCaps = caps.filter((n) => n.text!.trim().length > L.capsMaxChars);
   if (caps.length >= L.capsMinLayers || longCaps.length) {
     add('all-caps', (longCaps[0] ?? caps[0]!).id, caps.map((n) => n.id),
@@ -328,7 +420,7 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
   const eyebrows = texts.filter((n) => HEADING.test(n.tag)).flatMap((h) => {
     const siblings = doc.getChildren(h.parent).filter((s) => visible.has(s.id));
     const prev = siblings[siblings.findIndex((s) => s.id === h.id) - 1];
-    if (!prev || prev.type !== 'text' || HEADING.test(prev.tag) || !prev.text?.trim() || prev.text.trim().length > L.eyebrowMaxChars) return [];
+    if (!prev || prev.type !== 'text' || labelled.has(prev.id) || HEADING.test(prev.tag) || !prev.text?.trim() || prev.text.trim().length > L.eyebrowMaxChars) return [];
     const size = sizeOf(prev) ?? 16;
     return size <= L.eyebrowMaxPx ? [prev] : [];
   });
@@ -359,6 +451,40 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
         if (stops.length >= 2 && stops.every((c) => c.h >= L.gradientHues[0] && c.h <= L.gradientHues[1]) && stops.some((c) => c.h >= 255) && stops.some((c) => c.h < 255 || c.h > 285)) gradients.push(n);
       }
       if ((own(n, 'backgroundClip') ?? own(n, 'WebkitBackgroundClip') ?? own(n, 'webkitBackgroundClip')) === 'text') gradientText.push(n);
+    }
+  }
+  // The house palettes: warm off-white with a red-orange action, near-black with an acid green one. A colour a brand set
+  // (a token the brand wrote into the file) is the brand's choice, not a default.
+  const brandSet = new Set<string>(((doc.meta.get('brandTokens') as unknown) as string[] | undefined) ?? []);
+  const fromBrand = (n: BogenNode, prop: string) => [...((n.style as Record<string, string | undefined>)[prop] ?? '').matchAll(/var\(\s*--([\w-]+)/g)].some((m) => brandSet.has(m[1]!));
+  const groundOf = (n: BogenNode) => ['backgroundColor', 'background'].map((p) => ({ p, c: coloursIn((own(n, p) ?? '').replace(/url\([^)]*\)/g, ''))[0] })).find((x) => x.c && x.c.alpha >= 0.9);
+  const grounds = [root, ...doc.getChildren(root.id).filter((c) => visible.has(c.id))].map((n) => ({ n, g: groundOf(n) })).filter((x) => x.g);
+  const ground = grounds[0];
+  const fills = actionsOf(root);
+  if (ground && !fromBrand(ground.n, ground.g!.p)) {
+    const g = ground.g!.c!;
+    const cream = g.l >= 0.88 && g.s >= 0.08 && g.h >= 25 && g.h <= 60;
+    const night = g.l <= 0.12;
+    const loud = fills.filter(({ n }) => {
+      if (fromBrand(n, 'backgroundColor') || fromBrand(n, 'background')) return false;
+      const c = coloursIn(own(n, 'backgroundColor') ?? own(n, 'background') ?? '')[0]!;
+      return cream ? c.h <= 32 && c.s >= 0.45 && c.l >= 0.3 && c.l <= 0.7 : night ? c.h >= 65 && c.h <= 160 && c.s >= 0.6 && c.l >= 0.45 : false;
+    });
+    if (loud.length) add('house-palette', loud[0]!.n.id, [ground.n.id, ...loud.map((a) => a.n.id)],
+      `The ground is ${cream ? 'warm off-white' : 'near-black'} (${own(ground.n, ground.g!.p)}) and the action is ${cream ? 'red-orange' : 'acid green'} (${quote(loud[0]!.label)}): the ${cream ? 'cream-and-terracotta' : 'black-and-acid'} house palette of generated pages. Take the palette from this subject instead: name four to six colours after its materials and places, and keep the accent for what needs action. Keep this pairing only when the brand sets it.`, { actions: loud.length });
+  }
+  // A whole file of screens in neutrals and one hue: the one-accent default, said once, on the file's first screen.
+  // A brand's palette, a system preview and a file whose pictures bring their own colour decide otherwise.
+  if (root.artboard && !system && !brandSet.size) {
+    const boards = doc.getPages().flatMap((p) => doc.getChildren(p.id).filter((b) => b.artboard && !b.hidden));
+    if (boards.length >= L.oneHueBoards && boards[0]!.id === root.id) {
+      const all = boards.flatMap((b) => [b, ...doc.descendants(b.id)]).filter((n) => !n.hidden);
+      if (!all.some((n) => n.type === 'image' || n.type === 'video' || n.type === 'shader' || /url\(/.test(background(n)))) {
+        const hues = all.flatMap((n) => ['color', 'backgroundColor', 'background', 'borderColor', 'border', 'fill', 'stroke'].flatMap((p) => coloursIn((own(n, p) ?? '').replace(/url\([^)]*\)/g, '')))).filter((c) => chromatic(c, 0.3)).map((c) => c.h);
+        const spread = (h: number[]) => h.length < 2 ? 0 : Math.max(...h.flatMap((a) => h.map((b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b)))));
+        if (spread(hues) <= L.oneHueSpread) add('one-hue', root.id, boards.map((b) => b.id),
+          `All ${boards.length} screens of this file are neutrals${hues.length ? ` and one hue (around ${Math.round(hues[0]!)} degrees)` : ' only'}. One colour on grey is the default, not a decision: give the palette roles from the subject (a ground, an ink, two or three supporting colours with jobs, an action colour), tint the neutrals, and name the contrast that carries it; palette_suggest gives palettes with their contrast. Keep it this restrained only when the brief or the brand asks for it.`, { screens: boards.length, hues: hues.length ? 1 : 0 });
+      }
     }
   }
   if (glow.length) add('glow', glow[0]!.id, glow.map((n) => n.id), `${glow.length} ${glow.length === 1 ? 'layer has' : 'layers have'} a coloured glow (a shadow of ${L.glowBlurPx}px blur or more in a saturated colour: ${list(glow.map((n) => n.name))}). Glow stands in for art direction: remove it, and separate with a plain surface, a hairline or a neutral shadow.`, { layers: glow.length });
@@ -421,15 +547,102 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
     add('text-on-image', over[0]!.id, over.map((n) => n.id), `${over.length} ${over.length === 1 ? 'text sits' : 'texts sit'} directly on the image of "${holder.name}" with nothing between (${list(over.map((n) => quote(n.text!)))}). Contrast over a picture cannot be measured and changes across it: put a scrim between them (a layer or gradient of the background colour at 50% or more), or move the words onto a plain surface, then look at a screenshot.`, { texts: over.length });
   }
 
+  // ---- Composition: the page formulas that make every subject look alike.
+  const kind = declaredKind(doc, root);
+  // The sections of a page, below a wrapper such as <main> when everything sits in one.
+  let body: BogenNode = root;
+  for (let kids = doc.getChildren(body.id).filter((c) => visible.has(c.id) && c.type === 'frame'); kids.length === 1; kids = doc.getChildren(body.id).filter((c) => visible.has(c.id) && c.type === 'frame')) body = kids[0]!;
+  const chrome = (n: BogenNode) => ['header', 'nav', 'footer'].includes(n.tag) || /^(header|footer|nav(igation)?|top ?bar|menu)\b/i.test(n.name);
+  const pageSections = doc.getChildren(body.id).filter((c) => visible.has(c.id) && composed(c) && c.type === 'frame' && !chrome(c));
+  const inside = (n: BogenNode) => [n, ...doc.descendants(n.id)].filter((d) => visible.has(d.id));
+  const hairline = (v: string | undefined) => !!v && /solid|dashed|dotted/.test(v) && (lengths(v)[0] ?? 0) > 0 && (lengths(v)[0] ?? 0) <= 1.5;
+  const ruleOf = (n: BogenNode) => composed(n) && !boxed(n) && (hairline(own(n, 'borderTop')) || hairline(own(n, 'borderBottom')) || hairline(own(n, 'borderBlockStart')) || hairline(own(n, 'borderBlockEnd')));
+  const rulesBySection = pageSections.map((s) => inside(s).filter(ruleOf));
+  const ruledSections = rulesBySection.filter((r) => r.length >= 2).length;
+  const ruleCount = rulesBySection.reduce((sum, r) => sum + r.length, 0);
+  if (kind !== 'dashboards' && ruleCount >= L.rulesMin && ruledSections >= L.ruledSectionsMin && ruledSections / pageSections.length > L.ruledShare) {
+    add('ruled-rows', rulesBySection.find((r) => r.length >= 2)![0]!.id, rulesBySection.flat().map((n) => n.id),
+      `${ruleCount} hairline rules cut ${ruledSections} of ${pageSections.length} sections into ruled rows, the broadsheet default of generated pages. Keep rules where a real table needs them; give the other sections the form their content has: a drawn diagram or curve, a product view at full size, a sequence as a timeline, a quote set large.`, { rules: ruleCount, sections: ruledSections });
+  }
+  const isRow = (n: BogenNode) => {
+    const display = own(n, 'display');
+    if (display === 'grid' || display === 'inline-grid') return splitTop((own(n, 'gridTemplateColumns') ?? '').replace(/\s+(?![^(]*\))/g, ',')).length === 2;
+    return (display === 'flex' || display === 'inline-flex') && !/column/.test(own(n, 'flexDirection') ?? '');
+  };
+  const hasHeading = (n: BogenNode) => inside(n).some((d) => d.type === 'text' && /^h[12]$/.test(d.tag));
+  const opensWithSplit = (section: BogenNode) => {
+    for (const n of [section, ...doc.getChildren(section.id)].filter((d) => visible.has(d.id) && d.type === 'frame')) {
+      const kids = doc.getChildren(n.id).filter((c) => visible.has(c.id));
+      if (kids.length !== 2 || !isRow(n)) continue;
+      const [a, b] = kids as [BogenNode, BogenNode];
+      return (a.type === 'text' ? /^h[12]$/.test(a.tag) : hasHeading(a)) && !hasHeading(b) && inside(b).some((d) => d.type === 'text' && d.tag === 'p') && !inside(b).some(imageLike);
+    }
+    return false;
+  };
+  const splits = pageSections.filter(opensWithSplit);
+  if (pageSections.length >= L.splitSectionsMin && splits.length >= L.splitSectionsMin && splits.length / pageSections.length >= L.splitShare) {
+    add('split-sections', splits[0]!.id, splits.map((n) => n.id),
+      `${splits.length} of ${pageSections.length} sections open with the same split, a heading on the left and a paragraph on the right (${list(splits.map((n) => quote(n.name)))}). One formula repeated down the page reads as a template: give each section the layout its content needs, and keep the split for one or two.`, { sections: splits.length, of: pageSections.length });
+  }
+  const FIGURE = /^[^\p{L}]*\d[^\p{L}]*\p{L}{0,3}$/u;
+  const page = kind === 'websites' || (!kind && texts.some((n) => n.tag === 'h1'));
+  // Step numbers (1, 2, 3) and times of a timeline count something in order: they are a sequence, not a stat strip.
+  const sequence = (values: string[]) => values.every((v) => /:/.test(v)) || values.every((v, i) => /^0?\d+\.?$/.test(v) && Number.parseInt(v, 10) === Number.parseInt(values[0]!, 10) + i);
+  const statRows = !page ? [] : layers.filter((n) => n.type === 'frame' && composed(n)).filter((row) => {
+    const kids = doc.getChildren(row.id).filter((c) => visible.has(c.id) && c.type === 'frame');
+    if (kids.length < L.statMin) return false;
+    const figures: string[] = [];
+    const stats = kids.filter((k) => {
+      const t = inside(k).filter((d) => d.type === 'text' && d.text?.trim());
+      const figure = t.find((d) => FIGURE.test(d.text!.trim()) && d.text!.trim().length <= 10);
+      const label = t.find((d) => d !== figure && /\p{L}{3}/u.test(d.text!));
+      if (figure) figures.push(figure.text!.trim());
+      return !!figure && !!label && t.length <= 3 && (sizeOf(figure) ?? 16) >= (sizeOf(label) ?? 16) * L.statRatio;
+    });
+    return stats.length >= L.statMin && stats.length === kids.length && !sequence(figures);
+  });
+  if (statRows.length) {
+    const figures = statRows.flatMap((r) => doc.getChildren(r.id)).flatMap((k) => inside(k).filter((d) => d.type === 'text' && FIGURE.test(d.text?.trim() ?? '')));
+    add('stat-row', statRows[0]!.id, statRows.map((n) => n.id),
+      `${statRows.length === 1 ? 'A row' : `${statRows.length} rows`} of big figures over small labels (${list(figures.map((n) => quote(n.text!)))}), the stat strip of generated pages. Put each figure where it explains something: in the sentence, chart or table it belongs to, with its unit and its source, or make one of them the point of its section.`, { rows: statRows.length });
+  }
+  const dotted = texts.filter((n) => composed(n) && (n.text!.match(/\s[·•]\s/g)?.length ?? 0) >= 2);
+  if (dotted.length >= L.metaDotsMin) {
+    add('meta-dots', dotted[0]!.id, dotted.map((n) => n.id),
+      `${dotted.length} texts string facts together with middle dots (${list(dotted.map((n) => quote(n.text!)))}). A run of facts joined by dots is template chrome: give each fact its own place, label or column, or write the one that matters as words.`, { texts: dotted.length });
+  }
+  // A picture, a drawing, or a drawn product view: a surface of its own, sized, with the product's parts inside.
+  const pictured = layers.some((n) => {
+    if (imageLike(n) || /url\(/.test(background(n))) return true;
+    const size = Math.max(...['width', 'height', 'minHeight'].map((k) => lengths(own(n, k) ?? '')[0] ?? 0));
+    if (n.type === 'svg') return /%/.test(own(n, 'width') ?? '') || size >= L.visualMinPx;
+    return n.type === 'frame' && n !== root && size >= L.visualMinPx && !!background(n) && inside(n).filter((d) => d.type === 'text').length >= 3;
+  });
+  const boardWidth = lengths(own(root, 'width') ?? '')[0] ?? 0;
+  if (root.artboard && page && boardWidth >= 1024 && pageSections.length >= L.pageSectionsMin && !pictured) {
+    add('no-visual', root.id, pageSections.map((n) => n.id),
+      `${pageSections.length} sections and not one picture, drawing, product view, video or shader ${L.visualMinPx}px or larger: the page is type and boxes only. Show the product or its world: the real screen or output at a readable size, an inline SVG drawing of the object or mechanism, a chart of real data, or an image from your own image tool (asset_upload).`, { sections: pageSections.length });
+  }
+
   const width = lengths(own(root, 'width') ?? '')[0], height = lengths(own(root, 'height') ?? '')[0];
   if (root.artboard && width) {
-    const kind = declaredKind(doc, root);
     const format = (group: string) => FRAME_PRESETS.some((p) => p.group === group && p.w === width && p.h === height);
     // What the board or file says it is decides. The size is a guess only where nothing says: 1080 x 1920 is a story
     // and a portrait monitor, 1920 x 1080 a slide and a desktop, and 1280 x 720 a thumbnail and a laptop, so a slide
     // also needs its name to say so.
     const slide = kind === 'pitch-decks' || (!kind && format('Slides') && /slide|deck|folie/i.test(root.name));
     const social = kind === 'social' || (!kind && format('Social') && width !== 1280);
+    // An ad or social image an agent drew (nothing declares it; a template's share card declares itself and is
+    // typographic by design) needs one picture: a photograph, video, shader or drawing across a good part of the frame.
+    if (!kind && social && !system) {
+      const big = (n: BogenNode) => ['width', 'height'].some((k) => {
+        const v = own(n, k) ?? '';
+        return /%/.test(v) ? Number.parseFloat(v) >= 40 : (lengths(v)[0] ?? 0) >= width * 0.4;
+      });
+      const picture = layers.some((n) => n !== root && ((imageLike(n) && (big(n) || own(n, 'position') === 'absolute')) || /url\(/.test(background(n)) || (n.type === 'svg' && big(n))));
+      if (!picture && !/url\(/.test(background(root))) add('no-picture', root.id, [root.id],
+        `This ${width} x ${height} ad or social image has no picture: no photograph, video, shader or drawing across ${Math.round(0.4 * 100)}% of the frame, so it is type and interface parts only. Find one real scene or object that is a metaphor for what the product does, make it with your own image tool (or an inline SVG drawing) and asset_upload it, let it fill the frame with one colour treatment (image_filter), set two to six words in its calm area, and put the brand inside the scene. Read design_knowledge action skill discipline social.`);
+    }
     const seenAt = social ? L.socialViewPx : slide ? L.slideViewPx : 0;
     if (seenAt && seenAt < width) {
       const need = Math.ceil((L.minSeenPx * width) / seenAt);

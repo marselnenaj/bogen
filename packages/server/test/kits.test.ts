@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BogenDoc, createInstance, findMain, listMains, nodeToHtml, readHandoff, safeUsage, setInstanceProps, toReact, variantAxes } from '@bogen/core';
+import { BogenDoc, craftFindings, createInstance, findMain, listMains, nodeToHtml, readHandoff, safeUsage, setInstanceProps, SPECIMEN_EXEMPT, toReact, variantAxes } from '@bogen/core';
+import { copyIssues } from '../src/mcp/copy-check.ts';
 import { afterEach, describe, expect, it } from 'vitest';
 import { call, connectAgent, startServer, type Harness } from './helpers.ts';
 import { allKits, brandTheme, applyKitTheme, findKit, kitSummary, membersOf, registerKit, unregisterKit, writeKitBoards, writeKitTokens, type Kit } from '../src/kits/index.ts';
@@ -18,15 +19,18 @@ function build(kit: Kit) {
 }
 
 const KITS = allKits().filter((k) => k.source === 'builtin');
+const IDS = ['shadcn', 'shadcn-base-ui', 'radix-themes', 'bootstrap-5', 'material-3', 'ionic-ios', 'mantine', 'carbon', 'uswds', 'daisyui', 'web-awesome', 'pico'];
+/** The kits of the second batch, which are also held to the craft and copy checks of shipped content. */
+const CHECKED = new Set(['mantine', 'carbon', 'uswds', 'daisyui', 'web-awesome', 'pico']);
 
 describe('kits', () => {
   it('has the built-in kits, shadcn/ui first, with a phone kit and an iOS-like one without vendor fonts', () => {
-    expect(KITS.map((k) => k.id)).toEqual(['shadcn', 'shadcn-base-ui', 'radix-themes', 'bootstrap-5', 'material-3', 'ionic-ios']);
+    expect(KITS.map((k) => k.id)).toEqual(IDS);
     expect(KITS.find((k) => k.platform === 'android')?.id).toBe('material-3');
     const ios = KITS.find((k) => k.platform === 'ios-like')!;
     // No platform vendor's fonts, by name or by the keywords that resolve to them.
     expect(JSON.stringify(ios)).not.toMatch(/SF Pro|San Francisco|-apple-system|BlinkMacSystemFont|Apple/);
-    for (const k of KITS) expect(['MIT', 'Apache-2.0']).toContain(k.library.license);
+    for (const k of KITS) expect(['MIT', 'Apache-2.0', 'CC0-1.0']).toContain(k.library.license);
     expect(findKit('shadcn/ui').components.length).toBeGreaterThanOrEqual(25);
   });
 
@@ -42,9 +46,10 @@ describe('kits', () => {
         const names = new Set(kit.tokens.map((t) => t.name));
         const used = new Set([...html.matchAll(/var\(--([\w-]+)/g)].map((m) => m[1]!));
         expect([...used].filter((n) => !names.has(n) && n !== 'kit-showcase-font')).toEqual([]);
-        // A dark board shows one instance per component in the dark mode.
-        expect(boards.length).toBe(2);
-        expect(doc.getNode(boards[1]!)!.mode).toBe('dark');
+        // A dark board shows one instance per component in the dark mode, for a kit that has one: USWDS has none.
+        const dark = kit.tokens.some((t) => t.dark !== undefined);
+        expect(boards.length).toBe(dark ? 2 : 1);
+        if (dark) expect(doc.getNode(boards[1]!)!.mode).toBe('dark');
         expect(doc.tokens.size).toBe(kit.tokens.length);
       });
 
@@ -77,16 +82,67 @@ describe('kits', () => {
         }
         const code = toReact(doc, frame);
         for (const c of kit.components) {
+          // Markup is written as it is, with no import by name: only the scripts that define custom elements.
+          if (c.handoff.element) {
+            for (const m of c.handoff.side ?? []) expect(code).toContain(`import "${m}";`);
+            expect(code, `${kit.name} ${c.name}`).toContain(`<${c.handoff.element}`);
+            continue;
+          }
           expect(code).toContain(`from "${c.handoff.from}"`);
           const tag = c.handoff.usage ? /<([A-Z][\w.]*)/.exec(c.handoff.usage)![1]! : c.handoff.name;
           expect(code, `${kit.name} ${c.name}`).toContain(`<${tag}`);
         }
+        // One class attribute per tag, however many classes the variants add.
+        expect(code).not.toMatch(/<[a-z][\w-]*[^<>]*\sclassName="[^"]*"[^<>]*\sclassName="/);
         // The library's components are imported, not written out.
         expect(code).not.toContain('export function Button(');
         expect(code).not.toMatch(/written out in full/);
       });
     });
   }
+
+  for (const kit of KITS.filter((k) => CHECKED.has(k.id))) {
+    it(`${kit.name}: its showcase passes the craft and copy checks of shipped content`, () => {
+      const { doc, boards } = build(kit);
+      const craft = boards.flatMap((b) => craftFindings(doc, b).filter((f) => !SPECIMEN_EXEMPT.includes(f.rule)).map((f) => `${doc.getNode(f.nodeId)?.name}: ${f.rule}: ${f.message}`));
+      expect(craft).toEqual([]);
+      const copy = boards.flatMap((b) => copyIssues([doc.getNode(b)!, ...doc.descendants(b)], [], { doc }).map((f) => `${f.name}: ${f.quote}: ${f.message}`));
+      expect(copy).toEqual([]);
+      const html = boards.map((b) => nodeToHtml(doc, b)).join('\n');
+      // The habits of the generated look that the newer checks name: small tracked capitals, glow, gradients, emoji.
+      expect(html).not.toMatch(/text-transform:\s*uppercase/);
+      expect(html).not.toMatch(/gradient\(/);
+      expect(html).not.toMatch(/\p{Extended_Pictographic}/u);
+      expect(html).not.toMatch(/lorem|ipsum|john doe|jane doe|acme/i);
+      // A brand maps onto it through its roles.
+      for (const r of ['background', 'foreground', 'primary', 'font'] as const) expect(kit.tokens.some((t) => t.role === r), `${kit.id} ${r}`).toBe(true);
+      const theme = brandTheme(kit, { colors: [{ name: 'Ink', role: 'primary', value: '#123456' }, { name: 'Paper', role: 'background', value: '#fafaf7' }, { name: 'Text', role: 'text', value: '#111111' }], families: [{ role: 'body', family: 'Archivo', fallback: 'sans-serif' }], radius: [{ value: 6 }] } as never);
+      const primary = kit.tokens.find((t) => t.role === 'primary')!.name;
+      expect(theme[primary]).toBe('#123456');
+      expect(theme[kit.tokens.find((t) => t.role === 'font')!.name]).toBe('Archivo, sans-serif');
+      const used = build(kit);
+      used.doc.transact(() => applyKitTheme(used.doc, kit, theme));
+      expect(used.doc.tokens.get(primary)!.get('value')).toBe('#123456');
+      const themed = used.boards.map((b) => nodeToHtml(used.doc, b)).join('\n');
+      expect(themed).toContain(`var(--${primary})`);
+    });
+  }
+
+  it('writes markup handoffs as markup: one class attribute, HTML names as JSX, scripts of custom elements as imports', () => {
+    const { doc, page } = build(findKit('daisyui'));
+    const frame = doc.insert(page, { type: 'frame', tag: 'div', name: 'Form', style: {} });
+    const outline = findMain(doc.source, 'Button', { color: 'secondary', style: 'solid', size: 'md' })!;
+    const id = createInstance(doc, outline.id, frame);
+    setInstanceProps(doc, id, { label: 'Pay now' });
+    createInstance(doc, findMain(doc.source, 'Checkbox', { checked: 'true' })!.id, frame);
+    createInstance(doc, findMain(doc.source, 'Input', { state: 'error' })!.id, frame);
+    const code = toReact(doc, frame);
+    expect(code).not.toContain('from "daisyui"');
+    expect(code).toContain('<button className="btn btn-secondary">Pay now</button>');
+    expect(code).toContain('<input type="checkbox" className="checkbox checkbox-primary" defaultChecked />');
+    expect(code).toContain('className="input input-error"');
+    expect(code).toContain('<legend className="fieldset-legend">Email</legend>');
+  });
 
   it('writes shadcn usages in shadcn\'s own props', () => {
     const { doc, page } = build(findKit('shadcn'));
@@ -210,8 +266,8 @@ describe('kit tools', () => {
     harnesses.push(h);
     const client = await connectAgent(h.base, 'claude');
     const list = await call(client, 'kit_list');
-    expect(list.kits.map((k: { id: string }) => k.id)).toEqual(['shadcn', 'shadcn-base-ui', 'radix-themes', 'bootstrap-5', 'material-3', 'ionic-ios']);
-    expect((await call(client, 'template_list')).kits.length).toBe(6);
+    expect(list.kits.map((k: { id: string }) => k.id)).toEqual(IDS);
+    expect((await call(client, 'template_list')).kits.length).toBe(IDS.length);
     const file = await call(client, 'file_create', { name: 'App' });
     const used = await call(client, 'kit_use', { kit: 'shadcn', file_id: file.id, theme: { primary: '#2b3df2' } });
     expect(used.library.created).toBe(true);
@@ -248,7 +304,7 @@ describe('kit tools', () => {
     const h = await startServer();
     harnesses.push(h);
     const list = await (await fetch(`${h.base}/api/kits`)).json() as { id: string; tokenValues: unknown[] }[];
-    expect(list.map((k) => k.id)).toEqual(['shadcn', 'shadcn-base-ui', 'radix-themes', 'bootstrap-5', 'material-3', 'ionic-ios']);
+    expect(list.map((k) => k.id)).toEqual(IDS);
     expect(list[0]!.tokenValues).toContainEqual({ name: 'primary', kind: 'color', light: 'oklch(0.205 0 0)', dark: 'oklch(0.922 0 0)', role: 'primary' });
     const made = await (await fetch(`${h.base}/api/kits/material-3/library`, { method: 'POST' })).json() as { fileId: string; created: boolean };
     expect(made.created).toBe(true);

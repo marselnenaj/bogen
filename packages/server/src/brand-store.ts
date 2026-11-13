@@ -44,6 +44,21 @@ export interface BrandNote {
   notice?: string;
 }
 
+/** What became of a brand that arrived with a file. */
+export interface BrandTransfer {
+  id: string;
+  name: string;
+  /** created: it was not here and is now. kept: one with this id was here, and stays as it was. */
+  status: 'created' | 'kept';
+  /** The id it had where it came from, when it had to take a new one here. */
+  previous_id?: string;
+  version_here: number;
+  version_in_file: number;
+  /** Kept, and the brand that came is not the same as the one here. */
+  differs: boolean;
+  message: string;
+}
+
 export interface LayerImpact { id: string; name: string; prop: string; from: string; to: string }
 export interface BrandDrift {
   brand_id: string;
@@ -256,6 +271,46 @@ export class Brands {
     this.deps.hub.broadcast({ t: 'files' });
     this.deps.hub.broadcast({ t: 'brand', id });
     return entry;
+  }
+
+  /**
+   * A brand that arrived in a `.bogen` file or a design folder. One with this id here already stays exactly as it is,
+   * and the result says whether the one that came differs from it. Otherwise it is added under its own id, so that a
+   * file linked to it finds it and paired devices see one brand, not two. Only an id that this device knows as deleted
+   * (here or on a paired device) or as something else gets a new one, as the old would be deleted again at the next sync.
+   */
+  async adopt(carried: { id: string | null; name: string; doc: BogenDoc }, origin: unknown): Promise<BrandTransfer> {
+    const { storage, rooms, hub } = this.deps;
+    const data = readBrand(carried.doc);
+    const inFile = brandVersionHead(carried.doc)?.n ?? 0;
+    const name = (data.fields.name || carried.name).trim().slice(0, 200) || 'Imported brand';
+    const existing = carried.id ? storage.get(carried.id) : undefined;
+    if (carried.id && existing?.kind === 'brand') {
+      const room = await rooms.get(carried.id);
+      const here = brandVersionHead(room.doc)?.n ?? 0;
+      const differs = diffBrand(readBrand(room.doc), data).some((c) => !(c.section === 'fields' && c.id === 'name'));
+      const message = !differs
+        ? `The brand "${existing.name}" is on this device already, the same as in the file.`
+        : `The brand "${existing.name}" is on this device already and was kept as it is. The file came with ${inFile !== here ? `version ${inFile} of it, and this device has version ${here}` : 'changes to it that this device does not have'}. Compare the two before you take anything over.`;
+      return { id: carried.id, name: existing.name, status: 'kept', version_here: here, version_in_file: inFile, differs, message };
+    }
+    const deleted = carried.id ? this.deps.peers().wasDeleted(carried.id) : false;
+    const id = carried.id && !existing && !deleted ? carried.id : newId();
+    // Which brand is the default is this device's choice: one that arrives does not take it from a brand already set.
+    if (data.fields.defaultAt > 0 && (await this.defaultBrandId())) setBrandField(carried.doc, 'defaultAt', 0, origin);
+    // Another import of the same brand, or a paired device, may have listed it while the default was looked up.
+    if (storage.get(id)) return this.adopt(carried, origin);
+    await atomicWrite(storage.docPath(id), Y.encodeStateAsUpdate(carried.doc.y));
+    storage.create(name, id, 'brand');
+    hub.broadcast({ t: 'files' });
+    hub.broadcast({ t: 'brand', id });
+    const twin = storage.listBrands().some((b) => b.id !== id && b.name === name);
+    const message = [
+      `Added the brand "${name}" to this device.`,
+      ...(carried.id && id !== carried.id ? [deleted ? 'A brand with its id was deleted on this device or a paired one, so it was added under a new id.' : 'Its id is taken here, so it was added under a new id.'] : []),
+      ...(twin ? [`Another brand on this device is also called "${name}". They are separate brands.`] : []),
+    ].join(' ');
+    return { id, name, status: 'created', ...(carried.id && id !== carried.id ? { previous_id: carried.id } : {}), version_here: inFile, version_in_file: inFile, differs: false, message };
   }
 
   requireBrand(id: string): FileEntry {

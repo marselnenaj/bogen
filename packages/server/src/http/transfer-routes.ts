@@ -11,6 +11,7 @@ import { fromThisDevice, jsonBody, readBody, sendJson } from './server.ts';
 import type { GuardOptions } from './security.ts';
 import { createCommit, diffCommits, discardBranch, historyList, listBranches, mergeBranch, mirrorToGit, pickChanges, visualDiff } from '../history-ops.ts';
 import { readFolder } from '../design-folder.ts';
+import { folderBrand, importFolderBrand } from '../bogen-transfer.ts';
 import { startBranch } from '../design-branches.ts';
 import { gitCheckoutTo, gitInit, gitLog } from '../git-mirror.ts';
 
@@ -46,7 +47,7 @@ const CommitBody = z.object({ message: z.string().trim().min(1).max(2000).option
 const RevertBody = z.object({ ids: z.array(z.string().max(120)).max(500).optional(), run: z.string().max(60).optional() });
 const BranchBody = z.object({ name: z.string().trim().min(1).max(120) });
 const GitBody = z.object({ action: z.enum(['init', 'commit', 'log', 'restore']), dir: z.string().max(1000).optional(), message: z.string().max(2000).optional(), author: z.string().max(80).optional(), rev: z.string().max(200).optional(), limit: z.number().int().min(1).max(1000).optional() });
-const FolderBody = z.object({ name: z.string().trim().min(1).max(200), content: z.unknown() });
+const FolderBody = z.object({ name: z.string().trim().min(1).max(200), content: z.unknown(), brand: z.object({ name: z.string().trim().min(1).max(200), content: z.unknown() }).optional() });
 
 /** A person's token first, then one from the environment, then a saved one. Only this machine can use a saved one. */
 export async function figmaToken(app: BogenServer, given: string | undefined, local: boolean): Promise<string> {
@@ -207,10 +208,18 @@ export async function handleTransfer(app: BogenServer, req: IncomingMessage, res
     const raw = await readBody(req, FOLDER_LIMIT);
     const parsed = FolderBody.safeParse(JSON.parse(raw.toString('utf8') || '{}'));
     if (!parsed.success) throw new HttpError(400, 'A design folder needs a name and its content.');
-    const content = parsed.data.content as DesignContent;
+    let content = parsed.data.content as DesignContent;
     let state: Uint8Array;
     try {
       assertContent(content);
+      if (parsed.data.brand) assertContent(parsed.data.brand.content);
+    } catch (err) {
+      throw new HttpError(400, errorMessage(err));
+    }
+    // The brand first, so that the design links to it under the id it has on this device.
+    const brand = parsed.data.brand ? await importFolderBrand(app, content, { name: parsed.data.brand.name, content: parsed.data.brand.content as DesignContent }, 'person:editor') : null;
+    if (brand) content = brand.content;
+    try {
       state = Y.encodeStateAsUpdate(docFromContent(content).y);
     } catch (err) {
       throw new HttpError(400, errorMessage(err));
@@ -219,15 +228,19 @@ export async function handleTransfer(app: BogenServer, req: IncomingMessage, res
     const id = newId();
     await atomicWrite(app.storage.docPath(id), state);
     const entry = app.storage.create(parsed.data.name, id);
+    await app.brands.classify(id);
     app.hub.broadcast({ t: 'files' });
-    sendJson(res, 201, { id: entry.id, name: entry.name, pages: content.pages.length, layers: content.nodes.length });
+    sendJson(res, 201, { id: entry.id, name: entry.name, pages: content.pages.length, layers: content.nodes.length, ...(brand ? { brand: brand.brand } : {}) });
     return true;
   }
 
+  // `?brand=0` leaves the linked brand out; otherwise it comes along as a design folder of its own.
   if (a === 'files' && b && c === 'folder' && method === 'GET') {
     const entry = app.requireFile(b);
     const { doc } = await app.rooms.get(b);
-    sendJson(res, 200, { name: entry.name, content: docToContent(doc) });
+    const brand = await folderBrand(app, doc, url.searchParams.get('brand') !== '0');
+    const carried = brand && 'doc' in brand ? { id: brand.id, name: brand.name, content: docToContent(brand.doc) } : null;
+    sendJson(res, 200, { name: entry.name, content: docToContent(doc), ...(carried ? { brand: carried } : brand ? { brandNote: brand } : {}) });
     return true;
   }
 

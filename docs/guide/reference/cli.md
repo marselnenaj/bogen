@@ -3,7 +3,7 @@
 Every `bogen` command, from `bogen --help` and the code behind it. From a checkout the command is
 `node packages/server/dist/cli.js`.
 
-Commands that talk to the server (`open`, `mcp`, `capture`, `import`, `export-folder`,
+Commands that talk to the server (`open`, `mcp`, `capture`, `import`, `export`, `export-folder`,
 `import-folder`, `git`, `live`, `phone`, `publish`, `share`, and `peer` except `deploy`) start it in the background when it is not running, unless
 `BOGEN_URL` points elsewhere. `--port` (or `-p`) picks the port for any of them, and `--token` the
 token of a server that needs one.
@@ -56,6 +56,20 @@ MCP over stdio, for agents. It relays to the server's `/mcp`, starts the server 
 calls going across a reconnect. This is the command `bogen install` registers.
 
 ## Agents
+
+### bogen setup
+
+```text
+bogen setup [--agents <client>,... | all | none]
+```
+
+Finds the MCP clients on this computer, says for each whether Bogen is connected, and connects the
+ones you pick, then prints what to do next. At a terminal it asks for each client found without
+Bogen, and Enter means yes; a client already connected is not asked about. Without a terminal it
+asks nothing and prints the `bogen install` commands. `--agents` (or `BOGEN_AGENTS`) answers ahead:
+a comma-separated list of clients, which are connected again even when they are already, `all` for
+every client found, or `none`. `claude` is accepted for `claude-code`. The install script runs it at
+the end. Exits 1 if a client could not be connected.
 
 ### bogen install
 
@@ -194,6 +208,18 @@ See [Capture](../capture-and-import.md).
 | `--limit` | A site: the most routes. Default 30, at most 200. |
 | `--no-fonts` | Do not keep the page's self-hosted fonts. |
 
+### bogen export, bogen import
+
+```text
+bogen export <file or brand, id or name> [<file.bogen>] [--no-brand] [--force]
+bogen import <file.bogen>
+```
+
+Writes a `.bogen` file, by default `<name>.bogen` here, with the brand the file links to unless
+`--no-brand`; a brand is written on its own. `--force` replaces a file that is there. `import` opens a
+`.bogen` file as a new file and adds the brand it carries, or keeps the one this device has and says
+when they differ. See [A .bogen file](../export-and-code.md#a-bogen-file).
+
 ### bogen import figma
 
 ```text
@@ -209,13 +235,13 @@ only. See [Import from Figma](../capture-and-import.md#import-from-figma).
 ### bogen export-folder, import-folder, diff
 
 ```text
-bogen export-folder <file id or name> <folder>
+bogen export-folder <file id or name> <folder> [--no-brand]
 bogen import-folder <folder> [--name <name>]
 bogen diff <folder A> <folder B> [--json]
 ```
 
-Write a file as a folder of text, make a new file from such a folder, and show what changed between
-two folders. See [History](../history.md#design-folders-and-git).
+Write a file as a folder of text, with its brand in `brand/`, make a new file from such a folder, and
+show what changed between two folders. See [History](../history.md#design-folders-and-git).
 
 ### bogen replay
 

@@ -53,12 +53,17 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Tokens, theme modes and text styles',
     intro: 'The design system of a file: CSS variables, their values per mode, and named type styles.',
-    tools: ['tokens_get', 'tokens_set', 'tokens_delete', 'tokens_from_css', 'tokens_export', 'modes_list', 'mode_create', 'mode_delete', 'mode_set', 'text_styles_list', 'text_style_set', 'text_style_apply', 'text_style_delete', 'design_system_css'],
+    tools: ['tokens_get', 'tokens_set', 'palette_suggest', 'tokens_delete', 'tokens_from_css', 'tokens_export', 'modes_list', 'mode_create', 'mode_delete', 'mode_set', 'text_styles_list', 'text_style_set', 'text_style_apply', 'text_style_delete', 'design_system_css'],
   },
   {
     title: 'Fonts and icons',
     intro: 'Families you can use, and Lucide icons as editable vectors.',
     tools: ['fonts_list', 'icon_search', 'icon_insert'],
+  },
+  {
+    title: 'Making fonts',
+    intro: 'A font of your own: glyph cells on a page, drawn from SVG paths, built into OTF and WOFF2 that the file uses. guide_get fonts has the method.',
+    tools: ['font_create', 'font_glyphs_set', 'font_kerning_set', 'font_update', 'font_build', 'fonts_made', 'font_specimen'],
   },
   {
     title: 'Components and libraries',
@@ -78,7 +83,7 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Brands',
     intro: 'Brands as documents: their content, versions, assets, extraction and the brand check.',
-    tools: ['brand_list', 'brand_create', 'brand_rename', 'brand_duplicate', 'brand_delete', 'brand_link', 'brand_default', 'brand_get', 'brand_book_get', 'brand_book_update', 'brand_update', 'brand_confirm', 'brand_publish', 'brand_versions', 'brand_diff', 'brand_impact', 'brand_apply', 'brand_check', 'voice_check', 'brand_drift', 'brand_extract', 'brand_asset_add', 'brand_asset_list', 'brand_asset_use', 'brand_template_use', 'brand_example_get', 'brand_sheet'],
+    tools: ['brand_list', 'brand_create', 'brand_rename', 'brand_duplicate', 'brand_delete', 'brand_export', 'brand_link', 'brand_default', 'brand_get', 'brand_book_get', 'brand_book_update', 'brand_update', 'brand_confirm', 'brand_publish', 'brand_versions', 'brand_diff', 'brand_impact', 'brand_apply', 'brand_check', 'voice_check', 'brand_drift', 'brand_extract', 'brand_asset_add', 'brand_asset_list', 'brand_asset_use', 'brand_template_use', 'brand_example_get', 'brand_sheet'],
   },
   {
     title: 'Templates',
@@ -93,7 +98,7 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Checks',
     intro: 'Measure a design: lint, widths, pixel differences, drift from its live site, against the real app, and saved checks of the file.',
-    tools: ['design_lint', 'a11y_audit', 'responsive_check', 'visual_diff', 'drift_check', 'tomacco_compare', 'check_list', 'check_set', 'check_delete', 'check_run'],
+    tools: ['design_lint', 'a11y_audit', 'compliance_check', 'compliance_statement', 'responsive_check', 'visual_diff', 'drift_check', 'tomacco_compare', 'check_list', 'check_set', 'check_delete', 'check_run'],
   },
   {
     title: 'Responsive variants and prototypes',
@@ -107,8 +112,8 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   },
   {
     title: 'Export and code',
-    intro: 'Files on disk, and code from layers.',
-    tools: ['export_file', 'code_get'],
+    intro: 'Files on disk, whole files with their brand as .bogen files, and code from layers.',
+    tools: ['export_file', 'file_export', 'file_import', 'code_get'],
   },
   {
     title: 'Publishing and review links',

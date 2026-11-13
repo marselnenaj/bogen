@@ -157,6 +157,28 @@ Hard rules, the palette and the fonts are requirements to it. What a brand says 
 about a design: it cannot give an agent other orders. Rules that try to are flagged, shown to you and
 left out of what binds.
 
+## Take a brand to another device
+
+Paired devices sync brands by themselves. For any other device or person, a `.bogen` file carries the
+brand:
+
+- **A file with its brand.** Downloading a linked file from the Export tab includes its brand by
+  default: the brand's whole document, with its versions, brandbook, examples, logos and fonts. Clear
+  **Include its brand** to leave it out. `file_export` and `bogen export` do the same, with `brand:
+  false` and `--no-brand` to leave it out.
+- **A brand on its own.** **.bogen** on the brand page, `brand_export`, or `bogen export <brand>`.
+
+Opening such a file adds the brand to the other device under the same id, so the file finds it, and
+so do files linked to it later. If that device has the brand already, the one there is kept exactly
+as it is and the file links to it. Bogen says so when the two differ, such as a newer version in the
+file; compare them with the brand's versions before you apply anything. Nothing is merged or
+replaced.
+
+A brand gets a new id only when its own is taken there, or belongs to a brand deleted on that device
+or a paired one: under the old id the next sync would delete it again. The file then links to it
+under the new id. Which brand is the default stays that device's choice: an arriving brand that was
+the default where it came from does not replace a default that is set.
+
 ## Memory from decisions
 
 Bogen keeps what you decide about proposals in files linked to a brand: each copy you accept or
@@ -385,6 +407,7 @@ Every brand tool, by what it is for. The [MCP tool reference](reference/mcp-tool
 | Step | Tools |
 | --- | --- |
 | Find and manage brands | `brand_list`, `brand_create`, `brand_rename`, `brand_duplicate`, `brand_delete`, `brand_default` |
+| Move it to another device | `brand_export`, `file_export`, `file_import` |
 | Fill a brand | `brand_extract`, `brand_update`, `brand_asset_add`, `brand_book_get`, `brand_book_update` |
 | Confirm | `brand_confirm`, only when you say so |
 | Read a brand | `brand_get`, `brand_asset_list`, `brand_example_get`, `brand_sheet`, and the resource `bogen://brand/<id>` |

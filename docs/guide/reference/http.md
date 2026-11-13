@@ -94,6 +94,9 @@ Asset URLs in documents are `bogen-asset:<name>`. An image with no `src` is a pl
 | `GET\|POST .../branches`, `POST .../branches/:b/merge`, `DELETE .../branches/:b` | Branches. |
 | `POST .../git {action, dir?, message?, rev?}` | The Git layer. This machine. |
 | `GET .../folder`, `POST /api/files/import-folder` | Design folders. |
+| `POST /api/files/:id/compliance/run {pageId, nodeId?, profile, legal?}` | The accessibility and legal check of a page or an artboard: every criterion with its status, evidence and test, the score, and legal reminders. `compliance_check` |
+| `POST /api/files/:id/compliance/statement {pageId, profile, language?, fields?}` | A draft accessibility statement, `{markdown, html, open_fields}`. `compliance_statement` |
+| `POST /api/files/:id/compliance/export {pageId, nodeId?, profile, legal?, format, statement?, language?, fields?}` | The check as an HTML or PDF report. |
 | `GET /api/files/:id/away` | What changed while nobody had the file open, once. |
 | `GET /api/files/:id/conflicts`, `DELETE /api/files/:id/conflicts/:cid?` | Conflict notes from sync. |
 | `POST /api/files/:id/replay {pageId? \| page?, from?, to?, run?, scale?}` | NDJSON progress of rebuilding a replay, ending with `{t:'done', replay}`: its steps, pictures' places and frame. |
@@ -120,12 +123,13 @@ Asset URLs in documents are `bogen-asset:<name>`. An image with no `src` is a pl
 | `GET /api/races?fileId=` | Races of a file while the server runs, newest first, with each lane's status. A `race` event on `/events` says one changed. |
 | `POST /api/races/:id/stop {laneId?}`, `POST /api/races/:id/accept {laneId, keep:'discard'\|'branch', who}`, `POST /api/races/:id/discard {laneId, who}` | Stop one lane or all; accept one lane, which stops the others and discards them or branches the file first; drop one lane's copy. This machine. |
 | `GET /api/runs?fileId=`, `GET /api/runs/recent?limit=`, `POST /api/runs/:id/rerun {fileId}` | Run history. |
+| `GET /api/runs/conversations?fileId=` | The chats of a file, the one talked in last first: `[{ id, title, startedAt, updatedAt, turns, runners, running }]`, where `title` is the first message on one line. |
 | `GET /api/runs/conversations/:id?fileId=` | The turns of one chat: `{ id, turns: [{ runId, at, runner, message, reply?, layers, status, review?, nudged? }] }`, oldest first; none for an id the server does not know. |
 | `GET /api/run-settings`, `PATCH /api/run-settings {runner, scope:'prompt'\|'comment', model?, effort?, shareCursors?, limit?}` | Model and effort choices, and `limit`: how many runs of a runner a race starts at once (1 to 4). `null` clears; `default` means no flag. |
 | `POST /api/agents/undo {fileId, agent}` | Undoes an agent's last step. |
 | `GET /api/agents/steps?fileId=`, `POST /api/agents/steps/undo {fileId, stepId}`, `GET /api/agents/steps/:id/preview?fileId=&which=before\|after` | The activity feed: steps, undo of one step, before and after pictures. |
 | `POST /api/comments {fileId, text, author, threadId? \| pageId?, nodeId?, x?, y?, model?}` | Writes a comment: `{ threadId, messageId, started, refused? }`. A mention starts or queues a run only for a direct request from this machine. |
-| `GET /api/voice/status` | Whether this computer can write out voice notes, and with what. The owner only. |
+| `GET /api/voice/status[?fresh=1]` | Whether this computer can write out voice notes, and with what (`transcriber: { kind, name }` or null); `fresh=1` looks again at once instead of after a minute. The owner only. |
 | `POST /api/voice?fileId=&duration=` | A recording as the raw body with its audio `Content-Type`, up to 10 MB: `{ transcript }`, or `{ transcript: null, reason, attachment }` when it is kept as a voice note. The owner only: this machine or a paired phone. |
 | `GET\|DELETE /api/voice/:id.:ext` | A kept voice note. The owner only. See [Privacy](../privacy.md#voice-notes). |
 | `GET /api/comments/runs?fileId=` | Runs from comments in progress and waiting, with `steps` so far, `queueId` and the `reason` one waits. |
@@ -216,7 +220,8 @@ Routes the CLI and the editor use that the spec does not list:
 | `GET\|POST /api/peers`, `POST /api/peers/pair`, `POST /api/peers/tailnet`, `DELETE /api/peers/:id` | `bogen peer` |
 | `GET /api/fonts?q=` | The font picker |
 | `GET\|POST\|PATCH\|DELETE /api/folders` | Folders on the home screen |
-| `POST /api/files/import`, `GET /api/files/:id/download` | Opening and downloading `.bogen` files |
+| `POST /api/files/import`, `GET /api/files/:id/download[?brand=0]` | Opening and downloading `.bogen` files. A download includes the linked brand unless `brand=0`, and says what it did in `X-Bogen-Brand`; an import answers with what became of the brand under `brand` |
+| `GET /api/files/:id/folder[?brand=0]`, `POST /api/files/import-folder {name, content, brand?}` | `bogen export-folder` and `import-folder`, with the linked brand as a folder of its own |
 | `GET /api/files/:id/thumbnail` | Thumbnails on the home screen |
 | `GET /api/brands/templates`, `POST /api/brands/:id/template` | Brand templates |
 | `GET /api/examples`, `POST /api/examples/:id` | Start from an example on the home screen |

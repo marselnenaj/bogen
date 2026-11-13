@@ -6,7 +6,7 @@ import { FRAMER_IMPORT, motionHandoff, withMotionConfig, type MotionHandoff, typ
 import { BIND_VARIANT, BIND_VISIBLE, dataDeclarations, fieldAccess, placeholderExpr, placeholderJsx, repeatPlan, variantBindings } from './repeat.ts';
 import { fluidPageStyle, jsxBooleanAttr, renderSpec, type AssetResolver } from './render.ts';
 import { codeImportLines, codeUsageJsx } from './code-components.ts';
-import { handoffImportLines, type CodeHandoff } from './handoff.ts';
+import { handoffImportLines, mergeClassAttrs, type CodeHandoff } from './handoff.ts';
 
 /**
  * Hands components to code as what they are: a React component with typed props per main or variant
@@ -427,7 +427,9 @@ function handoffUsage(e: Emit, raw: BogenNode, main: BogenNode, info: ComponentI
       continue;
     }
     const bound = e.bound.get(`${raw.id}#prop.${prop.name}`);
-    const value = raw.props?.[prop.name] ?? (prop.type === 'text' ? memberDefault(doc, main, prop) : undefined);
+    // The member's own prop, whose targets are its own layers: each member of a set may show its own text.
+    const ownProp = main.component?.props?.find((p) => p.name === prop.name) ?? prop;
+    const value = raw.props?.[prop.name] ?? (prop.type === 'text' ? memberDefault(doc, main, ownProp) : undefined);
     if (prop.type === 'text' && typeof value === 'string') texts.set(prop.name, value);
     if (!name) continue;
     if (name === 'children') {
@@ -445,25 +447,45 @@ function handoffUsage(e: Emit, raw: BogenNode, main: BogenNode, info: ComponentI
   const own: Record<string, string> = {};
   for (const [k, v] of Object.entries(raw.style)) if (v !== '' && !POSITION.includes(k)) own[k] = v;
   styleProps(e, attrs, own, false);
+  if (h.element) jsxMarkupAttrs(attrs);
   const filled = fills.filter((f) => here.get(f.slot ?? '') !== undefined);
   if (dataChild) childText = undefined;
   const childJsx = filled.length ? filled.map((f) => layerJsx(e, f.id, depth + 1, false)).join('\n') : dataChild ? `${pad}  ${dataChild}` : childText !== undefined && childText !== '' ? `${pad}  ${jsxText(childText)}` : '';
   const note = unsaid ? `${pad}{/* ${raw.name}: ${unsaid} change${unsaid > 1 ? 's' : ''} on inner layers that these props do not say. */}\n` : '';
   if (h.usage) {
-    const body = h.usage
+    const filledBody = (h.element ? jsxMarkup(h.usage) : h.usage)
       .replace(/\{\{\s*attrs\s*\}\}/g, attrs.length ? ` ${attrs.join(' ')}` : '')
       .replace(/\{\{\s*children\s*\}\}/g, filled.length ? `\n${childJsx}\n` : dataChild ?? (childText ? jsxText(childText) : ''))
       .replace(/\{\{\s*([\w.$-]+)\s*\}\}/g, (_, name: string) => {
         const expr = fromData.props.get(name);
         return expr ? `{${expr}}` : jsxText(texts.get(name) ?? '');
       });
+    const body = h.element ? mergeClassAttrs(filledBody, 'className') : filledBody;
     return withData(e, raw, `${note}${body.split('\n').map((line) => (line.trim() ? `${pad}${line}` : line)).join('\n')}`, depth);
   }
-  const start = `${pad}<${h.name}${attrs.length ? ` ${attrs.join(' ')}` : ''}`;
-  if (!childJsx) return withData(e, raw, `${note}${start} />`, depth);
-  if (!filled.length && dataChild) return withData(e, raw, `${note}${start}>${dataChild}</${h.name}>`, depth);
-  if (!filled.length && childText !== undefined && !childText.includes('\n')) return withData(e, raw, `${note}${start}>${jsxText(childText)}</${h.name}>`, depth);
-  return withData(e, raw, `${note}${start}>\n${childJsx}\n${pad}</${h.name}>`, depth);
+  const tag = h.element ?? h.name;
+  const opening = `${pad}<${tag}${attrs.length ? ` ${attrs.join(' ')}` : ''}`;
+  const start = h.element ? mergeClassAttrs(opening, 'className') : opening;
+  // A custom element is never self-closing in HTML, so it is not in JSX either, to read the same as its docs.
+  if (!childJsx) return withData(e, raw, `${note}${h.element && (h.element.includes('-') || !VOID.has(h.element)) ? `${start}></${tag}>` : `${start} />`}`, depth);
+  if (!filled.length && dataChild) return withData(e, raw, `${note}${start}>${dataChild}</${tag}>`, depth);
+  if (!filled.length && childText !== undefined && !childText.includes('\n')) return withData(e, raw, `${note}${start}>${jsxText(childText)}</${tag}>`, depth);
+  return withData(e, raw, `${note}${start}>\n${childJsx}\n${pad}</${tag}>`, depth);
+}
+
+/** HTML attribute names in a markup handoff's usage, as JSX writes them. */
+function jsxMarkup(usage: string): string {
+  return usage.replace(/(\s)class="/g, '$1className="').replace(/(\s)for="/g, '$1htmlFor="').replace(/(\s)tabindex="/g, '$1tabIndex="');
+}
+
+/** A markup handoff's attributes as JSX: `class` as className, `for` as htmlFor, and a checked box as defaultChecked. */
+function jsxMarkupAttrs(attrs: string[]): void {
+  for (let i = 0; i < attrs.length; i++) {
+    const a = attrs[i]!;
+    if (a.startsWith('class="')) attrs[i] = `className=${a.slice(6)}`;
+    else if (a.startsWith('for="')) attrs[i] = `htmlFor=${a.slice(4)}`;
+    else if (a === 'checked') attrs[i] = 'defaultChecked';
+  }
 }
 
 function componentCode(e: Emit, info: ComponentInfo, extra: { css?: string; framer?: boolean } = {}): string {
@@ -581,3 +603,7 @@ export function textStyleCssFor(doc: BogenDoc, code: string): string {
   const used = getTextStyles(doc).filter((s) => code.includes(`ts-${s.key}`));
   return used.length ? textStylesCss(used, '', true) : '';
 }
+
+/** For the other code exports (sfc-export.ts, swiftui-export.ts): the mains a layer's code needs, and the component of each set. */
+export { collect as componentMainsFor, buildInfos as componentInfosFor, memberDefault as propDefaultFor };
+export type { ComponentInfo as CodeComponentInfo };

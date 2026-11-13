@@ -1,4 +1,4 @@
-import { clampAt, fluidClamp } from '@bogen/core';
+import { clampAt, fluidClamp, hostedFamilies } from '@bogen/core';
 import { inspectorStyle } from '../../ops/breakpoints.ts';
 import { elOf, rectOf } from '../../canvas/measure.ts';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -11,6 +11,7 @@ import { ColorField } from '../../ui/ColorPicker.tsx';
 import { common, IconButton, MIXED, NumberField, Popover, Row, Section, Segmented, SelectField, TextField } from '../../ui/controls.tsx';
 import type { FontEntry } from '../../lib/api.ts';
 import { TextStyleField } from './TextStyleField.tsx';
+import { fileFamilies } from './FontPanel.tsx';
 import { session } from '../../doc/session.ts';
 import { ctx, msg } from '../../i18n/core.ts';
 import { useT } from '../../i18n/react.ts';
@@ -29,10 +30,12 @@ function FontPicker({ value, mixed, onChange }: { value: string; mixed: boolean;
   useEffect(() => {
     if (open) void listFonts().then(setFonts);
   }, [open]);
+  // Fonts the file holds, made here or brought by a capture, read when the list opens.
+  const inFile = useMemo<FontEntry[]>(() => (open ? fileFamilies().map((f) => ({ family: f.family, source: 'file', made: f.made })) : []), [open]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const all = [...local, ...fonts];
+    const all = [...inFile, ...local, ...fonts];
     const seen = new Set<string>();
     const out: FontEntry[] = [];
     for (const f of all) {
@@ -42,7 +45,7 @@ function FontPicker({ value, mixed, onChange }: { value: string; mixed: boolean;
       if (out.length > 120) break;
     }
     return out;
-  }, [fonts, local, query]);
+  }, [fonts, local, inFile, query]);
 
   const canAddTyped = query.trim() && !results.some((r) => r.family.toLowerCase() === query.trim().toLowerCase());
 
@@ -79,6 +82,7 @@ function FontPicker({ value, mixed, onChange }: { value: string; mixed: boolean;
               <button key={f.family} type="button" className="font-row" data-testid="font-row" onClick={() => { onChange(f.family); setOpen(false); }} onMouseEnter={() => { if (f.source === 'google') ensureFont(f.family); }} style={{ fontFamily: `"${f.family}", var(--ui-font)` }}>
                 <span>{f.family}</span>
                 {f.source === 'local' ? <span className="font-tag">{t('Local')}</span> : null}
+                {f.source === 'file' ? <span className="font-tag" data-testid="font-tag-file">{f.made ? t('Made here') : t('In this file')}</span> : null}
               </button>
             ))}
             {!results.length && !canAddTyped ? <div className="hint">{t('No font matches.')}</div> : null}
@@ -159,7 +163,7 @@ export function TypographySection({ nodes: all, allText }: { nodes: BogenNode[];
       <div className="stack">
         {!allText ? <div className="hint">{t('Applies to the text layers in the selection.')}</div> : null}
         <TextStyleField nodes={nodes} />
-        <FontPicker value={typeof family === 'string' ? family : ''} mixed={family === MIXED} onChange={(f) => { ensureFont(f); inspectorStyle(ids, { fontFamily: `"${f}", sans-serif` }); }} />
+        <FontPicker value={typeof family === 'string' ? family : ''} mixed={family === MIXED} onChange={(f) => { ensureFont(f, hostedFamilies(session().doc)); inspectorStyle(ids, { fontFamily: `"${f}", sans-serif` }); }} />
         <Row>
           <SelectField<string>
             value={weight === MIXED ? MIXED : weight || '400'}

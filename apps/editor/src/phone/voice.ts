@@ -2,8 +2,9 @@ import type { CommentAttachment } from '@bogen/core';
 import { t } from '../i18n/store.ts';
 
 /**
- * Voice notes on the phone: recorded with MediaRecorder, sent to the computer over the phone listener and turned
- * into text there by a local model, if it has one. See packages/server/src/voice.ts. Nothing goes anywhere else.
+ * Voice notes and dictation, on the phone and in the editor: recorded with MediaRecorder, sent to the computer (over
+ * the phone listener, or straight to this machine's own server) and turned into text there by a local model, if it
+ * has one. See packages/server/src/voice.ts. Nothing goes anywhere else.
  */
 
 /** As long as a comment is worth speaking. The computer refuses more than 10 MB in any case. */
@@ -34,9 +35,10 @@ export function canRecord(): boolean {
 
 let statusOnce: Promise<VoiceStatus | null> | null = null;
 
-/** Whether the computer can transcribe, asked once per session. */
-export function voiceStatus(): Promise<VoiceStatus | null> {
-  statusOnce ??= fetch('/api/voice/status').then((res) => (res.ok ? res.json() as Promise<VoiceStatus> : null), () => null);
+/** Whether the computer can transcribe, asked once per session, or again when `fresh` (Check again, after a setup). */
+export function voiceStatus(fresh = false): Promise<VoiceStatus | null> {
+  if (fresh) statusOnce = null;
+  statusOnce ??= fetch(fresh ? '/api/voice/status?fresh=1' : '/api/voice/status').then((res) => (res.ok ? res.json() as Promise<VoiceStatus> : null), () => null);
   return statusOnce;
 }
 

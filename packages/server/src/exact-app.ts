@@ -39,3 +39,18 @@ export async function writeExactApp(app: ExactApp, folder: string, storage: Stor
   }
   return { files, missing };
 }
+
+/** Writes code files (handoffFiles) into `folder`, and returns their paths in it. */
+export async function writeCodeFiles(list: { path: string; text: string }[], folder: string, overwrite: boolean): Promise<string[]> {
+  await mkdir(folder, { recursive: true });
+  const files: string[] = [];
+  for (const f of list) {
+    // Paths come from Bogen's own writer: names it made, one folder deep at most.
+    if (!/^[\w.-]+(\/[\w.-]+)?$/.test(f.path) || f.path.includes('..')) throw new Error(`Not a file name: ${f.path}`);
+    const at = join(folder, f.path);
+    await mkdir(dirname(at), { recursive: true });
+    await writeFile(at, f.text, { flag: overwrite ? 'w' : 'wx' });
+    files.push(f.path);
+  }
+  return files;
+}

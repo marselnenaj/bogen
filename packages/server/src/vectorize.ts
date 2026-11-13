@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import { sanitizeSvgMarkup } from '@bogen/core';
 import { sniffImage } from './images.ts';
-import { downscale, type Rgba } from './image-raster.ts';
+import { decodePng, downscale, type Rgba } from './image-raster.ts';
 import { toBase64, withEncoderPage } from './media.ts';
 import type { Renderer } from './render.ts';
 import type { Storage } from './storage.ts';
@@ -101,6 +101,19 @@ async function decodeInBrowser(renderer: Renderer, bytes: Uint8Array, mime: stri
     }, toBase64(bytes), mime, maxPixels);
     return { rgba: { width: out.w, height: out.h, data: new Uint8ClampedArray(Buffer.from(out.data, 'base64')) }, natural: out.natural };
   }));
+}
+
+/** The pixels of a stored image, small enough to read colours from: PNG here, other formats in the sandboxed browser. */
+export async function assetPixels(storage: Storage, renderer: Renderer | undefined, src: string, maxPixels = 40_000): Promise<Rgba> {
+  const name = /^bogen-asset:([a-f0-9]{64}\.[a-z0-9]{2,5})$/.exec(src.trim())?.[1];
+  if (!name) throw new Error('Read colours from an image stored in Bogen: upload it with asset_upload first, then pass its src (bogen-asset:...) or the image layer.');
+  const asset = await storage.readAsset(name);
+  if (!asset) throw new Error('That image is not in the asset store.');
+  const mime = sniffImage(asset.bytes);
+  if (!mime) throw new Error('Only PNG, JPEG, WebP, GIF and AVIF images can be read.');
+  if (mime === 'image/png' && !isInterlacedPng(asset.bytes)) return downscale(decodePng(asset.bytes), maxPixels);
+  if (!renderer) throw new Error(`Reading ${mime} needs the renderer.`);
+  return downscale((await decodeInBrowser(renderer, asset.bytes, mime, maxPixels)).rgba, maxPixels);
 }
 
 /** The tracer's own root, made one that fills its layer: the view box is in traced pixels, the layer sets the size. */

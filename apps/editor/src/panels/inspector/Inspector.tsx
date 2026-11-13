@@ -33,6 +33,7 @@ import { setSpacing, spacingInfo } from '../../ops/ops.ts';
 import { addArtboard } from '../../ops/ops.ts';
 import { ConstraintsRow, OverflowRow, RatioLock, ratioOf } from './Layout2.tsx';
 import { PathActions } from './PathActions.tsx';
+import { FontBuildSection, FontPanel, useIsGlyphPage } from './FontPanel.tsx';
 import { PrototypeSection } from './Prototype.tsx';
 import { VariablesSection } from './PrototypeState.tsx';
 import { ResponsiveSection } from './ResponsiveSection.tsx';
@@ -608,8 +609,9 @@ export function Inspector() {
   const pageId = useEditor((s) => s.pageId);
   const tool = useEditor((s) => s.tool);
   useFrameVersion();
+  const glyphPage = useIsGlyphPage();
   if (tool === 'frame') return <FrameTool />;
-  if (!nodes.length) return <><PageSummary />{pageId ? <PageModeSection pageId={pageId} /> : null}<VariablesSection /></>;
+  if (!nodes.length) return <>{glyphPage ? <FontPanel /> : <PageSummary />}{pageId ? <PageModeSection pageId={pageId} /> : null}<VariablesSection /></>;
   const allFrames = nodes.every((n) => n.type === 'frame');
   const anyText = nodes.some((n) => n.type === 'text');
   const allText = nodes.every((n) => n.type === 'text');
@@ -620,6 +622,7 @@ export function Inspector() {
     <div className="inspector" data-testid="inspector">
       <Header nodes={nodes} />
       <BreakpointBar nodes={raw} />
+      {glyphPage ? <FontBuildSection /> : null}
       <ComponentSection nodes={nodes} />
       <AlignRow count={nodes.length} />
       {nodes.length >= 2 ? <SpacingRow nodes={nodes} /> : null}

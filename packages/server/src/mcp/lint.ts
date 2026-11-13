@@ -11,7 +11,12 @@ export type LintRule = 'contrast' | 'token' | 'grid' | 'overflow' | 'alt' | 'sma
  */
 export interface LintFix { style: Record<string, string>; safe: boolean; block?: string }
 /** `check` names the craft check, such as `glow` or `primary-actions`, and `criterion` the rubric criterion it counts against. */
-export interface LintIssue { rule: LintRule; nodeId: string; name: string; message: string; fix?: LintFix; check?: string; criterion?: string }
+/**
+ * `severity` hard: an objective defect (contrast is reported as its own rule): text that overflows or is clipped by more
+ * than 2px, text unreadable where it is seen, placeholder copy. design_verify does not count a rubric as scored while one
+ * stands. advisory: a choice that often reads as default, with `why`; it never blocks and never caps a score.
+ */
+export interface LintIssue { rule: LintRule; nodeId: string; name: string; message: string; fix?: LintFix; check?: string; criterion?: string; severity?: 'hard' | 'advisory'; why?: string }
 
 const GRID_PROPS = ['padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'paddingInline', 'paddingBlock', 'margin', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'marginInline', 'marginBlock', 'gap', 'rowGap', 'columnGap'];
 const GRID = 4;
@@ -507,7 +512,7 @@ export function craftIssues(doc: BogenDoc, nodes: BogenNode[]): LintIssue[] {
   const out: LintIssue[] = [];
   for (const root of nodes.filter((n) => !inScope.has(n.parent) && !n.virtual && !n.hidden)) {
     for (const f of craftFindings(doc, root.id)) {
-      out.push({ rule: 'craft', check: f.rule, criterion: f.criterion, nodeId: f.nodeId, name: doc.getNode(f.nodeId)?.name ?? '', message: f.message });
+      out.push({ rule: 'craft', check: f.rule, criterion: f.criterion, severity: f.severity, ...(f.severity === 'advisory' ? { why: f.why } : {}), nodeId: f.nodeId, name: doc.getNode(f.nodeId)?.name ?? '', message: f.message });
     }
   }
   return out;
@@ -529,25 +534,35 @@ export async function lintIssues(doc: BogenDoc, renderer: Renderer, target: Targ
   };
   const rendered = await renderer.probe(doc, target, probe, { ids: nodes.map((n) => n.id), minText: MIN_TEXT_PX, minTarget: MIN_TARGET_PX });
   return [
-    ...rendered.issues.map((r) => ({ rule: r.rule, nodeId: r.id, name: names.get(r.id) ?? '', message: r.message })),
+    // Overflow and clipping beyond 2px is a broken layout, not a matter of taste.
+    ...rendered.issues.map((r) => ({ rule: r.rule, nodeId: r.id, name: names.get(r.id) ?? '', message: r.message, ...(r.rule === 'overflow' && overflowPx(r.message) > 2 ? { severity: 'hard' as const } : {}) })),
     // Few and about the whole artboard, so they come before the per-value findings that can fill a report.
     ...craftIssues(doc, nodes),
     ...staticIssues(doc, nodes),
     ...hierarchyIssues(doc, rendered.texts, names),
-    ...copyIssues(nodes, profile ? avoidFor : options.avoid, { doc }).map((c) => ({ rule: 'copy' as const, nodeId: c.nodeId, name: c.name, message: c.message })),
+    ...copyIssues(nodes, profile ? avoidFor : options.avoid, { doc }).map((c) => ({ rule: 'copy' as const, nodeId: c.nodeId, name: c.name, message: c.message, ...(c.check === 'placeholder' ? { check: c.check, severity: 'hard' as const } : { ...(c.check ? { check: c.check } : {}), severity: 'advisory' as const, why: c.check === 'emoji' ? 'Emoji and arrow glyphs render differently on each platform and read as casual.' : 'Filler and hype words read as generated; the mechanism and the outcome convince more.' }) })),
     // The brand's measurable voice, when the file has a brand. A counter-example breaks it on purpose.
     ...(brand && profile ? voiceFindings(brand, nodes.filter((n) => !n.virtual && n.text?.trim() && exampleKindOf(doc, n.id) !== 'dont').map((n) => ({ id: n.id, name: n.name, tag: n.tag, text: n.text!, lang: langOf(n) })), { profile })
       .map((v) => ({ rule: 'copy' as const, nodeId: v.node_id, name: v.layer, message: `${v.message} ${v.how}${exampleLine(v.example)}` })) : []),
   ];
 }
 
-export interface LintReport { total: number; counts: Record<string, number>; issues: LintIssue[]; skippedOnImagesNote?: string }
+/** The px of an overflow finding, as its message says it: "Overflows its parent by 3px on the right." */
+function overflowPx(message: string): number {
+  return Math.max(0, ...[...message.matchAll(/(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1])));
+}
+
+export interface LintReport { total: number; counts: Record<string, number>; hard: number; issues: LintIssue[]; skippedOnImagesNote?: string; next?: string }
 
 export function lintReport(issues: LintIssue[], nodes: BogenNode[]): LintReport {
   const counts: Record<string, number> = { contrast: 0, overflow: 0, token: 0, grid: 0, alt: 0, 'small-text': 0, target: 0, repeated: 0, spacing: 0, hierarchy: 0, copy: 0, craft: 0 };
   for (const issue of issues) counts[issue.rule]!++;
+  // The generated look first: those are what keep a review from passing.
+  const hard = issues.filter((i) => i.severity === 'hard');
+  const ordered = [...hard, ...issues.filter((i) => i.severity !== 'hard')];
   return {
-    total: issues.length, counts, issues: issues.slice(0, 100),
+    total: issues.length, counts, hard: hard.length, issues: ordered.slice(0, 100),
+    ...(hard.length ? { next: `${hard.length} hard ${hard.length === 1 ? 'finding is an objective defect' : 'findings are objective defects'} (overflow, unreadable text, placeholder copy): fix ${hard.length === 1 ? 'it' : 'them'} before design_verify. Advisory findings say why a choice often reads as default; keep one when your direction has a reason, and say so in design_verify kept.` } : {}),
     ...(nodes.some((n) => n.type === 'shader' || n.type === 'image' || n.style.backgroundImage) ? { skippedOnImagesNote: 'Contrast is not measured for text over images, gradients or shaders. Check those in a screenshot.' } : {}),
   };
 }

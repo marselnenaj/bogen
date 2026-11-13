@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { PanelLeft, PanelRight } from 'lucide-react';
 import { camera } from '../state/camera.ts';
-import { chromeLayout, useWindowSize, type ChromeLayout } from '../state/chrome-layout.ts';
+import { chatLayout, useWindowSize, type ChatChrome, type ChromeLayout } from '../state/chrome-layout.ts';
 import { useSettings } from '../state/settings.ts';
 import { editor, useEditor } from '../state/store.ts';
 import { ui, useUi } from '../state/ui.ts';
@@ -17,19 +17,21 @@ const TOGGLE_TITLES: Record<Side, { open: string; close: string }> = {
 };
 const KEYS: Record<Side, string> = { left: 'Ctrl+Alt+1', right: 'Ctrl+Alt+2' };
 
-/** The layout of the editor's chrome for this window, UI scale and the panel widths chosen. */
-export function useChrome(): ChromeLayout {
+/** The layout of the editor's chrome for this window, UI scale, the panel widths chosen and the chat, open or not. */
+export function useChrome(): ChatChrome {
   const { width, height } = useWindowSize();
   const scale = useSettings((s) => s.uiScale);
   const leftWidth = useEditor((s) => s.leftWidth);
   const rightWidth = useEditor((s) => s.rightWidth);
-  return useMemo(() => chromeLayout({ width, height, scale, leftWidth, rightWidth }), [width, height, scale, leftWidth, rightWidth]);
+  const chatWidth = useEditor((s) => s.chatWidth);
+  const chatOpen = useEditor((s) => s.prompt.open);
+  return useMemo(() => chatLayout({ width, height, scale, leftWidth, rightWidth, chatOpen, chatWidth }), [width, height, scale, leftWidth, rightWidth, chatOpen, chatWidth]);
 }
 
 /** The same, read once, for commands. */
-export function currentChrome(): ChromeLayout {
+export function currentChrome(): ChatChrome {
   const st = editor();
-  return chromeLayout({ width: window.innerWidth, height: window.innerHeight, scale: useSettings.getState().uiScale, leftWidth: st.leftWidth, rightWidth: st.rightWidth });
+  return chatLayout({ width: window.innerWidth, height: window.innerHeight, scale: useSettings.getState().uiScale, leftWidth: st.leftWidth, rightWidth: st.rightWidth, chatOpen: st.prompt.open, chatWidth: st.chatWidth });
 }
 
 /**

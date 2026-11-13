@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FileText, Paperclip, Send, X } from 'lucide-react';
+import { FileText, Mic, Paperclip, Send, X } from 'lucide-react';
 import { RUNNABLE_IDS, type CommentAttachment } from '@bogen/core';
 import { api, resolveAsset } from '../lib/api.ts';
 import { imageSize } from '../ops/clipboard.ts';
@@ -10,6 +10,10 @@ import { mentionAt } from './mention.ts';
 import { ATTACH_ACCEPT, attachType, isImageAttachment } from './collab-words.ts';
 import { getDraft, setDraft } from './conversation-state.ts';
 import { useT } from '../i18n/react.ts';
+import { dropRecording } from '../phone/voice.ts';
+import { clockOf } from '../ui/VoiceNote.tsx';
+import { MicButton, useVoice, VoiceNotice, VoiceRecording } from '../ui/VoiceInput.tsx';
+import { joinWords } from '../ui/voice-state.ts';
 
 export { isImageAttachment };
 
@@ -57,6 +61,13 @@ export function CommentInput({ placeholder, rows = 1, autoFocus, testId, sendTes
   useEditor((s) => s.peers);
   useEffect(() => { if (focusKey !== undefined) areaRef.current?.focus(); }, [focusKey]);
   useEffect(() => onText?.(text), [text]);
+  // Speaking: the words go into the field to be checked; without a local model the recording is a voice note.
+  const voice = useVoice({
+    use: 'comment',
+    onText: (words) => setText((current) => joinWords(current, words)),
+    onAttach: (file) => setFiles((list) => [...list, file]),
+    onDone: () => requestAnimationFrame(() => areaRef.current?.focus()),
+  });
 
   const options = mention ? mentionables().filter((o) => o.name.toLowerCase().startsWith(mention.query.toLowerCase())).slice(0, 6) : [];
   const upload = async (blob: File | Blob) => {
@@ -77,10 +88,12 @@ export function CommentInput({ placeholder, rows = 1, autoFocus, testId, sendTes
     }
   };
   const send = async () => {
-    const body = text.trim();
-    if ((!body && !files.length) || uploading) return;
+    // A voice note on its own still says what it is, as on the phone.
+    const body = text.trim() || (files.some((f) => f.kind === 'audio') ? 'Voice note' : '');
+    if ((!body && !files.length) || uploading || voice.phase !== 'idle') return;
     try {
       await onSubmit(body, files);
+      voice.dismiss();
       setText('');
       setFiles([]);
       setMention(null);
@@ -161,18 +174,29 @@ export function CommentInput({ placeholder, rows = 1, autoFocus, testId, sendTes
       {files.length || uploading ? (
         <div className="comment-files" data-testid="comment-files">
           {files.map((f, i) => (
-            <div key={f.src + i} className={`comment-file${isImageAttachment(f.src) ? '' : ' is-doc'}`} data-testid="comment-file">
-              {isImageAttachment(f.src) ? <img src={resolveAsset(f.src)} alt={f.name ?? t('Attached image')} /> : <span className="comment-doc" title={f.name}><FileText size={13} /><span dir="auto">{f.name ?? t('File')}</span></span>}
-              <button type="button" aria-label={f.name ? t('Remove {file}', { file: f.name }) : t('Remove the file')} title={t('Remove')} onClick={() => setFiles((list) => list.filter((_, j) => j !== i))}><X size={10} /></button>
-            </div>
+            f.kind === 'audio' ? (
+              <div key={f.src + i} className="comment-file is-doc is-voice" data-testid="comment-voice">
+                <span className="comment-doc"><Mic size={13} /><span>{f.duration !== undefined ? t('Voice note, {duration}', { duration: clockOf(f.duration) }) : t('Voice note')}</span></span>
+                <button type="button" aria-label={t('Remove the voice note')} title={t('Remove')} onClick={() => { dropRecording(f); setFiles((list) => list.filter((_, j) => j !== i)); }}><X size={10} /></button>
+              </div>
+            ) : (
+              <div key={f.src + i} className={`comment-file${isImageAttachment(f.src) ? '' : ' is-doc'}`} data-testid="comment-file">
+                {isImageAttachment(f.src) ? <img src={resolveAsset(f.src)} alt={f.name ?? t('Attached image')} /> : <span className="comment-doc" title={f.name}><FileText size={13} /><span dir="auto">{f.name ?? t('File')}</span></span>}
+                <button type="button" aria-label={f.name ? t('Remove {file}', { file: f.name }) : t('Remove the file')} title={t('Remove')} onClick={() => setFiles((list) => list.filter((_, j) => j !== i))}><X size={10} /></button>
+              </div>
+            )
           ))}
           {uploading ? <div className="comment-file is-busy" role="status" aria-label={t('Uploading')} /> : null}
         </div>
       ) : null}
-      <div className="comment-actions">
-        <IconButton icon={<Paperclip size={13} />} title={t('Attach an image or a file (PDF, text, Markdown, CSV, JSON), or paste or drop one here. An agent asked in the thread gets them too.')} onClick={() => pickFile((f) => void upload(f))} testId={`${testId}-attach`} />
-        <IconButton icon={<Send size={13} />} title={t('Send ({shortcut})', { shortcut: 'Enter' })} onClick={() => void send()} disabled={(!text.trim() && !files.length) || uploading > 0} testId={sendTestId ?? `${testId}-send`} />
-      </div>
+      {voice.phase === 'recording' ? <VoiceRecording voice={voice} testId={`${testId}-mic`} /> : (
+        <div className="comment-actions">
+          <IconButton icon={<Paperclip size={13} />} title={t('Attach an image or a file (PDF, text, Markdown, CSV, JSON), or paste or drop one here. An agent asked in the thread gets them too.')} onClick={() => pickFile((f) => void upload(f))} testId={`${testId}-attach`} />
+          <MicButton voice={voice} testId={`${testId}-mic`} size={13} />
+          <IconButton icon={<Send size={13} />} title={t('Send ({shortcut})', { shortcut: 'Enter' })} onClick={() => void send()} disabled={(!text.trim() && !files.length) || uploading > 0 || voice.phase !== 'idle'} testId={sendTestId ?? `${testId}-send`} />
+        </div>
+      )}
+      {voice.phase !== 'idle' || voice.problem || voice.note ? <div className="comment-voice"><VoiceNotice voice={voice} testId={testId} /></div> : null}
     </div>
   );
 }

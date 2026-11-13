@@ -1,7 +1,7 @@
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { craftFindings, designReview, readBrand, voiceFindings, type BogenDoc, type BrandData } from '@bogen/core';
+import { craftFindings, designReview, readBrand, SPECIMEN_EXEMPT, voiceFindings, type BogenDoc, type BrandData } from '@bogen/core';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { copyIssues } from '../src/mcp/copy-check.ts';
@@ -9,6 +9,7 @@ import { staticIssues } from '../src/mcp/lint.ts';
 import { writeBrandSpec } from '../src/templates/brand-spec.ts';
 import { TEMPLATES } from '../src/templates/index.ts';
 import { SECTIONS } from '../src/templates/web-sections.ts';
+import { allKits } from '../src/kits/index.ts';
 import { BOGEN_BRAND } from '../src/templates/welcome.ts';
 import { call, connectAgent, startServer, type Harness } from './helpers.ts';
 
@@ -146,6 +147,20 @@ describe('shipped content passes its own checks', () => {
     }
     expect(all).toEqual([]);
   });
+
+  // A kit's own file is its showcase: every main side by side, a specimen sheet by nature, so the rules about composing
+  // one screen (SPECIMEN_EXEMPT) do not apply. The habits of the generated look must not be in it.
+  for (const kit of allKits()) {
+    it(`the kit ${kit.id}, by the craft checks`, async () => {
+      const file = (await call(client, 'file_create', { name: `Kit ${kit.id}` })).id;
+      const used = await call(client, 'kit_use', { kit: kit.id, file_id: file });
+      const { doc } = await h.server.rooms.get(used.library.id);
+      const boards = doc.getPages().flatMap((p) => doc.getChildren(p.id).filter((b) => b.artboard));
+      expect(boards.length).toBeGreaterThan(0);
+      const out = boards.flatMap((b) => craftFindings(doc, b.id).filter((f) => !SPECIMEN_EXEMPT.includes(f.rule)).map((f) => `${b.name} / ${doc.getNode(f.nodeId)?.name}: ${f.rule}: ${f.message}`));
+      expect(out).toEqual([]);
+    }, 60_000);
+  }
 
   for (const target of ['desktop', 'mobile'] as const) {
     it(`a new Omarchy theme file, ${target}`, async () => {

@@ -164,6 +164,12 @@ bogen import-folder ~/Work/site/design --name "Pricing page"
 bogen diff ~/Work/site/design ~/Work/old/design            # --json for a machine-readable diff
 ```
 
+`export-folder` writes the brand the file links to as a design folder of its own, in `brand/`, and
+`import-folder` brings it in the same way a `.bogen` file does: added if the device does not have it,
+kept as it is if it does. `--no-brand` leaves it out. A brand made from a folder is a new copy of its
+document rather than the same one, so on a device that also gets the brand from a paired device, both
+merge field by field. `bogen git` commits write the design only, without `brand/`.
+
 To keep a design folder in a real Git repository:
 
 ```sh

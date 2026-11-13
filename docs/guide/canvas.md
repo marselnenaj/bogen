@@ -47,6 +47,13 @@ The selected tool is remembered on this device when you switch files or reopen B
 The toolbar also has an icon picker with the Lucide set, 2015 icons placed as editable vectors in
 the text colour. Search goes by name and a short list of synonyms.
 
+Agents reach more sets with `icon_search` and its `set`: Phosphor (regular), Tabler Icons (outline),
+Heroicons (outline and solid) and Material Symbols (outlined), or `all` to search them together. Their
+names carry the set, such as `tabler:home`, and `icon_insert` places them like Lucide's: stroked sets
+take a stroke width, filled ones fill with the colour. None of the sets has the logos of other
+companies. The picker in the toolbar shows Lucide only. See [Licences](licences.md) for why Remix Icon
+is not among them.
+
 ## Selecting
 
 - Click to select, Shift+click to add, drag a marquee. Ctrl+A selects all.
@@ -248,6 +255,9 @@ Limits: there are no vector networks and no shape builder. A gradient fill becom
 when a shape turns into a path, an outside stroke needs a fill, and a boolean result replaces its
 sources (undo brings them back). An image becomes a vector with **Vectorize**, under Images below.
 
+A page of glyph cells is a font: the vectors in its cells are the outlines, and **Build font** turns them
+into a font the file can use. [Fonts of your own](fonts.md) explains it.
+
 ## Images and media
 
 - Place images with I, or paste or drop them. PNG, JPEG, GIF, WebP and AVIF upload, fit and crop. HEIC
@@ -391,6 +401,9 @@ frame, and the Code tab writes motion as clean CSS or as Framer Motion; see
   - Both panels sit beside the canvas while they leave it at least 360 px. Narrower, the inspector stays beside
     the canvas, drawn narrower if it must, and layers, pages and assets open as a drawer over the canvas from the
     button left of the file name. Narrower still, the inspector is a drawer too, from the button at the right.
+  - The chat with your agent (**Ctrl+Alt+3**) sits between the canvas and the inspector while the canvas keeps
+    its 360 px, putting layers into a drawer first if it must; narrower, it opens over the canvas. See
+    [the chat](agents.md#ask-from-the-canvas-the-chat).
   - **Ctrl+Alt+1** and **Ctrl+Alt+2** show or hide those drawers; a drawer takes the keyboard focus, **Esc**
     closes it and puts the focus back on its button. Show layers, a comment pin or History open the drawer they
     belong to. When the window grows, the panels go back beside the canvas at the widths you dragged them to:

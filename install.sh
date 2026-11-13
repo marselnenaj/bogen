@@ -3,6 +3,10 @@
 #   curl -fsSL https://bogen.dev/install.sh | bash
 # Add `-s -- --no-omarchy` to leave out the Omarchy integration (user service,
 # launcher, keybinding and bar widget).
+# At the end it offers to connect the coding agents it finds, asking on the terminal. To answer without
+# being asked, as an agent installing for a person does, name them:
+#   curl -fsSL https://bogen.dev/install.sh | BOGEN_AGENTS=claude-code bash
+# (a comma-separated list, all, or none).
 # It downloads the package from the GitHub release, checks it against its
 # checksum and the release signature, and installs it into
 # ~/.local/share/bogen-app with a `bogen` command in ~/.local/bin. It never
@@ -129,7 +133,19 @@ EOF
             printf '~/.local/bin is not on your PATH. To use bogen from a terminal, run this and open a new one:\n  %s\n' "$hint"
             ;;
     esac
-    printf 'Open the canvas with: bogen open\nConnect your agent with: bogen install claude-code   (or codex)\nCheck the setup with: bogen doctor\n'
+
+    # Connect the agents. Under `curl | bash` the script itself is on stdin, so a question goes to the terminal, and
+    # only when there is one and BOGEN_AGENTS does not answer it already. Without either, setup says what to run.
+    if ! "$command" help 2>/dev/null | grep -q 'bogen setup'; then
+        printf 'Open the canvas with: bogen open\nConnect your agent with: bogen install claude-code   (or codex)\nCheck the setup with: bogen doctor\n'
+        return
+    fi
+    printf '\n'
+    if [ -z "${BOGEN_AGENTS:-}" ] && (: < /dev/tty) 2>/dev/null; then
+        "$command" setup < /dev/tty || printf 'Bogen is installed. To connect your agents again: bogen setup\n' >&2
+    else
+        "$command" setup < /dev/null || printf 'Bogen is installed. To connect your agents again: bogen setup\n' >&2
+    fi
 }
 
 main "$@"

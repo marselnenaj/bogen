@@ -9,7 +9,7 @@ export type { DesignDiscipline, DesignRecipe, DesignRule, DesignSource } from '.
 export type { DesignPlaybook, DesignDecision } from './playbooks.ts';
 
 export const KNOWLEDGE_ACTIONS = ['catalog', 'style', 'playbook', 'rules', 'recipes', 'sources', 'skill', 'original', 'rubric'] as const;
-export const KNOWLEDGE_VERSION = '2026-11-10.1';
+export const KNOWLEDGE_VERSION = '2026-11-13.1';
 /** How the scored self-review is passed and judged, said once for every place that shows it. */
 export const RUBRIC_RULES = `Score each criterion from 1 to 5 from a fresh screenshot, with what you see as evidence, and pass the scores as rubric to design_verify. ${RUBRIC_FAIL} or lower on any criterion is not finished work. A criterion with measured findings against it cannot score above ${RUBRIC_CAP}. Under ${RUBRIC_STRONG} of ${RUBRIC_MAX} is adequate, not strong: repair the lowest criteria or build a second direction.`;
 export const DISCIPLINE_IDS = DESIGN_DISCIPLINES.map(d => d.id) as [string, ...string[]];
@@ -66,29 +66,29 @@ export function readKnowledge(options: { action?: string; discipline?: string; q
 }
 
 /**
- * A single discipline, no bibliography and no duplicate representation of the same decisions. What decides whether
- * work is accepted comes first, then the loop, since an agent follows the start of a long text best.
+ * A single discipline, no bibliography and no duplicate representation of the same decisions. What strong work holds
+ * comes first, then the brief and the decisions, since an agent follows the start of a long text best. The order of
+ * the work (direction, system, build, check) is in the server instructions every client shows, so it is named here,
+ * not repeated.
  */
 export function disciplineSkill(id: string): string {
   const p = playbook(id), recipes = DESIGN_RECIPES.filter(r => r.discipline === id), w = DESIGN_WORKFLOW;
   return `---
 name: bogen-${id}
-description: Design and review ${p.name.toLowerCase()} in Bogen using conditional decisions, explicit states and a bounded repair loop.
+description: Design and review ${p.name.toLowerCase()} in Bogen: what strong work holds, the decisions of the medium, its states and a bounded repair loop.
 ---
 
 # ${p.name}
 
 ${p.goal}
 
-Bogen-authored working guidance, version ${KNOWLEDGE_VERSION}. Heuristics, not empirical proof. No online sources are required. ${w.invariants[0]}
+Bogen-authored working guidance, version ${KNOWLEDGE_VERSION}. Heuristics, not empirical proof. ${w.invariants[0]} Work in the order of the server instructions: direction, system, build with ambition, check. This is what that means for ${p.name.toLowerCase()}.
 
-## Quality bar
+## What strong looks like
 
-${w.bar.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+${p.ambition.map(s => `- ${s}`).join('\n')}
 
-## Work loop
-
-${w.sequence.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+Hold every screen and section to this, not only the first. A clean screen with little on it is a wireframe, not a design.
 
 ## Brief and scope
 
@@ -98,18 +98,7 @@ ${w.invariants.slice(1).map(s => `- ${s}`).join('\n')}
 
 ## Decisions
 
-${p.decisions.map(d => `- **${d.title}** [${d.id}]\n  WHEN: ${d.when}.\n  DO: ${d.action}.\n  CHECK: ${d.check}.\n  REPAIR: ${d.repair}.\n  EXCEPTION: ${d.exception}.`).join('\n')}
-
-## Rubric
-
-${RUBRIC_RULES}
-
-${rubricText()}
-
-## Anti-slop review
-
-${ANTI_SLOP_POLICY.precedence} Each id names a habit to remove; design_knowledge action style with that id gives the replacement and its check. design_lint and design_review find many of them as craft findings.
-${ANTI_SLOP_GROUPS.map(g => `- ${g.name}: ${g.ids.join(', ')}.`).join('\n')}
+${p.decisions.map(d => `- **${d.title}** [${d.id}]: when ${lower(d.when)}, ${lower(d.action)}. Check: ${lower(d.check)}. Failure: ${lower(d.failure)}. Unless: ${lower(d.exception)}.`).join('\n')}
 
 ## States and deliverables
 
@@ -120,16 +109,32 @@ Deliver: ${p.deliver.join('; ')}. Do not add states or screens without a task-sp
 
 ${w.priorities.join('\n')}
 For each finding record: ${w.finding.fields.join('; ')}.
-After the last edit, capture the complete affected artboard with canvas_screenshot and call design_verify using ${id}, with specific observations for priority, content and context and the scored rubric. Fix measured errors, capture again and recheck. The built-in completion gate permits at most two additional repair turns; unresolved work remains explicit. External clients cannot be forced to continue.
+After the last edit, capture the complete affected artboard with canvas_screenshot and call design_verify using ${id}, with specific observations for priority, content and context and the scored rubric. A hard finding (an objective defect: overflow, unreadable text, placeholder copy) keeps the rubric from counting until it is fixed. Advisory findings say why a choice often reads as default; keep one with its reason in kept. The built-in completion gate permits at most two additional repair turns; unresolved work remains explicit.
 
 ${p.review.map(r => `- ${r.id}: ${r.question}`).join('\n')}
 
+## Rubric
+
+${RUBRIC_RULES}
+
+${rubricText()}
+
+## What often reads as default
+
+${ANTI_SLOP_POLICY.precedence} design_knowledge action style with an id gives the habit, a stronger alternative and its check; design_lint points at the measurable ones as advisory findings.
+${ANTI_SLOP_GROUPS.map(g => `- ${g.name}: ${g.ids.join(', ')}.`).join('\n')}
+
 ## Alternate compositions
 
-${recipes.map(r => `- ${r.name} [${r.id}]: ${r.useWhen}${r.template ? ` Start with template_use ${r.template} when suitable.` : ''} Read action recipes for its sequence.`).join('\n')}
+${recipes.map(r => `- ${r.name} [${r.id}]: ${r.useWhen}${r.template ? ` Start with template_use ${r.template} when suitable.` : ''}`).join('\n')}
 
 ## Completion
 
 ${w.completion.map(s => `- ${s}`).join('\n')}
 `;
+}
+/** A field of a decision inside a sentence: lower case at the start, unless it starts with a name or an acronym, and no full stop at the end. */
+function lower(text: string): string {
+  const t = text.trim().replace(/[.]$/, '');
+  return /^[A-Z](?:[a-z]|\s)/.test(t) && !/^I\s/.test(t) ? t[0]!.toLowerCase() + t.slice(1) : t;
 }

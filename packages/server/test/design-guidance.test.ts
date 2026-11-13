@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BogenDoc, importHtml, type BogenNode } from '@bogen/core';
-import { ANTI_SLOP_GROUPS, ANTI_SLOP_RULES, DESIGN_WORKFLOW, RUBRIC, disciplineSkill, readKnowledge } from '../src/design-knowledge/index.ts';
+import { ANTI_SLOP_GROUPS, ANTI_SLOP_RULES, DESIGN_PLAYBOOKS, DESIGN_WORKFLOW, RUBRIC, disciplineSkill, playbook, readKnowledge } from '../src/design-knowledge/index.ts';
 import { RUBRIC_IDS, scoreRubric } from '../src/design-knowledge/rubric.ts';
 import { copyIssues } from '../src/mcp/copy-check.ts';
-import { GUIDES, INSTRUCTIONS } from '../src/mcp/guide.ts';
+import { DESIGN_CORE, DESIGN_EXAMPLES, GUIDES, INSTRUCTIONS } from '../src/mcp/guide.ts';
 import { craftIssues, staticIssues } from '../src/mcp/lint.ts';
 import { skillText } from '../src/skill.ts';
 import { CONSIDERED, GENERATED } from '../../core/test/fixtures/design-craft.ts';
@@ -49,10 +49,39 @@ describe('the scored self-review', () => {
     expect(high.state).toBe('capped');
     expect(high.capped.map((c) => c.criterion)).toEqual(['hierarchy', 'colour']);
     expect(high.capped[0]).toMatchObject({ score: 5, findings: 1, example: '6 texts are set at or near the largest size.' });
-    expect(high.next).toContain('score 3 or lower and name the exception');
+    expect(high.next).toContain('score 3 or lower and name the reason');
     // Scored honestly, or with the findings fixed, it counts.
     expect(scoreRubric(scores(5, { hierarchy: 3, colour: 3 }), findings).state).toBe('scored');
     expect(scoreRubric(scores(5), []).state).toBe('scored');
+  });
+
+  it('does not count while an objective defect stands; advisory findings never block or cap, and a kept one records why', () => {
+    const findings = [
+      { rule: 'lint:overflow', hard: true, message: 'Overflows its parent by 14px on the right.' },
+      { rule: 'lint:placeholder', criterion: 'content', hard: true, message: 'The text says "Lorem ipsum", which reads as placeholder copy.' },
+      { rule: 'craft:caps-label', criterion: 'type', advisory: true, why: 'A small tracked capital label over the heading is the eyebrow of generated pages.', message: '2 small labels are set in letter-spaced capitals.' },
+      { rule: 'craft:one-hue', criterion: 'colour', advisory: true, why: 'Neutrals and one accent is the default palette, not a decision.', message: 'All 4 screens are neutrals and one hue.' },
+    ];
+    const out = scoreRubric(scores(3), findings);
+    expect(out.state).toBe('blocked');
+    expect(out.blocking.map((b) => b.check)).toEqual(['overflow', 'placeholder']);
+    expect(out.next).toContain('objective defects stand (overflow on 1, placeholder on 1)');
+    // Advisory findings alone: scored, even at 5 on the criteria they concern, and the next step names them with why.
+    const taste = scoreRubric(scores(5), findings.slice(2));
+    expect(taste.state).toBe('scored');
+    expect(taste.capped).toEqual([]);
+    expect(taste.advisory.map((a) => a.check)).toEqual(['caps-label', 'one-hue']);
+    expect(taste.next).toContain('Advisory, your call: caps-label (A small tracked capital label');
+    // Kept with the direction's reason: recorded, and no longer asked about.
+    const reason = 'The direction is a 1960s airline timetable, set in tracked capitals.';
+    const kept = scoreRubric(scores(5), findings.slice(2), true, [{ check: 'caps-label', reason }, { check: 'glow', reason }]);
+    expect(kept.advisory.find((a) => a.check === 'caps-label')!.kept).toBe(reason);
+    expect(kept.kept.map((k) => k.check)).toEqual(['caps-label']);
+    expect(kept.next).not.toContain('caps-label (');
+    // A short reason keeps nothing; a hard finding kept for the brief no longer blocks but still caps.
+    expect(scoreRubric(scores(5), findings.slice(2), true, [{ check: 'caps-label', reason: 'I like it' }]).kept).toEqual([]);
+    const briefed = scoreRubric(scores(5), findings.slice(1, 2), true, [{ check: 'placeholder', reason: 'The brief asks for a wireframe with placeholder text.' }]);
+    expect(briefed.state).toBe('capped');
   });
 
   it('asks for another pass or a second direction under 32 of 40, and for the scores in the report', () => {
@@ -88,34 +117,78 @@ describe('copy that reads like a report or a hedge', () => {
     // Three one-word claims stay with the rule that already names them.
     expect(copyIssues([node('a', 'Fast. Simple. Secure.', 'h2')]).map((f) => f.message)).toEqual([expect.stringContaining('three short claims in a row')]);
   });
+
+  it('names emoji and placeholder copy, and marks only the placeholder hard', () => {
+    const hard = (text: string) => copyIssues([node('a', text)]).map((f) => f.check ?? 'soft');
+    expect(copyIssues([node('a', 'Ship faster \u{1F680}')])[0]!.hard).toBe(false);
+    expect(copyIssues([node('a', 'Lorem ipsum dolor sit amet')])[0]!.hard).toBe(true);
+    expect(hard('Ship faster \u{1F680}')).toEqual(['emoji']);
+    expect(hard('Read more →')).toEqual(['emoji']);
+    expect(hard('Lorem ipsum dolor sit amet')).toEqual(['placeholder']);
+    expect(hard('Signed, Jane Doe')).toEqual(['placeholder']);
+    expect(hard('Elevate your workflow.')).toEqual(['soft']);
+    expect(hard('Your customer pays from the message.')).toEqual([]);
+  });
 });
 
 describe('what an agent reads first', () => {
-  it('keeps the instructions no larger than before, with the loop in order and the generated look named', () => {
-    // 3,872 characters before the loop was put first; every MCP client carries them in every session.
-    expect(INSTRUCTIONS.length).toBeLessThanOrEqual(3872);
-    const order = ['Brief first', 'System before screens', 'small chunks', 'Not the generated look', 'Before you report', 'Canvas structure'].map((s) => INSTRUCTIONS.indexOf(s));
+  it('puts the design core first in the instructions, in order, positive and with an ambition bar', () => {
+    // Every MCP client carries the instructions in every session. 3,872 characters before the direction step and the
+    // ambition bar; the skill no longer repeats them for Claude Code, which shows the instructions itself.
+    expect(INSTRUCTIONS.length).toBeLessThanOrEqual(6600);
+    expect(INSTRUCTIONS.indexOf(DESIGN_CORE)).toBeLessThan(200);
+    const order = ['1. Direction, before the first html_write', '2. System', '3. Build with ambition', '4. Check', 'Canvas structure'].map((s) => INSTRUCTIONS.indexOf(s));
     expect(order.every((at) => at > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    for (const word of ['one primary action', 'design_review', 'scored rubric', 'grotesk plus mono', 'overcorrection', 'do not hand choices back', 'design_knowledge action skill']) expect(INSTRUCTIONS).toContain(word);
-    expect(skillText().length).toBeLessThan(7500);
+    // The direction is written out, with the parts a default leaves open, and checked against a similar brief.
+    for (const word of ['Audience and job', 'Idea:', 'two real references', 'Type:', 'Colour:', 'named hex values', 'Layout:', 'a similar brief would also get', 'sketch three directions', 'Decide yourself']) expect(DESIGN_CORE).toContain(word);
+    // The bar against simple work, held to every section and screen.
+    for (const word of ['Show the real thing large', 'Density', 'A layout idea per section', 'States and detail', 'every section and every screen']) expect(DESIGN_CORE).toContain(word);
+    // The house looks are named once, with the reason a ban alone does not work.
+    // The defaults are named once, with why they read as default and that the direction may choose one.
+    for (const word of ['one grotesk with monospace labels', 'cream with terracotta', 'hairline-ruled rows', 'first thing a model reaches for', 'fine when the direction chose it']) expect(DESIGN_CORE).toContain(word);
+    // Capabilities, not prohibitions: the means are named.
+    for (const word of ['palette_suggest', 'kit_use', 'icon_insert', 'motion_preset', 'interaction_set', 'image_filter', 'art director']) expect(DESIGN_CORE).toContain(word);
+    for (const word of ['design_review', 'scored rubric', 'hard findings, the objective defects', 'Advisory findings', 'guide_get design', 'design_knowledge action skill', 'not a design: recompose']) expect(INSTRUCTIONS).toContain(word);
   });
 
-  it('opens every discipline skill with the quality bar and the loop, before its decisions, and carries the rubric', () => {
-    for (const id of ['foundations', 'websites', 'social', 'themes']) {
+  it('does not repeat the instructions in the skill for a client that shows them, and carries the core for one that may not', () => {
+    const claude = skillText('claude-code'), codex = skillText('codex');
+    expect(claude).not.toContain(DESIGN_CORE);
+    expect(claude).toContain('The bogen server instructions give the order');
+    expect(codex).toContain(DESIGN_CORE);
+    for (const text of [claude, codex]) {
+      expect(text).toContain('## Worked examples, each a default and a decision made for the subject');
+      expect(text).toContain('## Writing copy');
+      expect(text).toContain('wait_for_event');
+    }
+    // 7,417 characters before, with the instructions inside.
+    expect(claude.length).toBeLessThan(6500);
+    expect(codex.length).toBeLessThan(10400);
+  });
+
+  it('gives worked examples as a default and a decision, from subjects of their own', () => {
+    const examples = DESIGN_EXAMPLES.split('\n').slice(1);
+    expect(examples.length).toBeGreaterThanOrEqual(6);
+    for (const line of examples) expect(line, line).toMatch(/Default: .+ Decided/);
+    expect(GUIDES.design).toContain(DESIGN_EXAMPLES);
+    expect(GUIDES.design).toContain('A direction, written out');
+  });
+
+  it('opens every discipline skill with what strong work holds, before its decisions, and carries the rubric', () => {
+    for (const id of DESIGN_PLAYBOOKS.map((p) => p.id)) {
       const skill = disciplineSkill(id);
-      const at = ['## Quality bar', '## Work loop', '## Brief and scope', '## Decisions', '## Rubric', '## Anti-slop review', '## Completion'].map((h) => skill.indexOf(h));
+      const at = ['## What strong looks like', '## Brief and scope', '## Decisions', '## Review and repair', '## Rubric', '## What often reads as default', '## Completion'].map((h) => skill.indexOf(h));
       expect(at.every((i) => i > 0), id).toBe(true);
       expect([...at].sort((a, b) => a - b), id).toEqual(at);
-      // The first 3,000 characters are what an agent follows best: the bar has to be inside them.
-      expect(skill.indexOf('## Work loop'), id).toBeLessThan(3400);
+      expect(playbook(id).ambition.length, id).toBeGreaterThanOrEqual(3);
+      for (const line of playbook(id).ambition) expect(skill, id).toContain(line);
       for (const c of RUBRIC) expect(skill, id).toContain(`- ${c.id}: ${c.question}`);
-      for (const line of DESIGN_WORKFLOW.bar) expect(skill, id).toContain(line);
-      // 13,051 to 13,343 characters before; the added bar, loop and rubric are paid for by naming the habits by id.
-      expect(skill.length, id).toBeLessThan(13350);
+      // 13,051 to 13,343 characters before; the bar and the loop live in the instructions now, not in every skill.
+      expect(skill.length, id).toBeLessThan(10700);
     }
-    expect(DESIGN_WORKFLOW.bar[0]).toContain('One message, one action');
-    expect(DESIGN_WORKFLOW.sequence[0]).toContain('Brief and point of view');
+    expect(DESIGN_WORKFLOW.bar[0]).toContain('Direction first');
+    expect(DESIGN_WORKFLOW.sequence[0]).toContain('Sketch three directions');
     expect(DESIGN_WORKFLOW.sequence.at(-1)).toContain('Score the rubric');
   });
 
@@ -133,9 +206,10 @@ describe('what an agent reads first', () => {
     expect(rubric.rules).toContain('cannot score above 3');
   });
 
-  it('tells the design guide the same bar, the lines the checks draw and the rubric', () => {
-    expect(GUIDES.design).toContain(DESIGN_WORKFLOW.bar[0]);
+  it('tells the design guide the lines the checks draw, hard and soft, and the rubric', () => {
     expect(GUIDES.design).toContain('more than 2 font families');
+    expect(GUIDES.design).toContain('Hard findings are objective defects');
+    expect(GUIDES.design).toContain('design_lint, advisory:');
     expect(GUIDES.design).toContain('- originality: Could this only be for this subject?');
     expect(GUIDES.design).toContain('Writing copy:');
   });
@@ -283,6 +357,18 @@ describe('craft findings where an agent meets them', () => {
     beforeAll(async () => { h = await startServer(); });
     afterAll(async () => { await h.cleanup(); });
 
+    it('asks for the direction when a screen is made, and names the format\'s discipline', async () => {
+      const agent = await connectAgent(h.base, 'starter');
+      const file = (await call(agent, 'file_create', { name: 'Formats' })).id;
+      const web = await call(agent, 'artboard_create', { file_id: file, name: 'Page', width: 1440 });
+      expect(web.next).toContain('Before the first html_write: write the direction');
+      expect(web.next).not.toContain('design_knowledge');
+      const ad = await call(agent, 'artboard_create', { file_id: file, name: 'Ad', preset: 'Social portrait' });
+      expect(ad.next).toContain('discipline social');
+      expect((await call(agent, 'artboard_create', { file_id: file, name: 'Phone', width: 390 })).next).toContain('discipline mobile-apps');
+      await agent.close();
+    });
+
     it('reach design_review and hold the rubric of design_verify to account, with or without a browser', async () => {
       const agent = await connectAgent(h.base, 'designer');
       const file = (await call(agent, 'file_create', { name: 'Guidance' })).id;
@@ -291,18 +377,26 @@ describe('craft findings where an agent meets them', () => {
       await call(agent, 'html_write', { file_id: file, target_id: board, html: GENERATED.split('<section data-name="Photo"')[0]! });
       const review = await call(agent, 'design_review', { file_id: file, node_id: board });
       const found = review.observations.filter((o: any) => o.rule).map((o: any) => o.rule);
-      for (const rule of ['decorative-mono', 'loud-type', 'primary-actions', 'glow', 'tilt', 'window-chrome', 'pattern-background', 'default-gradient', 'boxes', 'nested-boxes']) expect(found, rule).toContain(rule);
+      // One grotesk with a monospace face is reported as the pairing, not again as decorative monospace.
+      for (const rule of ['grotesk-mono', 'caps-label', 'loud-type', 'primary-actions', 'glow', 'tilt', 'window-chrome', 'pattern-background', 'default-gradient', 'boxes', 'nested-boxes']) expect(found, rule).toContain(rule);
 
       const unscored = await call(agent, 'design_verify', { file_id: file, node_id: board, discipline: 'websites' });
       expect(unscored.rubric.state).toBe('missing');
       expect(unscored.rubric.open).toHaveLength(8);
       expect(unscored.automated.findings.some((f: any) => f.rule === 'craft:glow' && f.criterion === 'originality')).toBe(true);
+      // The generated look is advisory: it neither blocks nor caps, it says why, and a kept choice is recorded.
       const flattering = await call(agent, 'design_verify', { file_id: file, node_id: board, discipline: 'websites', rubric: scores(5) });
-      expect(flattering.rubric.state).toBe('capped');
-      expect(flattering.rubric.capped.map((c: any) => c.criterion)).toEqual(expect.arrayContaining(['hierarchy', 'type', 'craft', 'originality']));
-      const honest = await call(agent, 'design_verify', { file_id: file, node_id: board, discipline: 'websites', rubric: scores(3) });
-      expect(honest.rubric).toMatchObject({ state: 'scored', total: 24 });
-      expect(honest.rubric.next).toContain('adequate, not strong');
+      expect(flattering.rubric.blocking).toEqual([]);
+      const advisory: string[] = flattering.rubric.advisory.map((a: any) => a.check);
+      expect(advisory).toEqual(expect.arrayContaining(['glow', 'tilt', 'window-chrome', 'pattern-background', 'default-gradient', 'grotesk-mono', 'caps-label', 'boxes']));
+      expect(flattering.rubric.advisory.every((a: any) => a.why.length > 20)).toBe(true);
+      expect(flattering.rubric.capped.map((c: any) => c.criterion)).not.toEqual(expect.arrayContaining(['originality']));
+      expect(flattering.rubric.next).toContain('Advisory, your call');
+      const kept = await call(agent, 'design_verify', { file_id: file, node_id: board, discipline: 'websites', rubric: scores(3), kept: [{ check: 'glow', reason: 'The brief asks for a parody of a 2023 AI landing page.' }] });
+      expect(kept.rubric.advisory.find((a: any) => a.check === 'glow').kept).toContain('parody');
+      expect(kept.rubric.kept).toHaveLength(1);
+      await expect(call(agent, 'design_verify', { file_id: file, node_id: board, discipline: 'websites', rubric: scores(3), kept: [{ check: 'glow', reason: 'I like it' }] })).rejects.toThrow();
+      expect(kept.rubric.state).not.toBe('blocked');
       expect((await call(agent, 'design_knowledge', { action: 'rubric' })).rubric).toHaveLength(8);
       await agent.close();
     }, 120_000);

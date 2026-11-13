@@ -92,6 +92,8 @@ export function contentAssets(content: DesignContent): string[] {
   };
   scan(content.nodes);
   scan(content.fontFaces);
+  // A brand's logos, fonts and library, when the folder holds a brand (its brand/ folder).
+  scan(content.extra?.brandItems);
   return [...names].sort();
 }
 

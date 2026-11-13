@@ -33,8 +33,22 @@ export interface GestureView {
 }
 
 export interface ActivityEntry { id: string; agent: string; tool: string; nodeIds: string[]; at: number }
-/** `runId` on an agent's message: the run that wrote it, whose changes show under its last words. */
-export interface PromptMessage { role: 'user' | 'agent' | 'tool' | 'error'; text: string; runId?: string }
+/**
+ * One line of the chat with the agent. `runId` on an agent's message: the run that wrote it, whose changes show under
+ * its last words. A person's message keeps what went with it (`context`: the names of the layers, `images`: stored
+ * images) and how it was asked (`runner`, `review`), so that Ask again repeats it. `note` is what Bogen says about a
+ * run, such as that it was stopped.
+ */
+export interface PromptMessage {
+  role: 'user' | 'agent' | 'tool' | 'error' | 'note';
+  text: string;
+  runId?: string;
+  at?: number;
+  runner?: string;
+  review?: string;
+  context?: string[];
+  images?: string[];
+}
 export interface PromptState {
   /** An explicit scoped redo; opening it starts no agent. */
   redo?: { id: string; nodeId: string; name: string };
@@ -43,6 +57,8 @@ export interface PromptState {
   running: boolean;
   messages: PromptMessage[];
   nodeIds: string[];
+  /** When the run going now started, for the time it has taken. */
+  startedAt?: number;
 }
 
 export interface PendingComment { x: number; y: number; nodeId?: string }
@@ -73,6 +89,8 @@ export interface EditorState {
   rightTab: RightTab;
   leftWidth: number;
   rightWidth: number;
+  /** The chat panel's width, in UI pixels. Whether it is open is `prompt.open`, remembered per file. */
+  chatWidth: number;
   minimal: boolean;
   collapsed: Record<string, boolean>;
   shortcutsOpen: boolean;
@@ -99,7 +117,7 @@ export interface EditorState {
 
 const stored = (() => {
   try {
-    return JSON.parse(localStorage.getItem('bogen-layout') ?? '{}') as Partial<Pick<EditorState, 'leftWidth' | 'rightWidth' | 'minimal' | 'followAgents'>>;
+    return JSON.parse(localStorage.getItem('bogen-layout') ?? '{}') as Partial<Pick<EditorState, 'leftWidth' | 'rightWidth' | 'chatWidth' | 'minimal' | 'followAgents'>>;
   } catch {
     return {};
   }
@@ -132,6 +150,7 @@ export const useEditor = create<EditorState>((set) => ({
   rightTab: 'design',
   leftWidth: stored.leftWidth ?? 248,
   rightWidth: stored.rightWidth ?? 280,
+  chatWidth: Math.max(280, Math.min(640, stored.chatWidth ?? 340)),
   minimal: stored.minimal ?? false,
   collapsed: {},
   shortcutsOpen: false,
@@ -162,9 +181,9 @@ export function editor(): EditorState {
 }
 
 useEditor.subscribe((s, prev) => {
-  if (s.leftWidth !== prev.leftWidth || s.rightWidth !== prev.rightWidth || s.minimal !== prev.minimal) {
+  if (s.leftWidth !== prev.leftWidth || s.rightWidth !== prev.rightWidth || s.chatWidth !== prev.chatWidth || s.minimal !== prev.minimal) {
     try {
-      localStorage.setItem('bogen-layout', JSON.stringify({ leftWidth: s.leftWidth, rightWidth: s.rightWidth, minimal: s.minimal, followAgents: s.followAgents }));
+      localStorage.setItem('bogen-layout', JSON.stringify({ leftWidth: s.leftWidth, rightWidth: s.rightWidth, chatWidth: s.chatWidth, minimal: s.minimal, followAgents: s.followAgents }));
     } catch {
       // Layout simply does not persist in private mode.
     }

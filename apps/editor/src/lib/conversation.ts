@@ -39,6 +39,11 @@ export function startConversation(fileId: string): string {
   return id;
 }
 
+/** Goes back to an earlier chat: the next message continues it, with what was said in it. */
+export function continueConversation(fileId: string, id: string): void {
+  if (/^[\w-]{1,64}$/.test(id)) save(fileId, id);
+}
+
 /** What was said in a chat, oldest first. Empty when the server has nothing or cannot be reached. */
 export async function conversationTurns(fileId: string, id: string): Promise<ConversationTurn[]> {
   try {

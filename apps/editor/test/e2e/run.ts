@@ -1213,20 +1213,20 @@ async function panels(ctx: Ctx): Promise<void> {
   check(ctx, 'agents: undo per agent listed', (await page.$('[data-testid="agent-undo"]')) !== null);
   await shot(page, 'agents');
 
-  // Prompt.
+  // The chat with the agent.
   await clickTest(page, 'tab-design');
   await page.mouse.click(box.x + 10, box.y + 10);
   await sleep(30);
-  // Attached to a selection, it sits right under it.
+  // It docks beside the canvas, with the focus in its field and the selection going with the message.
   const rowR = await layerRect(page, row.id);
   await page.mouse.click(rowR.x + rowR.w - 8, rowR.y + rowR.h - 8);
   await sleep(30);
   await pressKey(page, 'Control+k');
   await page.waitForSelector('[data-testid="prompt-input"]');
-  await sleep(40);
-  const near = await (await page.$('[data-testid="prompt"]'))!.boundingBox();
-  check(ctx, 'prompt: attached under the selection', near!.y >= rowR.y + rowR.h && near!.y < rowR.y + rowR.h + 60, [near, rowR]);
-  await page.keyboard.press('Escape');
+  await sleep(60);
+  check(ctx, 'prompt: the chat docks beside the canvas', (await page.$('[data-testid="chat-slot"][data-dock="docked"]')) !== null);
+  check(ctx, 'prompt: the focus is in its field', await page.evaluate(() => document.activeElement?.getAttribute('data-testid') === 'prompt-input'));
+  check(ctx, 'prompt: the selection goes with the message', ((await page.$eval('[data-testid="chat-context"]', (e) => e.textContent).catch(() => '')) ?? '').length > 0);
   await page.mouse.click(box.x + 10, box.y + 10);
   await sleep(30);
   await pressKey(page, 'Control+k');
@@ -1241,12 +1241,16 @@ async function panels(ctx: Ctx): Promise<void> {
   check(ctx, 'prompt: stop button while running', (await page.$('[data-testid="prompt-stop"]')) !== null);
   await sleep(600);
   const msgs = await page.$eval('[data-testid="prompt-messages"]', (e) => e.textContent ?? '');
-  check(ctx, 'prompt: streams replies from /events', msgs.includes('Looking at the') && msgs.includes('Done.') && msgs.includes('bogen_set_style'), msgs);
+  check(ctx, 'prompt: streams replies from /events', msgs.includes('Looking at the') && msgs.includes('Done.') && (await page.$('[data-testid="chat-steps-toggle"]')) !== null, msgs);
   check(ctx, 'prompt: reaches the server with the runner', ctx.server.runs.at(-1)?.runner === 'claude' && ctx.server.runs.at(-1)?.prompt === 'Make it nicer', ctx.server.runs.at(-1));
   await shot(page, 'prompt-done');
+  // Docked, Esc leaves the field; the chat stays, and Ctrl+Alt+3 hides it.
   await page.keyboard.press('Escape');
   await sleep(30);
-  check(ctx, 'prompt: Esc closes', (await page.$('[data-testid="prompt-input"]')) === null);
+  check(ctx, 'prompt: Esc leaves the field and the chat stays', (await page.$('[data-testid="prompt-input"]')) !== null && await page.evaluate(() => document.activeElement?.getAttribute('data-testid') !== 'prompt-input'));
+  await pressKey(page, 'Control+Alt+3');
+  await sleep(60);
+  check(ctx, 'prompt: Ctrl+Alt+3 hides the chat', (await page.$('[data-testid="chat-slot"][data-dock="docked"]')) === null);
 
   // Shortcuts dialog from the registry.
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());

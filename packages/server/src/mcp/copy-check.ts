@@ -6,9 +6,11 @@ import { previewsSystem, type BogenDoc, type BogenNode } from '@bogen/core';
  * The lists are short on purpose: each entry is one that an agent writes again and again, and a person never misses.
  */
 
-export interface CopyRule { pattern: RegExp; hint: string }
+/** `hard`: placeholder copy, which no finished design keeps; it blocks a scored rubric. */
+export interface CopyRule { pattern: RegExp; hint: string; hard?: boolean }
 export interface AvoidWord { word: string; instead?: string }
-export interface CopyFinding { nodeId: string; name: string; quote: string; message: string }
+/** `check` names a finding design_verify weighs: `placeholder` (hard) or `emoji` (advisory). */
+export interface CopyFinding { nodeId: string; name: string; quote: string; message: string; hard?: boolean; check?: 'emoji' | 'placeholder' }
 
 const L = '\\p{L}\\p{N}';
 const word = (list: string) => new RegExp(`(?<![${L}])(?:${list})(?![${L}])`, 'iu');
@@ -35,8 +37,8 @@ export const COPY_PHRASES: CopyRule[] = [
   // Hedging and report language: the page talks about itself instead of to the customer.
   { pattern: word('aims? to|strives? to|is designed to help|are designed to help|may help|might help|can help you|we believe|we think|soll (?:dir|ihnen) helfen|kann (?:dir|ihnen) helfen|zielt darauf ab'), hint: 'A hedge sells nothing. Say what it does, as a fact you can stand behind, or leave the sentence out.' },
   { pattern: word('successfully (?:tested|verified|validated)|all (?:checks|tests) pass(?:ed)?|passes all (?:checks|tests)|has been (?:tested|verified|validated)|erfolgreich (?:getestet|geprüft|verifiziert)|alle (?:tests|prüfungen) bestanden'), hint: 'That is a test report, not a reason to buy. Say what the customer gets from it, such as "works offline on site".' },
-  { pattern: word('lorem ipsum|dolor sit amet|consectetur adipiscing'), hint: 'Write real copy from what the file, the brand or the person says.' },
-  { pattern: word('john doe|jane doe|max mustermann|erika mustermann|acme(?: corp| inc)?'), hint: 'A placeholder name reads like an invented testimonial or logo. Use a real one the person gave you, or leave it out.' },
+  { pattern: word('lorem ipsum|dolor sit amet|consectetur adipiscing'), hint: 'Write real copy from what the file, the brand or the person says.', hard: true },
+  { pattern: word('john doe|jane doe|max mustermann|erika mustermann|acme(?: corp| inc)?'), hint: 'A placeholder name reads like an invented testimonial or logo. Use a real one the person gave you, or leave it out.', hard: true },
 ];
 
 /** Emoji, and glyphs that phones draw as emoji: arrows, copyright and trademark signs, checks and stars. */
@@ -102,12 +104,12 @@ export function copyIssues(nodes: BogenNode[], avoid: AvoidWord[] | ((node: Boge
   };
   const out: CopyFinding[] = [];
   const seen = new Set<string>();
-  const add = (n: BogenNode, quote: string, message: string) => {
+  const add = (n: BogenNode, quote: string, message: string, check?: 'emoji' | 'placeholder') => {
     // An instance shows its main's words, so the same text is reported once.
     const key = `${quote.toLowerCase()}|${n.text}`;
     if (seen.has(key)) return;
     seen.add(key);
-    out.push({ nodeId: n.id, name: n.name, quote, message });
+    out.push({ nodeId: n.id, name: n.name, quote, message, ...(check ? { hard: check === 'placeholder', check } : {}) });
   };
   const compiled = new Map<AvoidWord[], (AvoidWord & { pattern: RegExp })[]>();
   const wordsFor = (list: AvoidWord[]) => {
@@ -125,7 +127,7 @@ export function copyIssues(nodes: BogenNode[], avoid: AvoidWord[] | ((node: Boge
     const words = text.replace(NAMES, (m) => ' '.repeat(m.length));
     for (const rule of COPY_PHRASES) {
       const m = rule.pattern.exec(words);
-      if (m) add(n, m[0].trim(), `The text says "${m[0].trim()}", which reads as filler. ${rule.hint}`);
+      if (m) add(n, m[0].trim(), `The text says "${m[0].trim()}", which reads as ${rule.hard ? 'placeholder copy' : 'filler'}. ${rule.hint}`, rule.hard ? 'placeholder' : undefined);
     }
     for (const w of brandWords) {
       const m = w.pattern.exec(words);
@@ -133,7 +135,7 @@ export function copyIssues(nodes: BogenNode[], avoid: AvoidWord[] | ((node: Boge
     }
     if (!prose) continue;
     const glyph = EMOJI.exec(text);
-    if (glyph) add(n, glyph[0], `The text has "${glyph[0]}". ${glyphHint(glyph[0])}`);
+    if (glyph) add(n, glyph[0], `The text has "${glyph[0]}". ${glyphHint(glyph[0])}`, 'emoji');
     if (text.includes('!')) add(n, '!', `"${short(text)}" has an exclamation mark. Drop it and let the claim stand on its own.`);
     if (HEADING.test(n.tag) && text.endsWith('?')) {
       if (!answered(n)) add(n, text, `The heading "${short(text)}" is a rhetorical question. State the answer instead.`);

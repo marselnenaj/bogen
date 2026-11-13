@@ -16,6 +16,7 @@ Select layers, or nothing for the whole page, and open the Export tab (Shift+E).
 | HTML | A page that plays its animations and shaders. |
 | Clickable prototype | One HTML file that runs the prototype; see [Clickable prototype](#clickable-prototype). |
 | MP4, WebM | Video; see [Video](#video). |
+| Vue, Svelte, SwiftUI | From your agent only: a folder per layer with a file per component; see [Vue, Svelte and SwiftUI](#vue-svelte-and-swiftui). |
 | Exact app | Experimental, from your agent only: a folder per layer; see [An Exact app](#an-exact-app-experimental). |
 
 **Several sizes as a zip:** the Export tab has preset sets, and you can add your own rows:
@@ -34,6 +35,26 @@ Select layers, or nothing for the whole page, and open the Export tab (Shift+E).
 `path` you give it: an absolute path under your home folder, or a folder ending in `/`. It never
 replaces a file unless told to overwrite. It refuses hidden folders unless you asked for one, and
 never writes into protected folders or Bogen's own data.
+
+### A .bogen file
+
+**Download .bogen file** at the bottom of the Export tab, or **Download .bogen** on the home screen,
+saves the whole file: every page, branch, comment, font and picture. A file linked to a brand takes the
+brand along unless you clear **Include its brand**, so the design arrives on another device with its
+brand, tokens and fonts. **Open** on the home screen brings a `.bogen` file in, and adds the brand it
+carries unless that device has it already; see [Take a brand to another
+device](brand.md#take-a-brand-to-another-device).
+
+From your agent, `file_export` writes one (`brand: false` leaves the brand out), `brand_export` writes a
+brand on its own, and `file_import` opens one. From the terminal:
+
+```sh
+bogen export "Launch page" ~/launch.bogen    # file or brand, id or name; --no-brand, --force
+bogen import ~/launch.bogen
+```
+
+A file without a brand to carry is written in the format older Bogen versions read. A file with its
+brand uses a newer format, which an older Bogen refuses at the start; leave the brand out for one.
 
 ### SVG
 
@@ -197,6 +218,51 @@ Under the format, **Motion** says how keyframes, animations and transitions come
 Your agent asks for the same with `code_get` and `motion: "css" | "framer" | "inline"`. An easing
 Framer Motion has no name for runs linear, and a missing `@keyframes` is named in a note.
 
+## Vue, Svelte and SwiftUI
+
+Your agent asks for these with `code_get` and `format: "vue"`, `"svelte"` or `"swiftui"`, which gives
+every file under a line that names it, or writes them into a folder with `export_file` and the same
+format (one folder per layer, or per top-level layer of the page, such as `ticket-screen-vue/`). The
+Code tab does not offer them yet. Each comes with the same contract as React:
+
+- **Components as components.** One file per main or variant set, with typed props: Vue's
+  `defineProps<{ ... }>()` with `withDefaults`, Svelte 5's `let { ... } = $props()`, and in SwiftUI a
+  `View` struct with stored properties and an enum per variant axis (`false` and `true` become a
+  `Bool`). A set switches on its axes (`v-if`, `{#if}`, `if tone == .positive`), and in a set each
+  member keeps its own text, as `label ?? 'Paid'`.
+- **Instances as usages.** `<Tag tone="positive" label="Paid" :showDot="false" />` in Vue,
+  `showDot={false}` in Svelte, `TagView(tone: .positive, label: "Paid", showDot: false)` in SwiftUI. A
+  slot is a `<slot>` in Vue, a snippet with `{@render}` in Svelte and an `AnyView?` in SwiftUI. An
+  instance with changes on its inner layers is written out in full, and says so.
+- **Kits.** A kit that is markup (daisyUI, USWDS, Pico CSS, Web Awesome) stays its markup in Vue and
+  Svelte, with the scripts of custom elements imported. A kit of a React library (shadcn/ui, MUI,
+  Mantine, Carbon React, Radix Themes, React Bootstrap, Ionic React) cannot be imported there, so its
+  components are written from their drawing as components of your own, and the notes say so. SwiftUI
+  writes every kit from its drawing.
+- **Tokens.** Vue and Svelte share a `bogen.css` that the page imports, with the base styles, the
+  tokens in each mode, text styles, the layers' pseudo-elements and conditions, and the motion.
+  SwiftUI gets `Tokens.swift`: an enum of the tokens the code uses, each colour as
+  `Color(light:dark:)`, which follows the system's appearance. Colours in `oklch()` and
+  `color-mix()` are worked out into sRGB.
+- **Motion.** In Vue and Svelte, as the CSS motion above, only under
+  `prefers-reduced-motion: no-preference`. In SwiftUI a keyframe animation plays its first stop to
+  its last with `withAnimation` (opacity, offset, scale, rotation), and when the person asks the
+  system to reduce motion the layer rests at its end with no movement.
+- **What could not be said.** A list at the end, such as transitions in SwiftUI, a CSS grid that is
+  a `VStack` there, a gradient background, or a React library that is written from its drawing.
+
+SwiftUI lays flex out as `VStack` and `HStack` with their spacing and alignment, spacing between items
+as `Spacer`, absolute children in a `ZStack` with `.offset`, and the box as modifiers in CSS's order:
+padding, frame, background in its shape, border as an overlay, clip, shadow. Text takes
+`.font(.custom(...))` or `.system`, weight, colour, line spacing and tracking. Images are
+`AsyncImage`; icons and drawings are images from the asset catalog, and `export_file` writes their
+SVGs in `Assets/`, to add with Render As Template Image. It is written for iOS 17 and macOS 14.
+
+Bogen's tests compile every Vue and Svelte file they write, for a sample screen and every member of
+every kit, with `@vue/compiler-sfc` and `svelte/compiler`. SwiftUI cannot be compiled on Linux, where
+Bogen is built: the tests check its syntax with `swiftc -parse` and its contents line by line, but
+not its types. Build it in Xcode before you rely on it, and tell us what does not.
+
 ## An Exact app (experimental)
 
 [Exact](https://github.com/expo/exact) is Expo's cross-platform runtime: an app's interface is written
@@ -254,7 +320,7 @@ and test them too.
 ## Hand off to your repo
 
 Your agent reads a design with `code_get` (`html`, `react-inline` or `react-tailwind`, with motion as
-CSS or Framer Motion, or the experimental `exact`), one section at a time, and treats it as an exact specification: it reuses your repo's own components and tokens
+CSS or Framer Motion, `vue`, `svelte` or `swiftui`, or the experimental `exact`), one section at a time, and treats it as an exact specification: it reuses your repo's own components and tokens
 instead of copying inline styles. The `implement_selection` prompt walks it through this.
 
 No MCP tool writes into a repository. Your agent writes with its own file tools, or you open a pull

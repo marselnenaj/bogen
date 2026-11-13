@@ -3,7 +3,8 @@ import {
   camelCss, instanceControls, instancesOf, isVirtualId, listMains, listOverrides, nodeToHtml, resetAllOverrides, resetOverride, setInstanceProps, setOverride, setPageMode, setSlot, setTextStyle, setTokenMode, slotsOf,
   TEXT_STYLE_PROPS, textStyleKey, libraryOf, updateComponent, variantAxes, type BogenDoc, type ComponentProp, type PropTarget, type PropValue,
 } from '@bogen/core';
-import { closestIcons, hasIcon, iconSpec, searchIcons, iconSvg } from '@bogen/core/icons';
+import { closestSetIcons, hasSetIcon, ICON_SETS, iconSetCounts, searchSetIcons, setIconSpec, type IconSetId } from '@bogen/core/icon-sets';
+import { useIconSetFiles } from '../icon-set-files.ts';
 import { z } from 'zod';
 import { wrapLayers } from './tools-layout.ts';
 import { assertSafeStyle } from './tools-write.ts';
@@ -338,39 +339,45 @@ Expose what varies as props, such as the label of a button. Mark frames as slots
     return { deleted: textStyleKey(style) };
   });
 
-  define('icon_search', { description: 'Find icons in the Lucide set by name or by a word such as settings or close. Use real icons rather than emoji or drawing your own.', readOnly: true }, {
+  // The sets beyond Lucide are read from their files on first use, not bundled.
+  useIconSetFiles();
+  define('icon_search', { description: `Find icons by name or by a word such as settings or close. Use real icons rather than emoji or drawing your own, and one set per design. set: lucide (the default), ${ICON_SETS.filter((x) => x.id !== 'lucide').map((x) => `${x.id} (${x.name.replace(/^[^(]*\(|\)$/g, '')})`).join(', ')}, or all to search every set. Names outside Lucide carry their set, such as tabler:home; pass them to icon_insert as they are. No set has the logos of other companies.`, readOnly: true }, {
     query: z.string().min(1).max(100),
+    set: z.enum(['lucide', 'phosphor', 'tabler', 'heroicons', 'heroicons-solid', 'material-symbols', 'all']).default('lucide'),
     limit: z.number().int().min(1).max(200).default(30),
-  }, ({ query, limit }) => ({ icons: searchIcons(query, limit) }));
+  }, async ({ query, set, limit }) => {
+    const icons = await searchSetIcons(query, { set: set as IconSetId | 'all', limit });
+    return { icons, ...(icons.length ? {} : { sets: (await iconSetCounts()).map((x) => ({ id: x.id, name: x.name, license: x.license, icons: x.icons })) }) };
+  });
 
-  define('icon_insert', { description: 'Place a Lucide icon as an editable vector layer. It takes the text colour of its parent unless you give a colour, so it follows tokens and theme modes. In html_write, an icon can also be inline <svg>.' }, {
-    name: z.string().describe('From icon_search, such as arrow-right.'),
+  define('icon_insert', { description: 'Place an icon from icon_search as an editable vector layer. It takes the text colour of its parent unless you give a colour, so it follows tokens and theme modes. Stroked sets (lucide, tabler, heroicons) take stroke_width; filled ones ignore it. In html_write, an icon can also be inline <svg>.' }, {
+    name: z.string().max(120).describe('From icon_search, such as arrow-right or tabler:home.'),
     parent_id: z.string().optional().describe('A frame. Default is the current page.'),
     size: z.number().min(1).max(4000).default(24),
     color: z.string().max(200).optional().describe('A CSS colour for the stroke. To use a token, set color with layer_style instead.'),
-    stroke_width: z.number().min(0.25).max(8).default(2),
+    stroke_width: z.number().min(0.25).max(8).optional().describe('For a stroked set. Default: the set\'s own, 2 for Lucide and Tabler, 1.5 for Heroicons.'),
     index: z.number().int().min(0).optional(),
     x: z.number().optional().describe('Sets left in px.'),
     y: z.number().optional().describe('Sets top in px.'),
     page_id: pageIdArg,
     file_id: fileIdArg,
   }, async ({ name, parent_id, size, color, stroke_width, index, x, y, page_id, file_id }, ctx) => {
-    if (!hasIcon(name)) {
-      throw new Error(`There is no icon "${name}". Close ones: ${closestIcons(name).join(', ')}.`);
+    if (!(await hasSetIcon(name))) {
+      throw new Error(`There is no icon "${name}". Close ones: ${(await closestSetIcons(name)).join(', ')}.`);
     }
     const room = await ctx.room(file_id);
     const { doc } = room;
     const parent = parent_id ?? ctx.page(room, page_id);
     if (parent_id && !doc.pages.has(parent_id)) assertUnlocked(doc, [parent_id]);
     if (color) assertSafeStyle('color', color);
-    const spec = iconSpec(name, { size, strokeWidth: stroke_width, ...(color ? { color } : {}) });
+    const spec = await setIconSpec(name, { size, strokeWidth: stroke_width, ...(color ? { color } : {}) });
     const onPage = doc.pages.has(parent);
     if (onPage || x !== undefined || y !== undefined) {
       spec.style = { ...spec.style, position: 'absolute', left: `${x ?? (onPage ? nextArtboardX(doc, parent) : 0)}px`, top: `${y ?? 0}px` };
     }
     const id = ctx.write(room, () => doc.insert(parent, spec, index));
     ctx.touch([id]);
-    return { id, name, svg_length: iconSvg(name).length };
+    return { id, name, svg_length: spec.svg?.length ?? 0 };
   });
 
   define('design_system_css', { description: 'The file\'s design system as one stylesheet for a repository: tokens with one block per theme mode, and text styles as classes. The same blocks as tokens_export with format css, and it also answers for a file that has text styles but no tokens. For Tailwind 4 or Tailwind 3 output use tokens_export.', readOnly: true }, {

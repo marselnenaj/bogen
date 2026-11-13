@@ -3,7 +3,8 @@ import { homedir } from 'node:os';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { contentLanguageOf, COMMENT_CHECKS, confirmed, createMode, getModes, setTokenMode, EXACT_COMMIT, toExactApp, type BogenDoc, type BogenNode, type CommentCheck, type TokenKind } from '@bogen/core';
 import { z } from 'zod';
-import { exactFolder, writeExactApp } from '../exact-app.ts';
+import { exactFolder, writeCodeFiles, writeExactApp } from '../exact-app.ts';
+import { handoffFiles } from '../code-handoff.ts';
 import { exportTarget, type ExportFormat, type ExportReport } from '../exporter.ts';
 import { listFonts } from '../fonts.ts';
 import type { Target } from '../render.ts';
@@ -106,7 +107,9 @@ export function registerDesignTools(define: ToolDefiner): void {
         }
       }
     });
-    return { set: tokens.map((t) => `--${t.name}`), modes: getModes(room.doc).map((m) => m.name) };
+    const colours = tokens.filter((t) => t.kind === 'color').length;
+    return { set: tokens.map((t) => `--${t.name}`), modes: getModes(room.doc).map((m) => m.name),
+      ...(colours >= 2 && !ctx.session.paletteSuggested ? { next: 'Colours set without palette_suggest: compare them with its palettes for this subject (roles, tinted neutrals, contrast of every text pair).' } : {}) };
   });
 
   define('tokens_delete', { description: 'Delete design tokens. Layers that still reference them lose those values, so check with layer_find first.', destructive: true }, {
@@ -193,8 +196,8 @@ export function registerDesignTools(define: ToolDefiner): void {
     return { thread_id, replied: true };
   });
 
-  define('export_file', { description: 'Export layers or a page to a file on this machine and return its path, for a design the person wants to keep or send. It goes to the Bogen export folder, or to path when given. Formats: png, jpg, webp, avif, svg, pdf, html, prototype, mp4, webm, and the experimental exact. Several layers give one file each, except pdf and prototype, which make one file. prototype writes a static clickable .html of the artboards with their variables and interactions (interaction_set), one small script that asks no network, and every screen its links lead to. svg writes native vector elements, and says which layers had to stay HTML in a foreignObject. mp4 and webm render frame by frame with CSS animations and shaders at exact times; give duration and fps. exact (experimental) writes a folder per layer, or per top-level layer of the page: a minimal Exact app (github.com/expo/exact) with app.contract, app.ts, app.json, app.test.contract, app.tamber for the tokens and assets/ for the pictures, and returns what Contract could not say. To just look at your work, use canvas_screenshot instead.' }, {
-    format: z.enum(['png', 'jpg', 'webp', 'avif', 'svg', 'pdf', 'html', 'prototype', 'mp4', 'webm', 'exact']),
+  define('export_file', { description: 'Export layers or a page to a file on this machine and return its path, for a design the person wants to keep or send. It goes to the Bogen export folder, or to path when given. Formats: png, jpg, webp, avif, svg, pdf, html, prototype, mp4, webm, vue, svelte, swiftui, and the experimental exact. Several layers give one file each, except pdf and prototype, which make one file. prototype writes a static clickable .html of the artboards with their variables and interactions (interaction_set), one small script that asks no network, and every screen its links lead to. svg writes native vector elements, and says which layers had to stay HTML in a foreignObject. mp4 and webm render frame by frame with CSS animations and shaders at exact times; give duration and fps. exact (experimental) writes a folder per layer, or per top-level layer of the page: a minimal Exact app (github.com/expo/exact) with app.contract, app.ts, app.json, app.test.contract, app.tamber for the tokens and assets/ for the pictures, and returns what Contract could not say. vue, svelte and swiftui write a folder per layer, or per top-level layer of the page, with a file per component, the page or screen, the tokens (bogen.css or Tokens.swift) and for SwiftUI the icons as SVGs in Assets/, and return what the format could not say. To just look at your work, use canvas_screenshot instead.' }, {
+    format: z.enum(['png', 'jpg', 'webp', 'avif', 'svg', 'pdf', 'html', 'prototype', 'mp4', 'webm', 'vue', 'svelte', 'swiftui', 'exact']),
     duration: z.number().min(0.05).max(120).optional().describe('Video only: seconds. Default 3.'),
     fps: z.number().int().min(1).max(60).optional().describe('Video only: frames per second. Default 30.'),
     node_ids: z.array(z.string()).max(100).optional().describe('The layers to export. Leave out for the whole page.'),
@@ -229,6 +232,25 @@ export function registerDesignTools(define: ToolDefiner): void {
         apps.push({ layer: id, folder, files: written.files, ...(written.missing.length ? { missing_assets: written.missing } : {}), dropped: app.dropped, notes: app.notes });
       }
       return { paths: apps.map((a) => a.folder), format, exact_commit: EXACT_COMMIT, apps, run: 'Experimental. Make an app with `bun <exact>/scripts/exact.mjs new <name>`, copy these files over its own, then `bun exact.mjs web` or `bun exact.mjs test web`.' };
+    }
+    if (format === 'vue' || format === 'svelte' || format === 'swiftui') {
+      // A folder per layer, as for exact: path is the folder it goes in.
+      const dir = given ? await exportLocation(given, { exportRoot, dataDir: ctx.app.storage.home, hidden: allow_hidden }) : exportRoot;
+      const isDir = await stat(dir).then((s) => s.isDirectory(), () => false);
+      if (given && !isDir && !/[/\\]$/.test(given)) throw new Error(`Nothing was exported. A ${format} export is a folder: give the folder it goes in, ending in /.`);
+      const roots = node_ids?.length ? node_ids : doc.getChildren(ctx.page(room, page_id)).map((n) => n.id);
+      if (!roots.length) throw new Error('Nothing was exported. The page is empty.');
+      for (const id of roots) if (!doc.getNode(id)) throw new Error(`Nothing was exported. No layer with id ${id}.`);
+      await mkdir(dir, { recursive: true });
+      const out = [];
+      for (const id of roots) {
+        const code = handoffFiles(doc, id, format, ctx.app.localUrl());
+        const stem = (doc.getNode(id)!.name || 'layer').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'layer';
+        const folder = await exactFolder(dir, `${stem}-${format}`, overwrite);
+        const written = await writeCodeFiles(code.files, folder, overwrite);
+        out.push({ layer: id, folder, entry: code.entry, files: written, notes: code.notes });
+      }
+      return { paths: out.map((o) => o.folder), format, exports: out };
     }
     // Checked before anything renders, so that a refused path costs nothing.
     let dir = exportRoot;
@@ -268,11 +290,11 @@ export function registerDesignTools(define: ToolDefiner): void {
     limit: z.number().int().min(1).max(500).default(80),
   }, ({ query, source, limit }) => listFonts(query, source, limit));
 
-  define('guide_get', { description: 'Read a guide on how to do good work in Bogen. Topics include knowledge (source-based rules, skills, composition recipes and bounded design review), components (reuse instead of copying: read this before you build anything that repeats), design (avoiding the generic look), layout (artboards, flex, html_write rules), tokens, shaders, code (handoff to a repository), live (reacting to a person: events, comments, showing them things), checks (undo, batch, visual_diff, responsive_check), brand (working with a linked brand, checking against it, building one, and templates that lay out a brand system, landing page or social images from it), publish (static websites and review links for clients), omarchy (designing an Omarchy theme, exporting and installing it), data (data sources, binding layers to fields, repeats). Read design and layout before your first big piece of work, and live if a person is working with you.', readOnly: true }, {
-    topic: z.enum(['components', 'design', 'layout', 'tokens', 'shaders', 'code', 'live', 'checks', 'brand', 'publish', 'omarchy', 'data', 'knowledge']),
+  define('guide_get', { description: 'Read a guide on how to do good work in Bogen. Topics include knowledge (source-based rules, skills, composition recipes and bounded design review), components (reuse instead of copying: read this before you build anything that repeats), design (avoiding the generic look), layout (artboards, flex, html_write rules), tokens, shaders, code (handoff to a repository), live (reacting to a person: events, comments, showing them things), checks (undo, batch, visual_diff, responsive_check), brand (working with a linked brand, checking against it, building one, and templates that lay out a brand system, landing page or social images from it), publish (static websites and review links for clients), omarchy (designing an Omarchy theme, exporting and installing it), data (data sources, binding layers to fields, repeats), fonts (drawing a font of your own and making a display face hold together). Read design and layout before your first big piece of work, and live if a person is working with you.', readOnly: true }, {
+    topic: z.enum(['components', 'design', 'layout', 'tokens', 'shaders', 'code', 'live', 'checks', 'brand', 'publish', 'omarchy', 'data', 'knowledge', 'fonts']),
   }, ({ topic }) => GUIDES[topic]);
 
-  define('design_lint', { description: 'Check a layer or page for real problems: text contrast under WCAG AA (also of the words in ::before and ::after, and of text under @media, @container and state blocks, whose fixes name the block), hard-coded values that equal a token (inside a block too), spacing off the 4px grid, layers overflowing their parents, images without alt text, text under 12px, links or buttons too small to hit, repeated identical layer trees that should be a component, spacing rhythm (gaps and paddings off the file\'s spacing tokens, siblings of one kind spaced differently from the rest), type hierarchy (headings no larger than the body text, a heading level larger than the one above it, more than six font sizes on one artboard) and copy (filler such as "elevate", "unlock", "seamless", "game-changer", "whether you\'re X or Y", "not just X, it\'s Y", in English and German, words the brand avoids, exclamation marks, rhetorical questions as headings, three one-word claims in a row, emoji and the arrows and signs phones draw as emoji, hedges such as \"aims to\" and report language such as \"all checks passed\", headings chopped into fragments, lorem ipsum and placeholder names; each quotes the phrase and says what to write instead) and craft, per artboard, with the check named in check and the rubric criterion it counts against in criterion (more than two font families, decorative monospace, sizes beside a type scale step, more than three texts at the largest size, mostly bold, capitals, small labels over headings, mostly centred, two different actions with the same fill in one section, boxes around most groups or inside each other, coloured glow, tilt, drawn window dots, dot or grid backgrounds, blue-to-purple gradients, gradient text, text on a picture without a scrim, text too small where a social image or slide is seen). It renders, so results reflect the actual layout. Issues with a fix carry the style to set; safe ones change nothing a person would notice (a value written as its token, a step snapped by 2px or less), and fix true applies those as one undo step, then checks again. Apply the others with layer_style when they are right. Run it before you call work finished, and fix what matters.' }, {
+  define('design_lint', { description: 'Check a layer or page, rendered: contrast (WCAG AA, also in ::before/::after and @media, @container and state blocks), values that equal a token, spacing off the 4px grid and the spacing scale, overflow, missing alt text, text under 12px, small targets, repeated layer trees that should be a component, type hierarchy, copy, and craft. Severity hard is an objective defect: overflow or clipping beyond 2px, text on a picture without a scrim, text too small where a social image or slide is seen, placeholder copy; design_verify does not count a rubric while one stands. Severity advisory is a choice that often reads as default, with why: font families, monospace labels and the grotesk-mono pairing, capitals and caps-label, eyebrows, centred text, the house palettes, glow, tilt, window dots, pattern backgrounds, gradients, loud or bold type, competing filled actions, boxes, ruled-rows, split-sections, stat-row, meta-dots, no-visual, no-picture, one-hue, hype words and emoji. They never block or cap a score: change one, or keep it with your reason in design_verify kept. Hard findings come first. Issues with a fix carry the style to set; fix true applies the safe ones (a value written as its token, a step snapped by 2px or less) as one undo step, then checks again.' }, {
     node_id: z.string().optional().describe('Check this layer and everything inside. Leave out for the whole page.'),
     page_id: pageIdArg,
     fix: z.boolean().default(false).describe('Apply the safe fixes as one undo step, then check again.'),

@@ -9,7 +9,7 @@ import { t } from '../i18n/store.ts';
 /**
  * Fitting the screen you are working on to the window, without zooming by hand. Fit screen shows one artboard whole;
  * Fit width fills the canvas with its width, for a tall web page that would be unreadable whole. Both keep holding as
- * the window, the panels or the prompt change, until you pan or zoom yourself. The artboard is the selected one, the
+ * the window, the panels or the chat change, until you pan or zoom yourself. The artboard is the selected one, the
  * one around the selection, or the one most in view: never every artboard of a large file.
  */
 
@@ -20,7 +20,7 @@ export const FIT_MARGIN = 32;
 /** A fitted artboard is never drawn larger than this: a small phone screen does not fill a 4K window. */
 export const FIT_MAX_ZOOM = 2;
 
-/** The part of the canvas a fit can use: the canvas less what lies over it (a drawer, the prompt at the bottom). */
+/** The part of the canvas a fit can use: the canvas less what lies over it (a drawer, or the chat in a narrow window). */
 export interface Area { x: number; y: number; w: number; h: number }
 
 /** A camera that shows `rect` whole in `area`, centred, with a margin. */
@@ -80,7 +80,7 @@ export function fitTarget(): string | null {
   return boardInView(boards, camera.visibleWorld());
 }
 
-/** The canvas less a drawer over it and the prompt when it sits at the bottom, in canvas pixels. */
+/** The canvas less a drawer over it (a panel, or the chat in a narrow window), in canvas pixels. */
 export function fitArea(): Area {
   const stage = camera.viewport?.getBoundingClientRect();
   let area: Area = { x: 0, y: 0, w: camera.width, h: camera.height };
@@ -89,12 +89,6 @@ export function fitArea(): Area {
     const r = el.getBoundingClientRect();
     if (el.classList.contains('is-left')) area = { ...area, x: Math.max(area.x, r.right - stage.left), w: area.w - Math.max(0, r.right - stage.left - area.x) };
     else area = { ...area, w: Math.min(area.w, r.left - stage.left - area.x) };
-  }
-  const prompt = document.querySelector<HTMLElement>('main.stage > [data-testid="prompt"]');
-  if (prompt) {
-    const r = prompt.getBoundingClientRect();
-    // Only a prompt docked at the bottom takes room; one floating next to a selection does not.
-    if (r.bottom > stage.bottom - 48) area = { ...area, h: Math.max(120, Math.min(area.h, r.top - stage.top - area.y - 8)) };
   }
   return area;
 }
@@ -132,7 +126,7 @@ export function stopAutoFit(): void {
 }
 
 /**
- * While a fit holds: refit on a change of the canvas size, a drawer or the prompt, at most once a frame, measuring only
+ * While a fit holds: refit on a change of the canvas size, a drawer or the chat, at most once a frame, measuring only
  * the fitted artboard. Any other camera move (a pan, a zoom, following someone, going to a layer) lets go of it.
  */
 export function startAutoFit(): () => void {
@@ -161,7 +155,7 @@ export function startAutoFit(): () => void {
   };
 }
 
-/** Refits when a drawer opens or closes or the prompt does: both change the room over the canvas. */
+/** Refits when a drawer opens or closes or the chat does: both change the room the canvas has. */
 function onLayoutChange(fn: () => void): () => void {
   let drawer = ui().drawer;
   let prompt = editor().prompt.open;

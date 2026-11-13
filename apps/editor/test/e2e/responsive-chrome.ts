@@ -224,11 +224,12 @@ try {
       await page.waitForSelector('[data-testid="prompt"]', { timeout: 3000 });
       const prompt = await page.evaluate(() => {
         const p = document.querySelector('[data-testid="prompt"]')!.getBoundingClientRect();
-        const s = document.querySelector('main.stage')!.getBoundingClientRect();
-        return { inside: p.left >= s.left - 0.5 && p.right <= s.right + 0.5 && p.top >= s.top - 0.5 && p.bottom <= s.bottom + 0.5, p: [p.left, p.top, p.right, p.bottom], s: [s.left, s.top, s.right, s.bottom] };
+        const send = document.querySelector('[data-testid="prompt-send"], [data-testid="prompt-input"]')!.getBoundingClientRect();
+        return { inside: p.left >= -0.5 && p.right <= innerWidth + 0.5 && p.top >= 0 && p.bottom <= innerHeight + 0.5 && send.bottom <= innerHeight + 0.5, p: [p.left, p.top, p.right, p.bottom], w: innerWidth, h: innerHeight };
       });
-      check(`${tag}: the prompt stays inside the canvas`, prompt.inside, prompt);
+      check(`${tag}: the chat and its field stay inside the window`, prompt.inside, prompt);
       await page.screenshot({ path: join(shots, `${tag}-prompt.png`) });
+      await page.click('[data-testid="prompt-toggle"]');
     }
     await page.close();
   }
@@ -448,7 +449,9 @@ try {
     // In a text field the keys type.
     await page.keyboard.down('Control'); await page.keyboard.press('k'); await page.keyboard.up('Control');
     await page.waitForSelector('[data-testid="prompt-input"]');
-    await page.mouse.move(500, 300); await page.mouse.wheel({ deltaY: 60 }); await wait(150);
+    // The chat docks beside the canvas now: the wheel goes over the canvas itself to end the fit.
+    const over = await page.$eval('main.stage', (e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    await page.mouse.move(over.x, over.y); await page.mouse.wheel({ deltaY: 60 }); await wait(150);
     await page.focus('[data-testid="prompt-input"]');
     await key('3');
     const typed = await page.$eval('[data-testid="prompt-input"]', (e) => (e as HTMLTextAreaElement).value);

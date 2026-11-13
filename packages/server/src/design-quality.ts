@@ -6,7 +6,7 @@ import { auditA11y } from './a11y.ts';
 import { craftIssues, lintIssues, type LintIssue } from './mcp/lint.ts';
 import { responsiveReport } from './mcp/tools-check.ts';
 import { discipline, inferDiscipline, KNOWLEDGE_VERSION } from './design-knowledge/index.ts';
-import { scoreRubric, type RubricResult, type RubricScore } from './design-knowledge/rubric.ts';
+import { scoreRubric, type RubricKept, type RubricResult, type RubricScore } from './design-knowledge/rubric.ts';
 
 export const MAX_REPAIR_TURNS = 2;
 const MAX_LAYERS = 1600;
@@ -14,7 +14,8 @@ const MAX_AUTO_BOARDS = 4;
 const MAX_RECORDS = 200;
 export interface VisualObservation { criterion: string; verdict: 'pass' | 'needs-work' | 'not-applicable'; evidence: string }
 /** `criterion` is the rubric criterion a finding counts against, where it has one. */
-export interface QualityFinding { rule: string; node_id: string; message: string; severity: 'error' | 'warning'; width?: number; criterion?: string }
+/** `hard` is an objective defect that keeps the rubric from counting; `advisory` a choice of taste, with `why`. */
+export interface QualityFinding { rule: string; node_id: string; message: string; severity: 'error' | 'warning'; width?: number; criterion?: string; hard?: boolean; advisory?: boolean; why?: string }
 export interface QualityReport {
   node_id: string; discipline: string; version: string; fingerprint: string; checkedAt: number;
   automated: { state: 'passed' | 'needs-work' | 'unverified'; findings: QualityFinding[]; total: number; note?: string };
@@ -82,13 +83,13 @@ export class DesignQuality {
   forgetRun(run: string): void {
     for (const map of [this.reports, this.screenshots, this.initialScreens]) for (const key of map.keys()) if (key.split(':')[1] === run) map.delete(key);
   }
-  async review(file: string, node: string, disciplineId: string, observations: VisualObservation[] = [], run?: string, rubric: RubricScore[] = []): Promise<QualityReport> {
+  async review(file: string, node: string, disciplineId: string, observations: VisualObservation[] = [], run?: string, rubric: RubricScore[] = [], kept: RubricKept[] = []): Promise<QualityReport> {
     const { doc } = await this.app.rooms.get(file);
     const d = discipline(disciplineId);
     const nodes = subtree(doc, node);
     const before = reviewFingerprint(doc, node);
     const findings: QualityFinding[] = [];
-    const fromLint = (issue: LintIssue): QualityFinding => ({ rule: issue.rule === 'craft' ? `craft:${issue.check}` : `lint:${issue.rule}`, node_id: issue.nodeId, message: issue.message, severity: issue.rule === 'contrast' ? 'error' : 'warning', ...(issue.criterion ? { criterion: issue.criterion } : {}) });
+    const fromLint = (issue: LintIssue): QualityFinding => ({ rule: issue.rule === 'craft' || issue.check ? `${issue.rule === 'craft' ? 'craft' : 'lint'}:${issue.check ?? issue.rule}` : `lint:${issue.rule}`, node_id: issue.nodeId, message: issue.message, severity: issue.rule === 'contrast' ? 'error' : 'warning', ...(issue.criterion ? { criterion: issue.criterion } : issue.rule === 'copy' ? { criterion: 'content' } : {}), ...(issue.severity === 'hard' ? { hard: true } : {}), ...(issue.severity === 'advisory' || (issue.rule === 'copy' && issue.severity !== 'hard') ? { advisory: true, ...(issue.why ? { why: issue.why } : {}) } : {}) });
     const report: QualityReport = {
       node_id: node, discipline: d.id, version: KNOWLEDGE_VERSION, fingerprint: before, checkedAt: Date.now(),
       automated: { state: 'unverified', findings, total: 0 },
@@ -127,10 +128,10 @@ export class DesignQuality {
       const errors = findings.filter((f) => f.severity === 'error').length;
       if (errors > 100) report.automated.state = 'unverified';
       report.automated.note = `${findings.length} findings; output limited to 100, errors first. ${errors > 100 ? 'Too many errors for complete verification; narrow the scope.' : 'Every measured error is included; remaining heuristic warnings need visual judgement.'}`;
-      findings.sort((a, b) => Number(b.severity === 'error') - Number(a.severity === 'error') || Number(b.rule.startsWith('craft:')) - Number(a.rule.startsWith('craft:')));
+      findings.sort((a, b) => Number(b.severity === 'error') - Number(a.severity === 'error') || Number(!!b.hard) - Number(!!a.hard) || Number(b.rule.startsWith('craft:')) - Number(a.rule.startsWith('craft:')));
     }
     // Scored against every finding, before the list is cut for output.
-    report.rubric = scoreRubric(rubric, findings, report.automated.state !== 'unverified');
+    report.rubric = scoreRubric(rubric, findings, report.automated.state !== 'unverified', kept);
     if (findings.length > 100) findings.length = 100;
     if (reviewFingerprint(doc, node) !== before) {
       report.automated.state = 'unverified'; report.automated.note = 'The design changed while it was measured. Read the new state and review again.';

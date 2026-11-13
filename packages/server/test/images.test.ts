@@ -136,6 +136,36 @@ describe('image tools', () => {
 
   afterAll(() => h.cleanup());
 
+  it('suggests palettes with roles and contrast from a subject, a seed and a stored image, ready for tokens_set', async () => {
+    const agent = await connectAgent(h.base, 'palette-agent');
+    await call(agent, 'file_open', { file_id: fileId });
+    const fromImage = await call(agent, 'palette_suggest', { image: imageId });
+    expect(fromImage.palettes[0].source).toBe('image');
+    expect((await call(agent, 'palette_suggest', { image: src })).palettes[0].tokens).toEqual(fromImage.palettes[0].tokens);
+    const mixed = await call(agent, 'palette_suggest', { subject: 'swimming school', seed: '#2f8fa6', dark: true, prefix: 'x-' });
+    expect(mixed.palettes.map((p: any) => p.source)).toEqual(expect.arrayContaining(['seed', 'subject']));
+    for (const p of mixed.palettes) for (const pair of p.pairs.filter((x: any) => x.fg.includes('ink'))) expect(pair.wcag).toBeGreaterThanOrEqual(4.5);
+    const tokens = mixed.palettes[0].tokens;
+    expect(tokens[0].name).toBe('x-ground');
+    await call(agent, 'tokens_set', { tokens });
+    expect((await h.server.rooms.get(fileId)).doc.getTokens().some((t) => t.name === 'x-ground')).toBe(true);
+    expect((await callRaw(agent, 'palette_suggest', {})).isError).toBe(true);
+    await agent.close();
+  });
+
+  it('points tokens_set at palette_suggest when a session sets colours without it, once it has not been asked', async () => {
+    const agent = await connectAgent(h.base, 'colour-agent');
+    await call(agent, 'file_open', { file_id: fileId });
+    const colours = [{ name: 'c-ground', kind: 'color', value: '#f6f6f6' }, { name: 'c-action', kind: 'color', value: '#2563eb' }];
+    expect((await call(agent, 'tokens_set', { tokens: colours })).next).toContain('palette_suggest');
+    // One colour, or other kinds, need no palette.
+    expect((await call(agent, 'tokens_set', { tokens: [{ name: 'c-one', kind: 'color', value: '#111111' }] })).next).toBeUndefined();
+    expect((await call(agent, 'tokens_set', { tokens: [{ name: 's-1', kind: 'spacing', value: '8px' }, { name: 's-2', kind: 'spacing', value: '16px' }] })).next).toBeUndefined();
+    await call(agent, 'palette_suggest', { seed: '#2563eb' });
+    expect((await call(agent, 'tokens_set', { tokens: colours })).next).toBeUndefined();
+    await agent.close();
+  });
+
   it('crops to a preset and makes the height follow', async () => {
     const agent = await connectAgent(h.base, 'crop-agent');
     await call(agent, 'file_open', { file_id: fileId });

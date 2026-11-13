@@ -5,17 +5,34 @@ import '../styles/transfer.css';
 import { t } from '../i18n/store.ts';
 import { useT } from '../i18n/react.ts';
 
+/** What became of a brand that came in a `.bogen` file, as the server says it. */
+export interface ImportedBrand { id: string; name: string; status: 'created' | 'kept'; previous_id?: string; version_here: number; version_in_file: number; differs: boolean }
+
+export interface Imported { id: string; name: string; kind: 'file' | 'brand'; brand?: ImportedBrand }
+
 /** Sends a `.bogen` file to the server and gives what it became. */
-export async function importBogenFile(file: File): Promise<{ id: string; name: string }> {
+export async function importBogenFile(file: File): Promise<Imported> {
   const res = await fetch('/api/files/import', {
     method: 'POST',
     // The name goes through a header, so it has to survive being one.
     headers: { 'Content-Type': 'application/x-bogen', 'X-Bogen-Filename': file.name.replace(/[^\x20-\x7e]/g, '_') },
     body: file,
   });
-  const body = await res.json().catch(() => ({})) as { id?: string; name?: string; error?: string };
+  const body = await res.json().catch(() => ({})) as { id?: string; name?: string; kind?: 'file' | 'brand'; brand?: ImportedBrand; error?: string };
   if (!res.ok || !body.id) throw new Error(body.error ?? t('Opening {file} failed with {status}.', { file: file.name, status: res.status }));
-  return { id: body.id, name: body.name ?? file.name };
+  return { id: body.id, name: body.name ?? file.name, kind: body.kind ?? 'file', ...(body.brand ? { brand: body.brand } : {}) };
+}
+
+/**
+ * Where an import leads, and what to say about its brand. A brand kept here that differs from the one in the file is
+ * worth reading, so that stays on Home with a way on; the details are in what the server says to agents and the CLI.
+ */
+export function importResult(out: Imported): { href: string; text: string | null; stay: boolean } {
+  const href = out.kind === 'brand' ? `#/brand/${out.id}` : `#/file/${out.id}`;
+  const b = out.brand;
+  if (b?.status === 'kept' && b.differs) return { href, stay: true, text: t('The brand {name} on this device was kept as it is, and differs from the one in the file.', { name: b.name }) };
+  if (b?.status === 'created' && out.kind === 'file') return { href, stay: false, text: t('It came with its brand {name}, which is now on this device too.', { name: b.name }) };
+  return { href, text: null, stay: false };
 }
 
 /** Takes files dropped anywhere on the home screen. */

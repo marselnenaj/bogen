@@ -1,7 +1,7 @@
 {
   "name": "bogen-monorepo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "license": "GPL-3.0-or-later",
   "workspaces": ["packages/core", "packages/server", "apps/editor"],
@@ -22,6 +22,8 @@
   },
   "devDependencies": {
     "@types/node": "^22",
+    "@vue/compiler-sfc": "^3.5.45",
+    "svelte": "^5.57.3",
     "typescript": "^5.9",
     "vitest": "^5"
   },

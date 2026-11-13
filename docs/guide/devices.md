@@ -363,7 +363,8 @@ There are two ways to speak a comment:
   dictation instead.
 
 On the computer, a speech model you installed writes the recording out: whisper.cpp with a model file,
-faster-whisper with a model it already has, or a command of your own in `BOGEN_TRANSCRIBER` (see
+Voxtype with a Whisper model it downloaded, faster-whisper with a model it already has, or a command of your own
+in `BOGEN_TRANSCRIBER` (see
 [Privacy](privacy.md#voice-notes)). Bogen looks for one and never installs or downloads it. The text
 lands in the field, where you can change it before you send it, and the recording is deleted. A
 mention of @claude or @codex in it starts that agent, as when you type it.

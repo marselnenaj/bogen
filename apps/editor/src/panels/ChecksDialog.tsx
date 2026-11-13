@@ -117,6 +117,7 @@ export default function ChecksDialog() {
       <div className="checks-layout">
         <nav className="checks-list" aria-label={t('Saved checks')}>
           <button type="button" className="btn" onClick={() => create()} data-testid="check-new">{t('New check')}</button>
+          <button type="button" className="btn btn-quiet" onClick={() => ui().set({ checksOpen: false, complianceOpen: true })} data-testid="open-compliance">{t('Accessibility and legal check')}</button>
           <h3>{t('Built-ins')}</h3>{BUILTIN_CHECKS.map((c) => <button type="button" key={c.id} className={selected === c.id ? 'is-active' : ''} onClick={() => choose(c)}>{c.name}</button>)}
           <h3>{t('This file')}</h3>{checks.map((c) => <button type="button" key={c.id} className={selected === c.id ? 'is-active' : ''} onClick={() => choose(c)} data-testid={`saved-check-${c.id}`}>{c.enabled === false ? t('{name} (off)', { name: c.name }) : c.name}</button>)}
           {!checks.length ? <p>{t('Save checks here to reuse them with this file and your agents.')}</p> : null}

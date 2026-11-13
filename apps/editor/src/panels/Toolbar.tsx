@@ -10,6 +10,7 @@ import { pickImage } from '../ops/images.ts';
 import { openAppScreenBeside } from './AppScreens.tsx';
 import { camera } from '../state/camera.ts';
 import { editor, useEditor, type Tool } from '../state/store.ts';
+import { toggleChat } from './prompt-actions.ts';
 import { ui, useUi } from '../state/ui.ts';
 import { fitScreen } from '../ops/fit-view.ts';
 import { fitToolbar, PEERS_SHOWN, useWindowSize, type ChromeLayout, type ToolbarLevel } from '../state/chrome-layout.ts';
@@ -403,7 +404,7 @@ export function Toolbar() {
         {micro ? null : <Me />}
         {micro ? null : <span className="toolbar-sep" />}
         {micro ? null : <UndoRedo />}
-        <IconButton icon={<Sparkles size={15} />} title={t('Ask your agent ({shortcut})', { shortcut: 'Ctrl+K' })} active={prompt} onClick={() => { const st = editor(); st.set({ prompt: { ...st.prompt, open: !st.prompt.open, nodeIds: st.selection } }); }} testId="prompt-toggle" />
+        <IconButton icon={<Sparkles size={15} />} title={prompt ? t('Hide the chat ({shortcut})', { shortcut: 'Ctrl+Alt+3' }) : t('Chat with your agent ({shortcut})', { shortcut: 'Ctrl+K' })} active={prompt} onClick={toggleChat} testId="prompt-toggle" />
         {wide ? (
           <>
             <IconButton icon={<SlidersHorizontal size={15} />} title={t('Hide panels ({shortcut})', { shortcut: 'Ctrl+\\' })} onClick={() => editor().set({ minimal: !editor().minimal })} testId="minimal-toggle" />

@@ -453,7 +453,6 @@ select.field-input option { background: var(--ui-bg); color: var(--ui-fg); }
 .connect-cmd .icon-btn { width: 20px; height: 20px; }
 
 /* Prompt */
-.prompt { position: absolute; z-index: 30; width: 440px; background: var(--ui-bg); border-radius: 8px; box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; gap: 4px; }
 .prompt-messages { max-height: 220px; overflow: auto; display: flex; flex-direction: column; gap: 4px; padding: 2px 4px 6px; border-bottom: 1px solid var(--ui-border); font-size: 12.5px; scrollbar-width: thin; }
 .prompt-msg { white-space: pre-wrap; line-height: 1.4; overflow-wrap: anywhere; }
 .prompt-msg.is-user { color: var(--ui-fg-2); }

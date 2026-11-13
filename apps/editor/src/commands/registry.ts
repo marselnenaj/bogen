@@ -4,7 +4,7 @@ import { cancelPen, finishPen, penActive } from '../canvas/pen.ts';
 import { armPasteMode, copyStyles, onCopy, onPaste, pasteFromSystem, pasteStyles, placeImagePlaceholder } from '../ops/clipboard.ts';
 import * as ops from '../ops/ops.ts';
 import { showSizes } from '../ops/breakpoints.ts';
-import { openTab, showPanel } from '../panels/ChromePanels.tsx';
+import { currentChrome, openTab, showPanel } from '../panels/ChromePanels.tsx';
 import { fitScreen } from '../ops/fit-view.ts';
 import { detachSelection, goToMain, makeComponent } from '../ops/components.ts';
 import { redoSelectedScreen, selectedScreen } from '../panels/redo-screen.ts';
@@ -12,7 +12,7 @@ import { camera } from '../state/camera.ts';
 import { editor, type Tool } from '../state/store.ts';
 import { ui } from '../state/ui.ts';
 import { pickImage } from '../ops/images.ts';
-import { rebuildAsLayers, startPrompt } from '../panels/prompt-actions.ts';
+import { rebuildAsLayers, startPrompt, toggleChat } from '../panels/prompt-actions.ts';
 import { askForCommit, setStageView } from '../panels/history-state.ts';
 import { openAppCompare, openAppScreenBeside } from '../panels/AppScreens.tsx';
 import { pullRequestFromSelection } from '../panels/PullRequestDialog.tsx';
@@ -80,6 +80,7 @@ export const COMMANDS: Command[] = [
   { id: 'file.appCompare', title: msg('Design versus app'), group: msg('Edit'), run: openAppCompare },
   { id: 'help.welcome', title: msg('Welcome to Bogen'), group: msg('View'), run: () => void api.welcome().then(({ id }) => { location.hash = `#/file/${id}`; }) },
   { id: 'view.prompt', title: msg('Ask your agent'), group: msg('View'), keys: ['mod+k'], inInput: true, run: () => startPrompt() },
+  { id: 'view.chatPanel', title: msg('Chat with your agent: show or hide'), group: msg('View'), keys: ['mod+alt+3'], inInput: true, run: () => toggleChat() },
   { id: 'view.sizes', title: msg('See the artboard at several widths'), group: msg('View'), run: () => showSizes() },
   { id: 'agent.redoScreen', title: msg('Redo this screen…'), group: msg('Layers'), needsSelection: sel, when: () => Boolean(selectedScreen()), run: redoSelectedScreen },
   { id: 'agent.rebuild', title: msg('Rebuild as layers'), group: msg('Layers'), needsSelection: sel, run: () => { const [id] = editor().selection; if (id) void rebuildAsLayers(id); } },
@@ -93,6 +94,7 @@ export const COMMANDS: Command[] = [
   { id: 'view.code', title: msg('Show code'), group: msg('View'), keys: ['shift+c'], run: () => openTab('right', { rightTab: 'code' }) },
   { id: 'view.design', title: msg('Show design'), group: msg('View'), keys: ['shift+d'], run: () => openTab('right', { rightTab: 'design' }) },
   { id: 'view.checks', title: msg('Design checks'), group: msg('View'), run: () => ui().set({ checksOpen: true }) },
+  { id: 'view.compliance', title: msg('Accessibility and legal check'), group: msg('View'), run: () => ui().set({ complianceOpen: true }) },
   { id: 'view.export', title: msg('Show export'), group: msg('View'), keys: ['shift+e'], run: () => openTab('right', { rightTab: 'export' }) },
   { id: 'view.drift', title: msg('Compare with the live site (Drift)'), group: msg('View'), run: () => openTab('right', { rightTab: 'drift' }) },
   { id: 'file.restyle', title: msg('Like this site, in a brand'), group: msg('View'), run: () => ui().set({ restyleOpen: true }) },
@@ -248,7 +250,8 @@ function onEscape(): void {
   }
   if (state.tool !== 'move') return state.setTool('move');
   if (state.pendingComment) return state.set({ pendingComment: null });
-  if (state.prompt.open) return state.set({ prompt: { ...state.prompt, open: false } });
+  // A chat over the canvas closes; one docked beside it stays, like the other panels.
+  if (state.prompt.open && currentChrome().chat === 'drawer') return state.set({ prompt: { ...state.prompt, open: false } });
   if (state.followClientId !== null) return state.set({ followClientId: null });
   if (!state.selection.length) return;
   const { snap } = session();

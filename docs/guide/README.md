@@ -33,9 +33,12 @@ what your agent sees in a screenshot and what you export come from the same rend
 | Use `::before`, `::after`, container and media queries, hover and other states | [Pseudo-elements and conditions](pseudo-and-conditions.md) |
 | Reuse things: components, variants, slots, shared libraries, code components | [Components](components.md) |
 | Set up a brand, and check designs against it | [Brands](brand.md) |
+| Have an agent draw a font of my own, and use it in the file | [Fonts of your own](fonts.md) |
 | Use and customize design playbooks, skills and bounded verification | [Design knowledge](design-knowledge.md) |
 | Copy a live website onto the canvas, or import from Figma | [Capture and import](capture-and-import.md) |
-| Export images, PDF, video, SVG or code | [Export and code](export-and-code.md) |
+| Check accessibility against WCAG, EN 301 549, the EAA and BaFG or the WZG, and see what else the law asks of a website or shop | [Accessibility and other legal requirements](compliance-law.md) |
+| Export images, PDF, video, SVG, or code for React, Vue, Svelte or SwiftUI | [Export and code](export-and-code.md) |
+| See which design systems, icon sets and frameworks Bogen may ship, and why | [Licences](licences.md) |
 | Publish a design as a static website | [Export and code](export-and-code.md#publish) |
 | Send a client a review link, and read their comments | [Sharing for review](sharing.md) |
 | See who changed what, go back, branch, replay how a page was built, or keep a design in Git | [History](history.md) |

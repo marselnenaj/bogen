@@ -127,6 +127,35 @@ export function chromeLayout({ width, height, scale, leftWidth, rightWidth }: Ch
   return { mode: 'narrow', left: 'drawer', right: 'drawer', leftPx: drawer(left), rightPx: drawer(right), toolbar, short };
 }
 
+export type ChatDock = 'docked' | 'drawer' | 'closed';
+export interface ChatChrome extends ChromeLayout {
+  chat: ChatDock;
+  /** The chat's width in window pixels, docked or as a drawer. */
+  chatPx: number;
+}
+
+/**
+ * The layout with the chat panel. Open, it sits between the canvas and the inspector when the canvas keeps its
+ * minimum: first with everything docked, then with layers in a drawer, as the inspector does. When even that leaves
+ * too little canvas, the chat opens over the canvas as a drawer at its right edge and the rest stays as it was.
+ * Closed, the layout is exactly the one without it.
+ */
+export function chatLayout(input: ChromeInput & { chatOpen: boolean; chatWidth: number }): ChatChrome {
+  const base = chromeLayout(input);
+  const s = input.scale > 0 ? input.scale : 1;
+  const want = input.chatWidth * s;
+  if (!input.chatOpen) return { ...base, chat: 'closed', chatPx: Math.round(want) };
+  const { width } = input;
+  if (base.mode === 'wide' && width - base.leftPx - base.rightPx - want >= CANVAS_MIN) return { ...base, chat: 'docked', chatPx: Math.round(want) };
+  if (base.right === 'docked') {
+    const right = input.rightWidth * s;
+    if (width - right - want >= CANVAS_MIN) return { ...base, mode: 'compact', left: 'drawer', right: 'docked', rightPx: Math.round(right), chat: 'docked', chatPx: Math.round(want) };
+  }
+  const room = width - (base.right === 'docked' ? base.rightPx : 0);
+  const px = Math.round(Math.max(Math.min(want, room - DRAWER_GAP), Math.min(PANEL_MIN * s, room)));
+  return { ...base, chat: 'drawer', chatPx: px };
+}
+
 // ---------------------------------------------------------------- the window, as React reads it
 
 function subscribe(fn: () => void): () => void {

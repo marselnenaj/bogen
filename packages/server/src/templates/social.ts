@@ -41,7 +41,7 @@ function image(k: BrandKit, format: (typeof FORMATS)[number], ground: BrandColor
 export const socialImages: TemplateDef = {
   id: 'social-images',
   name: 'Social images',
-  description: 'Share images in the brand: an Open Graph image at 1200 x 630 with the name and positioning on the brand\'s main colour, and a 1080 x 1080 square with its own shortest line on its page colour. Each has the logo variant made for its ground. Fixed sizes, ready to export as PNG.',
+  description: 'Share images in the brand: an Open Graph image at 1200 x 630 with the name and positioning on the brand\'s main colour, and a 1080 x 1080 square with its own shortest line on its page colour. Each has the logo variant made for its ground. Fixed sizes, ready to export as PNG. Typographic share cards: for an ad or campaign image, start from a picture instead (design_knowledge social, recipe picture-ad).',
   parts: FORMATS.map((f) => ({ key: f.key, name: f.name, size: `${f.width} x ${f.height}` })),
   fileName: (brand) => `${brand} social images`,
   build(env: TemplateEnv, options: TemplateOptions): TemplatePlan {

@@ -1,5 +1,5 @@
 import { applyRemoteUpdate } from './design-branches.ts';
-import { BogenDoc, brandUndoScope, repairMirror, textLayersChanged, Y } from '@bogen/core';
+import { BogenDoc, brandUndoScope, glyphFontsUndoScope, repairMirror, textLayersChanged, Y } from '@bogen/core';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 import { WebSocket } from 'ws';
@@ -143,7 +143,7 @@ export class Room {
     let manager = this.undo.get(agent);
     if (!manager) {
       const { nodes, pages, tokens, meta, modes, textStyles, variables } = this.doc;
-      manager = new Y.UndoManager([nodes, pages, tokens, meta, modes, textStyles, variables, ...brandUndoScope(this.doc)], { trackedOrigins: new Set([agentOrigin(agent)]), captureTimeout: 0 });
+      manager = new Y.UndoManager([nodes, pages, tokens, meta, modes, textStyles, variables, ...brandUndoScope(this.doc), ...glyphFontsUndoScope(this.doc)], { trackedOrigins: new Set([agentOrigin(agent)]), captureTimeout: 0 });
       this.undo.set(agent, manager);
       this.rooms.undoManagerMade(this, agent, manager);
     }

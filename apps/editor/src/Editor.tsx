@@ -26,7 +26,8 @@ import { setStageView } from './panels/history-state.ts';
 import { history } from './lib/history-api.ts';
 import { PullRequestDialog } from './panels/PullRequestDialog.tsx';
 import { RepoTokensDialog } from './panels/RepoTokensDialog.tsx';
-import { PromptBar } from './panels/PromptBar.tsx';
+import { ChatHost } from './panels/ChatPanel.tsx';
+import { chatOpenFor } from './panels/chat-state.ts';
 import { startAgentEvents } from './panels/prompt-actions.ts';
 import { startBrandEvents } from './panels/brand-state.ts';
 import { RightPanel } from './panels/RightPanel.tsx';
@@ -44,6 +45,7 @@ import { RestyleDialog } from './panels/RestyleDialog.tsx';
 import { useSettings } from './state/settings.ts';
 import { useUi } from './state/ui.ts';
 const ChecksDialog = lazy(() => import('./panels/ChecksDialog.tsx'));
+const ComplianceDialog = lazy(() => import('./panels/ComplianceDialog.tsx'));
 import { editor, useEditor } from './state/store.ts';
 import { stopTextEdit } from './canvas/text-edit.ts';
 import { unionRects, type Rect } from './canvas/geometry.ts';
@@ -152,6 +154,7 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
   const [stored, setStored] = useState<boolean | null>(null);
   const connection = useEditor((s) => s.connection);
   const checksOpen = useUi((s) => s.checksOpen);
+  const complianceOpen = useUi((s) => s.complianceOpen);
   const minimal = useEditor((s) => s.minimal);
   const pageId = useEditor((s) => s.pageId);
   const lay = useChrome();
@@ -164,7 +167,7 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
     const s = new Session(fileId);
     sessionRef.current = s;
     setSession(s);
-    editor().set({ fileId, ready: false, connection: 'connecting', everConnected: false, pageId: null, selection: [], hoverId: null, editingTextId: null, editingPathId: null, tool: rememberedTool(), gesture: {}, peers: [], activity: [], activeAgents: {}, activeThreadId: null, threadRuns: {}, pendingComment: null, followClientId: null, prompt: { open: false, runId: null, running: false, messages: [], nodeIds: [] } });
+    editor().set({ fileId, ready: false, connection: 'connecting', everConnected: false, pageId: null, selection: [], hoverId: null, editingTextId: null, editingPathId: null, tool: rememberedTool(), gesture: {}, peers: [], activity: [], activeAgents: {}, activeThreadId: null, threadRuns: {}, pendingComment: null, followClientId: null, prompt: { open: chatOpenFor(fileId), runId: null, running: false, messages: [], nodeIds: [] } });
     camera.value = { x: 0, y: 0, z: 1 };
 
     api.files().then((files) => {
@@ -337,8 +340,9 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
   // Docked panels sit beside the canvas at the width the layout gives them; the others open as drawers over it.
   const leftDocked = !minimal && lay.left === 'docked';
   const rightDocked = !minimal && lay.right === 'docked';
+  const chatDocked = !minimal && lay.chat === 'docked';
   const style = {
-    gridTemplateColumns: [leftDocked ? `${lay.leftPx}px` : '', 'minmax(0, 1fr)', rightDocked ? `${lay.rightPx}px` : ''].filter(Boolean).join(' '),
+    gridTemplateColumns: [leftDocked ? `${lay.leftPx}px` : '', 'minmax(0, 1fr)', chatDocked ? `${lay.chatPx}px` : '', rightDocked ? `${lay.rightPx}px` : ''].filter(Boolean).join(' '),
   };
 
   return (
@@ -356,12 +360,12 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
         <main className="stage" aria-label={t('Canvas')}>
           <Canvas />
           <ProposalBars />
-          <PromptBar />
           <HistoryStage />
           <AppScreens />
           {children}
           {minimal ? <button type="button" className="minimal-exit" onClick={() => editor().set({ minimal: false })} data-testid="minimal-exit">{t('Show panels ({shortcut})', { shortcut: 'Ctrl+\\' })}</button> : null}
         </main>
+        <ChatHost lay={lay} minimal={minimal} />
         <PanelHost side="right" lay={lay} minimal={minimal} resizer={<Resizer side="right" />}><RightPanel /></PanelHost>
       </div>
       <ShortcutsDialog />
@@ -376,6 +380,7 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       <OmarchyThemeDialog />
       <SizesView />
       {checksOpen ? <Suspense fallback={null}><ChecksDialog /></Suspense> : null}
+      {complianceOpen ? <Suspense fallback={null}><ComplianceDialog /></Suspense> : null}
       <Toast />
     </div>
   );

@@ -152,14 +152,19 @@ delete them.
 ## Voice notes
 
 The microphone in the phone's comment sheet records on the phone and sends the recording to your computer, over
-the phone listener, as a paired phone. Nothing else gets it: no speech service, no Bogen server, no other device.
+the phone listener, as a paired phone. The microphone in the editor's chat and comment boxes records in the editor
+and sends it to the server on the same computer. Nothing else gets it: no speech service, no Bogen server, no other
+device.
 
-- **Up to 10 MB**, and the phone stops after three minutes.
+- **Up to 10 MB**, and the recording stops after three minutes.
 - **Written out on your computer**, only by a speech model you installed yourself: whisper.cpp (`whisper-cli` or
-  `whisper-cpp` with a `ggml-*.bin` model, set `BOGEN_WHISPER_MODEL` if it is not in a usual folder), faster-whisper
-  with a model already downloaded (run offline, so it never fetches one), or a command of your own in
-  `BOGEN_TRANSCRIBER`. Bogen never installs or downloads a model. The text goes into the comment field, where you
-  can change it before you send it, and the recording is deleted right away.
+  `whisper-cpp` with a `ggml-*.bin` model, set `BOGEN_WHISPER_MODEL` if it is not in a usual folder), Voxtype with a
+  Whisper model it already downloaded to `~/.local/share/voxtype/models` (always run with its local Whisper engine,
+  whatever its own settings say, so a remote or cloud engine configured there is never used), faster-whisper with a
+  model already downloaded (run offline, so it never fetches one), or a command of your own in
+  `BOGEN_TRANSCRIBER`. Bogen never installs or downloads a model. The text goes into the field, where you can
+  change it before you send it, and the recording is deleted right away.
+- **The chat without a model** records nothing and says how to set one up: an agent cannot hear a recording.
 - **Without a model**, the recording is attached to the comment as a voice note and kept in `voice/` in the data
   folder, readable by you only. It is not an asset, so it does not sync to your other devices: there the comment
   says which computer has it. It is deleted when you take it off the comment or cancel the comment, when its file

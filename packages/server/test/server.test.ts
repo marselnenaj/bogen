@@ -44,7 +44,7 @@ describe('Bogen server', () => {
       expect(names).toContain(expected);
     }
     for (const t of tools) expect(t.description!.length).toBeGreaterThan(20);
-    expect(agent.getInstructions()).toMatch(/small chunks/);
+    expect(agent.getInstructions()).toMatch(/one section per html_write/);
     // Only a person resolves or reopens a thread: no tool for it, and nothing that tells an agent to.
     expect(names).not.toContain('comment_resolve');
     expect(JSON.stringify(tools)).not.toMatch(/comment_resolve(?!d)/);

@@ -6,32 +6,38 @@ There are 16 playbooks, 128 conditional decisions and 32 composition briefs: vis
 
 ## What an agent reads first
 
-Every skill opens with the same two short parts, before the decisions of its discipline, because an
-agent follows the start of a long text best.
+The MCP server instructions, which every client shows in every session, open with the design core in
+four steps, positive and with the reason, because a list of looks to avoid only moves a model to its next
+default:
 
-The **quality bar** says what decides whether work is accepted, with numbers: one message and one
-primary action per screen, and two or three loud peaks on a long page; at most two font families and
-five or six sizes from one declared scale; one spacing scale, with section gaps at least twice the gaps
-inside a section; neutrals and one accent; the real product shown; copy from the customer's side with
-nothing invented; neither the generated look (grotesk plus mono, glow, cards around everything, dot
-grids, tilt, gradient text) nor its overcorrection (warm beige, a serif, forest green); the agent
-decides and gives its reason instead of handing choices back; and nothing clipped, covered or too small
-at the size the piece is really seen.
+1. **Direction**, written out before the first `html_write`: audience and job (one message and one
+   primary action per screen), an idea from the subject's own world with two real references, type
+   (one or two families and a scale of five or six sizes), colour (four to six named hex values and
+   what the accent marks), and a layout sentence per screen. The agent sketches three directions,
+   keeps the one only this subject could have, and changes any part that would fit a similar brief.
+2. **System**: the scales and colours as tokens before any screen.
+3. **Build with ambition**, one section at a time with a screenshot after each: the real product shown
+   large, specific content in quantity, one loud thing per screen, a layout idea per section in the
+   form its content has, and the states the task has. Every section and screen is held to this, not
+   only the first.
+4. **Check**: `design_lint`, `design_review` and `responsive_check`, every objective defect fixed, then
+   `design_verify` with the scored rubric.
 
-The **work loop** has six steps: brief and point of view (audience, the one carrying idea, the one
-action, two or three real references of the class); the type scale, spacing scale and colours as tokens
-before any screen; one section at a time with a screenshot after each; the real sizes; a review of the
-whole artboard with `design_lint` and `design_review`; then the scored rubric, a repair of the lowest
-criterion, and `design_verify`.
+`guide_get design` adds a direction written out in full, worked examples (each a default next to the
+decision made for its subject), what the checks measure, the copy rules and the rubric. The Claude Code
+skill that `bogen install` writes adds the examples and the copy rules without repeating the
+instructions; the Codex skill carries the core too.
 
-The MCP server instructions carry the same loop in five lines, at the same size as before.
+Each discipline skill opens with **what strong looks like** in that medium (three concrete lines, such as
+"the primary task within thumb reach on the first screen, with real data in it" for a mobile app), then
+the brief, the decisions, states, review and the rubric.
 
 ## A working contract for the agent
 
 Each playbook contains:
 
 - Brief inputs that matter for that discipline. Read the request and existing work first; ask only if a missing answer blocks the task.
-- Decisions in **WHEN / DO / CHECK / REPAIR / EXCEPTION** form. They change what the agent does and give it a concrete recovery path.
+- Decisions, each with when it applies, what to do, how to check it, the likely failure and its exception. The structured playbook keeps the repair step too.
 - Relevant states and deliverables, considered only when the actual task needs them.
 - Three visual-review questions: priority, content and context.
 - Alternative composition briefs. These are choices for the subject and medium, not a mandatory page skeleton.
@@ -83,13 +89,26 @@ The shared guidance contains 41 authored style rules with alternatives and check
 
 `design_lint` reports these per artboard as `craft` issues, with the check in `check` and the rubric
 criterion it counts against in `criterion`. `design_review` reports the same findings with their rule
-id, and needs no browser. Each is a warning to weigh against the brief and the brand, with a line that
-can be tested:
+id, and needs no browser. Each has a line that can be tested, and a severity:
+
+- **hard** (marked H below): an objective defect, text nobody can read where it is seen. `design_verify`
+  does not count a rubric as scored while one stands. The other hard findings come from the rest of
+  `design_lint`: overflow or clipping beyond 2px, and placeholder copy (lorem ipsum, placeholder names).
+  Contrast under WCAG AA and accessibility errors are errors of their own.
+- **advisory**: a choice that often reads as default, with a one-line `why`. It never blocks and never
+  caps a score: the agent changes it, or keeps it and passes the reason from its direction as `kept` to
+  `design_verify`, which records it. Emoji and hype words are advisory copy findings.
+
+Bogen does not decide taste for the model; it says what is likely to read as generated and leaves the
+choice with the direction.
 
 | Check | Fires when |
 | --- | --- |
 | `font-families` | more than two named font families on one artboard |
 | `decorative-mono` | two or more texts in a monospace face that are not code, a command or figures |
+| `grotesk-mono` | the only two families are one grotesk and one monospace face, with monospace on three or more texts outside code, most of them labels or figures rather than code or commands; reported instead of `decorative-mono` |
+| `house-palette` | the ground of the artboard (or its first section) is warm off-white and a filled action is red-orange, or the ground is near-black and a filled action is acid green; colours the brand wrote into the file do not count |
+| `caps-label` | a text of 14px or less, 40 characters or less, in capitals with 0.04em tracking or more; its layers are not counted again as `all-caps` or `eyebrow` |
 | `type-scale` | a literal size within 8% of a step of the file's type scale (three or more font-size tokens) without being on it |
 | `loud-type` | more than three texts at 85% or more of the largest size, when that is 28px or more |
 | `heavy-type` | more than two thirds of the words in weight 600 or heavier, from eight texts up |
@@ -105,8 +124,15 @@ can be tested:
 | `pattern-background` | a gradient repeated as a tile of 64px or less, or a repeating radial gradient |
 | `default-gradient` | a gradient whose saturated stops all lie between blue and pink, with a violet one and one that is not |
 | `gradient-text` | text filled with a gradient |
-| `text-on-image` | text over a background image or a picture laid behind it, with no scrim, panel or text shadow between |
-| `viewing-size` | text under 9px where a social image (seen at 390px) or a slide (seen at 960px) is really seen; what the board or file declares decides, and the size is a guess only where nothing is declared |
+| `text-on-image` H | text over a background image or a picture laid behind it, with no scrim, panel or text shadow between |
+| `viewing-size` H | text under 9px where a social image (seen at 390px) or a slide (seen at 960px) is really seen; what the board or file declares decides, and the size is a guess only where nothing is declared |
+| `no-picture` | an ad or social image at a social preset size that nothing declares (a template's share card declares its kind) has no photograph, video, shader, background image or SVG drawing across 40% of the frame |
+| `one-hue` | a file of three screens or more, with no brand palette and no pictures, whose saturated colours all lie within 30 degrees of hue: neutrals and one colour; reported once, on the file's first screen |
+| `ruled-rows` | twelve or more one-sided hairline rules (1.5px or less) that cut more than half of the page's sections, and at least three, into rows; not on a dashboard |
+| `split-sections` | four or more sections, and more than 70% of them, open with the same two-column split: a heading on the left, a paragraph and no picture on the right |
+| `stat-row` | on a page, a row of three or more groups that each hold a figure at 1.75 times its label's size or more; step numbers, times and dashboards do not count |
+| `meta-dots` | three or more texts that join three or more facts with middle dots |
+| `no-visual` | a page 1024px or wider with four sections or more and no image, video, shader, SVG of 160px or more, or drawn surface of 160px or more with three texts inside |
 
 `type-scale` is exact on purpose: a size within half a pixel of a step is on it, and 17px beside an 18px
 token is a slip, not a nuance. The token costs nothing to use and keeps the scale one scale.
@@ -153,10 +179,12 @@ The scores are passed as `rubric` to `design_verify`, and count as scored only w
 
 - all eight criteria have one score with evidence of 24 characters or more;
 - none is 2 or lower;
-- none is above 3 while measured findings stand against that criterion. An agent either fixes the
-  findings or scores 3 and names the exception.
+- no hard finding stands (an objective defect). One the brief itself asks for, such as placeholder text
+  in a wireframe, is passed in `kept` with the reason and then caps its criterion;
+- none is above 3 while measured findings (spacing, hierarchy, contrast, overflow, small text and
+  targets, alt text) stand against that criterion. Advisory findings do not count here.
 
-Under 32 of 40 the result says the work is adequate rather than strong, and asks for a repair of the
+While a hard finding stands the state is `blocked`, with each check in `blocking`. Advisory findings are listed in `advisory` with their `why`, and with the reason where one was kept; they never change the state. Under 32 of 40 the result says the work is adequate rather than strong, and asks for a repair of the
 two lowest criteria or a second direction to compare. That is advice, not a block.
 
 A built-in run does not complete until the rubric is scored. The scores are the agent's own

@@ -20,12 +20,12 @@ Zed. Claude Code and Codex have been set up and run for real; the others follow 
 formats and have not been tried with the apps yet. Any other client connects to `bogen mcp` or to
 `http://127.0.0.1:29990/mcp`. See [Agents](agents.md).
 
-The prompt bar (Ctrl+K) and mentions in comments start Claude Code or Codex, the two CLIs Bogen knows
+The chat beside the canvas (Ctrl+K) and mentions in comments start Claude Code or Codex, the two CLIs Bogen knows
 how to run.
 
 ## Do I need an API key?
 
-No. Bogen calls no model itself, and has no image generator. The prompt bar and comment runs use
+No. Bogen calls no model itself, and has no image generator. The chat and comment runs use
 your logged-in `claude` or `codex` CLI.
 
 ## Where do images come from?

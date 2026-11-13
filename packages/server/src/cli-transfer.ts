@@ -1,9 +1,13 @@
-import { stat, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { basename, join, resolve } from 'node:path';
 import type { Connection } from './daemon.ts';
 import { diffFolders, formatDiff, readFolder, readFolderAssets, writeFolder, type DesignFolder } from './design-folder.ts';
 
 type Values = Record<string, string | boolean | undefined>;
+
+/** Where a design folder keeps the brand its design links to: a design folder of its own. */
+const BRAND_FOLDER = 'brand';
 
 function headers(conn: Connection, json = true): Record<string, string> {
   return { ...(json ? { 'Content-Type': 'application/json' } : {}), ...(conn.token ? { Authorization: `Bearer ${conn.token}` } : {}) };
@@ -128,28 +132,88 @@ export async function gitCommand(conn: Connection, action: string, file: string,
   else out(`Restored ${res.restored}: ${res.pages} pages, ${res.layers} layers. What it replaced is commit ${res.savedAs}.`);
 }
 
-export async function exportFolder(conn: Connection, file: string, dir: string, out: (line: string) => void): Promise<void> {
+type FolderAnswer = DesignFolder & { brand?: { id: string; name: string; content: DesignFolder['content'] }; brandNote?: { id: string; name?: string; why?: string } };
+
+/** With the linked brand, unless --no-brand: as a design folder of its own, in brand/. */
+export async function exportFolder(conn: Connection, file: string, dir: string, values: Values, out: (line: string) => void): Promise<void> {
   const entry = await findFile(conn, file);
-  const folder = await answer<DesignFolder>(await fetch(`${conn.url}/api/files/${entry.id}/folder`, { headers: headers(conn, false) }));
-  const result = await writeFolder(dir, folder, async (name) => {
+  const folder = await answer<FolderAnswer>(await fetch(`${conn.url}/api/files/${entry.id}/folder${values['no-brand'] ? '?brand=0' : ''}`, { headers: headers(conn, false) }));
+  const readAsset = async (name: string) => {
     const res = await fetch(`${conn.url}/assets/${name}`, { headers: headers(conn, false) });
     return res.ok ? new Uint8Array(await res.arrayBuffer()) : null;
-  });
+  };
+  const result = await writeFolder(dir, { name: folder.name, content: folder.content }, readAsset);
   out(`Wrote "${folder.name}" to ${dir}: ${result.files} text files, ${result.assets} assets.`);
+  const brandDir = join(dir, BRAND_FOLDER);
+  if (folder.brand) {
+    const brand = await writeFolder(brandDir, { name: folder.brand.name, content: folder.brand.content }, readAsset);
+    out(`With its brand "${folder.brand.name}" in ${brandDir}: ${brand.files} text files, ${brand.assets} assets.`);
+    result.missingAssets.push(...brand.missingAssets);
+  } else {
+    // A brand written there before is not this design's any more. Only a folder Bogen wrote is taken away.
+    if (existsSync(join(brandDir, 'design.json'))) await rm(brandDir, { recursive: true, force: true });
+    if (folder.brandNote) out(folder.brandNote.why === 'left out' ? 'Without its brand, as asked.' : `Without its brand: it links to one that is not on this device (${folder.brandNote.id}).`);
+  }
   if (result.missingAssets.length) out(`Missing on this device: ${result.missingAssets.join(', ')}`);
 }
 
 export async function importFolder(conn: Connection, dir: string, values: Values, out: (line: string) => void): Promise<void> {
   const folder = await readFolder(dir);
   const assets = await readFolderAssets(dir);
+  const brandDir = join(dir, BRAND_FOLDER);
+  const brand = existsSync(join(brandDir, 'design.json')) ? await readFolder(brandDir) : null;
+  if (brand) assets.push(...await readFolderAssets(brandDir));
   for (const asset of assets) {
     await answer(await fetch(`${conn.url}/api/assets`, { method: 'POST', headers: { ...headers(conn, false), 'Content-Type': asset.mime }, body: Buffer.from(asset.bytes) }));
   }
-  const created = await answer<{ id: string; name: string; pages: number; layers: number }>(await fetch(`${conn.url}/api/files/import-folder`, {
+  const created = await answer<{ id: string; name: string; pages: number; layers: number; brand?: { message: string } }>(await fetch(`${conn.url}/api/files/import-folder`, {
     method: 'POST', headers: headers(conn),
-    body: JSON.stringify({ name: typeof values.name === 'string' ? values.name : folder.name, content: folder.content }),
+    body: JSON.stringify({ name: typeof values.name === 'string' ? values.name : folder.name, content: folder.content, ...(brand ? { brand: { name: brand.name, content: brand.content } } : {}) }),
   }));
   out(`Imported "${created.name}" (${created.id}): ${created.pages} pages, ${created.layers} layers, ${assets.length} assets.`);
+  if (created.brand) out(created.brand.message);
+}
+
+/** `bogen export <file or brand> [<path>] [--no-brand]`: a .bogen file, with the brand the file links to. */
+export async function exportBogenFile(conn: Connection, nameOrId: string, target: string | undefined, values: Values, out: (line: string) => void): Promise<void> {
+  const entry = await findFileOrBrand(conn, nameOrId);
+  const path = resolve(target ?? `${entry.name.replace(/[^\p{L}\p{N}._ -]+/gu, '-').trim() || 'design'}.bogen`);
+  if (!values.force && existsSync(path)) throw new Error(`${path} exists already. Pass --force to replace it.`);
+  const res = await fetch(`${conn.url}/api/files/${entry.id}/download${values['no-brand'] ? '?brand=0' : ''}`, { headers: headers(conn, false) });
+  if (!res.ok) await answer(res);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  await writeFile(path, bytes);
+  const raw = res.headers.get('x-bogen-brand');
+  const brand = raw ? JSON.parse(decodeURIComponent(raw)) as { included: boolean; name?: string; version?: number; why?: string; id: string } : null;
+  out(`Wrote ${path}, ${Math.max(1, Math.round(bytes.length / 1024))} KB.`);
+  if (brand?.included) out(entry.kind === 'brand' ? `The brand "${brand.name}" on its own, version ${brand.version}.` : `With its brand "${brand.name}", version ${brand.version}.`);
+  else if (brand) out(brand.why === 'left out' ? 'Without its brand, as asked.' : `Without its brand: it links to one that is not on this device (${brand.id}).`);
+}
+
+/** `bogen import <file.bogen>`: makes a file of it, and adds the brand it carries unless this device has it. */
+export async function importBogenFile(conn: Connection, path: string, out: (line: string) => void): Promise<void> {
+  const bytes = await readFile(resolve(path));
+  const res = await fetch(`${conn.url}/api/files/import`, {
+    method: 'POST',
+    headers: { ...headers(conn, false), 'Content-Type': 'application/x-bogen', 'X-Bogen-Filename': basename(path).replace(/[^\x20-\x7e]/g, '_') },
+    body: bytes,
+  });
+  const created = await answer<{ id: string; name: string; kind: 'file' | 'brand'; brand?: { message: string } }>(res);
+  out(created.kind === 'brand' ? `Imported the brand "${created.name}" (${created.id}).` : `Imported "${created.name}" (${created.id}).`);
+  if (created.brand) out(created.brand.message);
+}
+
+async function findFileOrBrand(conn: Connection, nameOrId: string): Promise<{ id: string; name: string; kind: 'file' | 'brand' }> {
+  try {
+    return { ...await findFile(conn, nameOrId), kind: 'file' };
+  } catch (e) {
+    const brands = await answer<{ id: string; name: string }[]>(await fetch(`${conn.url}/api/brands`, { headers: headers(conn, false) }));
+    const found = brands.filter((b) => b.id === nameOrId || b.name === nameOrId);
+    if (found.length === 1) return { ...found[0]!, kind: 'brand' };
+    if (found.length > 1) throw new Error(`Several brands are called "${nameOrId}": ${found.map((b) => b.id).join(', ')}. Use an id.`);
+    if (/^Several files/.test((e as Error).message)) throw e;
+    throw new Error(`No file or brand has the id or name "${nameOrId}".`);
+  }
 }
 
 async function assetNames(dir: string): Promise<string[]> {

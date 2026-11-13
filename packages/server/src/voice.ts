@@ -11,8 +11,9 @@ import { findFfmpeg } from './media.ts';
 import { atomicWrite, errorMessage, HttpError } from './util.ts';
 
 /**
- * Voice notes from the phone's comment sheet. The audio comes to this computer over the phone listener, which has
- * already checked the paired phone's token, and stays here: in `$BOGEN_HOME/voice/`, never among the assets, so
+ * Voice notes and dictation, from the phone's comment sheet and from the editor's chat and comment boxes on this
+ * computer. The audio comes from this machine, or over the phone listener, which has already checked the paired
+ * phone's token, and stays here: in `$BOGEN_HOME/voice/`, never among the assets, so
  * that it is neither synced to other devices nor part of a `.bogen` file. If a local speech model is installed it
  * becomes text, and the audio is deleted at once. Nothing here installs or downloads a model, and nothing is sent
  * anywhere. Without a model the recording is kept as a voice note on the comment, until it is removed, its file is
@@ -43,7 +44,7 @@ export function voiceExtension(contentType: string): string | null {
 export interface VoiceEntry { id: string; ext: string; fileId: string; at: number; bytes: number; duration?: number }
 
 export interface Transcriber {
-  kind: 'command' | 'whisper.cpp' | 'faster-whisper';
+  kind: 'command' | 'whisper.cpp' | 'voxtype' | 'faster-whisper';
   /** In words, for the phone. */
   name: string;
   run: (audio: string) => Promise<string>;
@@ -110,6 +111,36 @@ export function whisperModel(env: NodeJS.ProcessEnv = process.env): string | nul
   return null;
 }
 
+/**
+ * A Whisper model Voxtype (Omarchy's dictation, Install > AI > Dictation) has already downloaded, by its name:
+ * `ggml-base.en.bin` is `base.en`. Only files already there are used.
+ */
+export function voxtypeModel(env: NodeJS.ProcessEnv = process.env): string | null {
+  const data = env.XDG_DATA_HOME ?? join(env.HOME ?? homedir(), '.local', 'share');
+  const dir = join(data, 'voxtype', 'models');
+  const rank = (name: string) => ['small', 'base', 'medium', 'tiny', 'large'].findIndex((size) => name.startsWith(size)) + 1 || 9;
+  let names: string[];
+  try {
+    names = readdirSync(dir).map((n) => /^ggml-(.+)\.bin$/.exec(n)?.[1] ?? '').filter((n) => n && !/encoder|for-tests/.test(n));
+  } catch {
+    return null;
+  }
+  names.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  for (const name of names) {
+    try {
+      if (statSync(join(dir, `ggml-${name}.bin`)).size > 1_000_000) return name;
+    } catch {
+      // Gone meanwhile.
+    }
+  }
+  return null;
+}
+
+/** What `voxtype transcribe` prints is its progress first, then the text. */
+export function voxtypeText(out: string): string {
+  return out.split('\n').filter((line) => !/^(Loading audio file|Audio format|Processing \d+ samples)/.test(line.trim())).join(' ');
+}
+
 /** A faster-whisper model already in the Hugging Face cache, by size. Never one that would have to be downloaded. */
 function fasterWhisperModel(env: NodeJS.ProcessEnv): string | null {
   if (env.BOGEN_FASTER_WHISPER_MODEL) return env.BOGEN_FASTER_WHISPER_MODEL;
@@ -130,8 +161,8 @@ const FASTER_WHISPER = [
 
 /**
  * The transcriber this computer has, if any, in this order: `BOGEN_TRANSCRIBER` (a command given the audio's path,
- * which prints the text; `off` turns transcription off), whisper.cpp with a model file, faster-whisper with a
- * cached model. Found by looking, never by installing.
+ * which prints the text; `off` turns transcription off), whisper.cpp with a model file, Voxtype with a Whisper model
+ * it downloaded, faster-whisper with a cached model. Found by looking, never by installing.
  */
 export async function findTranscriber(env: NodeJS.ProcessEnv = process.env): Promise<Transcriber | null> {
   const given = env.BOGEN_TRANSCRIBER?.trim();
@@ -152,6 +183,25 @@ export async function findTranscriber(env: NodeJS.ProcessEnv = process.env): Pro
           const wav = join(dir, 'note.wav');
           await toWav(ffmpeg, audio, wav);
           return await run(whisper, ['-m', model, '-f', wav, '-l', 'auto', '-nt', '-np'], { timeoutMs: TRANSCRIBE_TIMEOUT_MS });
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      },
+    };
+  }
+  // Voxtype, with a Whisper model it already has, run locally whatever its own configuration says (it can also be
+  // set to a remote server or a cloud engine, which Bogen never uses).
+  const voxtype = ffmpeg ? onPath(['voxtype'], env) : null;
+  const voxModel = voxtype ? voxtypeModel(env) : null;
+  if (voxtype && ffmpeg && voxModel) {
+    return {
+      kind: 'voxtype', name: 'Voxtype',
+      run: async (audio) => {
+        const dir = await mkdtemp(join(tmpdir(), 'bogen-voice-'));
+        try {
+          const wav = join(dir, 'note.wav');
+          await toWav(ffmpeg, audio, wav);
+          return voxtypeText(await run(voxtype, ['-q', '--engine', 'whisper', '--whisper-mode', 'local', '--model', voxModel, 'transcribe', wav], { timeoutMs: TRANSCRIBE_TIMEOUT_MS }));
         } finally {
           await rm(dir, { recursive: true, force: true });
         }
@@ -222,16 +272,16 @@ export class VoiceNotes {
     await atomicWrite(join(this.dir, 'index.json'), JSON.stringify({ notes: this.index ?? [] }, null, 1), 0o600);
   }
 
-  /** Looked for again after a minute, so a model installed meanwhile is found without a restart. */
-  transcriber(): Promise<Transcriber | null> {
+  /** Looked for again after a minute, or when asked to, so a model installed meanwhile is found without a restart. */
+  transcriber(fresh = false): Promise<Transcriber | null> {
     const env = this.options.env?.() ?? process.env;
-    if (!this.detected || Date.now() - this.detected.at > DETECT_MS) this.detected = { at: Date.now(), found: findTranscriber(env).catch(() => null) };
+    if (fresh || !this.detected || Date.now() - this.detected.at > DETECT_MS) this.detected = { at: Date.now(), found: findTranscriber(env).catch(() => null) };
     return this.detected.found;
   }
 
-  async status(): Promise<{ transcriber: { kind: string; name: string } | null; device: string; limit: number; maxSeconds: number; retentionDays: number }> {
+  async status(fresh = false): Promise<{ transcriber: { kind: string; name: string } | null; device: string; limit: number; maxSeconds: number; retentionDays: number }> {
     this.startSweeping();
-    const found = await this.transcriber();
+    const found = await this.transcriber(fresh);
     return { transcriber: found ? { kind: found.kind, name: found.name } : null, device: this.options.deviceName(), limit: VOICE_LIMIT, maxSeconds: VOICE_MAX_SECONDS, retentionDays: VOICE_RETENTION_MS / 86_400_000 };
   }
 
@@ -378,7 +428,7 @@ export function voiceNotes(app: { options: { home: string }; storage: { get: (id
 }
 
 /**
- * `GET /api/voice/status`, `POST /api/voice?fileId=&duration=`, `GET|DELETE /api/voice/:name`. Only for the
+ * `GET /api/voice/status[?fresh=1]`, `POST /api/voice?fileId=&duration=`, `GET|DELETE /api/voice/:name`. Only for the
  * owner: this machine, or a phone paired with it. Not on the tailnet listener.
  */
 export async function handleVoiceRoute(app: Parameters<typeof voiceNotes>[0], req: IncomingMessage, res: ServerResponse, url: URL, parts: string[], owner: boolean, send: (res: ServerResponse, status: number, body: unknown) => void): Promise<void> {
@@ -389,7 +439,7 @@ export async function handleVoiceRoute(app: Parameters<typeof voiceNotes>[0], re
   }
   const voice = voiceNotes(app);
   const [, name] = parts;
-  if (name === 'status' && method === 'GET') return send(res, 200, await voice.status());
+  if (name === 'status' && method === 'GET') return send(res, 200, await voice.status(url.searchParams.get('fresh') === '1'));
   if (!name && method === 'POST') {
     const duration = url.searchParams.has('duration') ? Number(url.searchParams.get('duration')) : undefined;
     return send(res, 201, await voice.receive(req, res, url.searchParams.get('fileId') ?? '', duration));

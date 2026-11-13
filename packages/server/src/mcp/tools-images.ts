@@ -1,11 +1,11 @@
 import {
-  aspectRatioOf, CROP_ASPECTS, CROP_ATTR, croppedHeight, cropToAspect, formatCrop, parseCrop, parseImageFilters, withImageFilters,
+  aspectRatioOf, CROP_ASPECTS, CROP_ATTR, croppedHeight, cropToAspect, formatCrop, paletteFromImage, palettesFromSeed, palettesFromSubject, parseCrop, parseImageFilters, withImageFilters,
   type BogenDoc, type BogenNode, type Crop, type CropAspect, type NewNode,
 } from '@bogen/core';
 import { z } from 'zod';
 import { imageSize } from '../image-raster.ts';
 import type { Storage } from '../storage.ts';
-import { MAX_COLORS, MIN_COLORS, VECTORIZE_DETAILS, vectorizeAsset } from '../vectorize.ts';
+import { assetPixels, MAX_COLORS, MIN_COLORS, VECTORIZE_DETAILS, vectorizeAsset } from '../vectorize.ts';
 import { assertUnlocked, fileIdArg, type ToolContext, type ToolDefiner } from './kit.ts';
 
 /** Crop, filters and vectorizing of image layers. The canvas has the same in the Image section of the inspector. */
@@ -85,6 +85,32 @@ export function registerImageTools(define: ToolDefiner): void {
     });
     ctx.touch([node_id]);
     return { id: node_id, crop: whole ? null : value, ...(style.height ? { height: style.height } : {}), ...(natural ? { image: natural } : {}), ...(note ? { note } : {}) };
+  });
+
+  define('palette_suggest', { description: 'Colour palettes with roles, for tokens_set: a ground, a surface, an ink and a muted ink (tinted, never plain grey), two or three supporting colours and an action colour with its text colour, each with its use, the Itten contrast that carries the palette, and the WCAG 2 contrast ratio of every text pair. From subject (words of the brief: palettes named after the materials of a world), seed (one colour: analogous, complementary, split, triad, warm against cold, and tinted neutrals with one colour, all computed in OKLCH), or image (an image layer or bogen-asset src: its dominant colours and accents). Give one or more; dark for a dark ground. Offline and deterministic. Pick one and adapt it to the direction; pass its tokens to tokens_set.', readOnly: true }, {
+    subject: z.string().max(400).optional().describe('Words of the brief, such as "swimming school timetable".'),
+    seed: z.string().max(60).optional().describe('A colour to build around, such as #2f8fa6.'),
+    image: z.string().max(200).optional().describe('An image layer id, or a bogen-asset: src from asset_upload.'),
+    dark: z.boolean().default(false).describe('A dark ground with light ink.'),
+    prefix: z.string().max(20).regex(/^[a-z][a-z0-9-]*-?$|^$/).default('').describe('Put before every token name, such as "brand-".'),
+    file_id: fileIdArg,
+  }, async ({ subject, seed, image, dark, prefix, file_id }, ctx) => {
+    if (!subject && !seed && !image) throw new Error('Give subject, seed or image (or several).');
+    ctx.session.paletteSuggested = true;
+    const palettes = [];
+    if (image) {
+      let src = image;
+      if (!image.startsWith('bogen-asset:')) {
+        const node = (await ctx.room(file_id)).doc.getNode(image);
+        if (!node?.src) throw new Error('That layer has no image. Pass an image layer id or a bogen-asset: src.');
+        src = node.src;
+      }
+      const px = await assetPixels(ctx.app.storage, ctx.app.renderer, src);
+      palettes.push(...paletteFromImage(px.data, { dark, prefix }));
+    }
+    if (seed) palettes.push(...palettesFromSeed(seed, { dark, prefix }));
+    if (subject) palettes.push(...palettesFromSubject(subject, { prefix }));
+    return { palettes: palettes.slice(0, 10), next: 'Choose one for the direction and say why; change a colour where the subject asks for it, keep the text pairs at 4.5:1, and pass its tokens to tokens_set. Use supporting colours for areas, illustration and categories, the action colour for what needs action.' };
   });
 
   define('image_filter', { description: 'Adjust an image (or any layer) with CSS filters: brightness, contrast and saturation in percent (100 is unchanged), blur in px and grayscale in percent (0 is unchanged). They are the layer\'s own filter style, so every export keeps them, and other filter functions already there (such as drop-shadow) stay. null or the neutral value takes one away; reset takes all five away.' }, {

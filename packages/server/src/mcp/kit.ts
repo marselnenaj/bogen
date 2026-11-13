@@ -24,6 +24,8 @@ export interface Session {
    * own branch tools or file_open. A write after someone else checked out another branch is refused, never mixed in.
    */
   branchPins?: Map<string, string>;
+  /** Whether this session asked palette_suggest, so that tokens_set can point to it once colours are set without it. */
+  paletteSuggested?: boolean;
 }
 
 /**
@@ -63,7 +65,7 @@ const CRITIQUE_WRITES = new Set(['comment_add', 'comment_reply']);
  * Their `openWorldHint` says so, and an agent in the browser (WebMCP) asks the person before each call of one.
  */
 export const OPEN_WORLD_TOOLS = new Set([
-  'asset_upload', 'brand_extract', 'code_project_link', 'data_source_refresh', 'data_source_set', 'drift_check', 'export_file',
+  'asset_upload', 'brand_export', 'brand_extract', 'code_project_link', 'data_source_refresh', 'data_source_set', 'drift_check', 'export_file', 'file_export', 'file_import',
   'figma_import', 'layer_repeat', 'omarchy_theme_export', 'omarchy_theme_install', 'page_capture', 'publish_prepare', 'replay_export',
   'share_prepare', 'site_capture', 'site_restyle', 'storybook_import', 'tokens_repo_diff', 'tokens_repo_pull', 'tomacco_compare', 'tomacco_import', 'tomacco_status',
 ]);
