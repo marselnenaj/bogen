@@ -1,5 +1,5 @@
 import {
-  autoGrid, blockKey, WEB_PAGE_ATTR, designReview, fluidScale, focusOrder, fontAudit, importHtml, keyframesName, mediaToContainerPlan, resolveInstanceRefs, setTextStyle, stressCopy,
+  absoluteUrl, autoGrid, blockKey, languageDirection, normalizeLanguageTag, WEB_META_ATTRS, WEB_PAGE_ATTR, webPageMeta, designReview, fluidScale, focusOrder, fontAudit, importHtml, keyframesName, mediaToContainerPlan, resolveInstanceRefs, setTextStyle, stressCopy,
   type BogenDoc, type NewNode,
 } from '@bogen/core';
 import { z } from 'zod';
@@ -35,20 +35,57 @@ export function registerWebTools(define: ToolDefiner): void {
     sections: SECTIONS.map((s) => ({ kind: s.kind, name: s.name, description: s.description, facts: s.facts })),
   }));
 
-  define('web_page_set', { description: 'Say whether an artboard is a web page. A web page\'s export (HTML file, React, Tailwind) is as wide as the window, up to the artboard\'s width, with min-height instead of a fixed height, so its grids and queries meet real widths. Every other artboard, such as an app screen, a poster or a slide, exports at the size it was designed. section_insert marks its artboard by itself.' }, {
+  const seo = (max: number) => z.string().max(max).nullable().optional();
+  define('web_page_set', { description: 'Say whether an artboard is a web page, and what search engines and link previews read about it. A web page\'s export (HTML file, React, Tailwind) is as wide as the window, up to the artboard\'s width, with min-height instead of a fixed height, so its grids and queries meet real widths. Every other artboard, such as an app screen, a poster or a slide, exports at the size it was designed. section_insert marks its artboard by itself. The SEO fields go into the head of a published page: title (else the artboard\'s name), description, lang (and dir from it; else the file\'s design language), canonical (the full address it will have, which also makes the social picture\'s address full), og_image (a src from asset_upload, 1200x630 px, or an https address) and favicon (a src from asset_upload, square PNG or SVG). null clears a field. publish_check says what is still missing.' }, {
     node_id: z.string().describe('The artboard.'),
     web: z.boolean().default(true),
+    title: seo(200),
+    description: seo(400),
+    lang: seo(20),
+    canonical: seo(500),
+    og_image: seo(300),
+    favicon: seo(300),
     file_id: fileIdArg,
-  }, async ({ node_id, web, file_id }, ctx) => {
+  }, async ({ node_id, web, title, description, lang, canonical, og_image, favicon, file_id }, ctx) => {
     const room = await ctx.room(file_id);
     const node = room.doc.getNode(node_id);
     if (!node?.artboard) throw new Error(`${node_id} is not an artboard.`);
     assertUnlocked(room.doc, [node_id]);
-    const attrs = { ...(node.attrs ?? {}) };
+    const attrs: Record<string, string> = { ...(node.attrs ?? {}) };
     if (web) attrs[WEB_PAGE_ATTR] = 'page';
     else delete attrs[WEB_PAGE_ATTR];
+    const put = (key: string, value: string | null | undefined) => {
+      if (value === undefined) return;
+      if (value === null || !value.trim()) delete attrs[key];
+      else attrs[key] = value.trim();
+    };
+    put(WEB_META_ATTRS.title, title);
+    put(WEB_META_ATTRS.description, description?.replace(/\s+/g, ' '));
+    if (lang !== undefined) {
+      const tag = lang === null || !lang.trim() ? null : normalizeLanguageTag(lang);
+      if (lang && !tag) throw new Error(`"${lang}" is not a language tag such as en, de-AT or pt-BR.`);
+      put('lang', tag);
+      if (tag) attrs.dir = languageDirection(tag);
+      else delete attrs.dir;
+    }
+    if (canonical) {
+      const url = absoluteUrl(canonical);
+      if (!url) throw new Error('canonical is the full address the page will have, such as https://example.com/ or https://example.com/pricing.html.');
+      canonical = url;
+    }
+    put(WEB_META_ATTRS.canonical, canonical);
+    const picture = (value: string | null | undefined, what: string, remote: boolean) => {
+      if (!value) return value;
+      const v = value.trim();
+      if (/^bogen-asset:[\w.-]+$/.test(v)) return v;
+      if (remote && /^https:\/\//i.test(v) && absoluteUrl(v)) return v;
+      throw new Error(`${what} is a src from asset_upload, such as bogen-asset:abc.png${remote ? ', or an https address' : ''}.`);
+    };
+    put(WEB_META_ATTRS.ogImage, picture(og_image, 'og_image', true));
+    put(WEB_META_ATTRS.favicon, picture(favicon, 'favicon', false));
     ctx.write(room, () => room.doc.updateFields(node_id, { attrs }));
-    return { node_id, web };
+    const meta = webPageMeta({ name: node.name, attrs });
+    return { node_id, web, ...meta, next: 'publish_check shows what a published page still lacks.' };
   });
 
   define('section_insert', { description: 'Insert one website section from section_list into an artboard or frame, as editable layers. Its colours, type and space use tokens with fallbacks (--ink, --paper, --muted, --line, --accent, --type-*, --space-*), so it takes on the file\'s tokens; run type_scale_set first for the fluid scale. Its copy is a worked example: replace every layer listed in facts with the person\'s real words before calling the page done. Ids it carries (#top, #work, #studio, #questions, site-menu) are what its links and buttons point at: keep them unique on the page.' }, {

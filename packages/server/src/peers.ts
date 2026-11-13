@@ -262,7 +262,7 @@ export function isPeerPath(pathname: string): boolean {
 
 /** On the tailnet listener these answer nothing, token or not: they configure this machine or run programs on it. */
 export function isLocalOnlyPath(pathname: string): boolean {
-  return /^\/api\/(peers|phone|inbox|runs|races|run-settings|comments|voice|tomacco|omarchy|live|notifications|brands|libraries|kits|code|agents\/steps|publish|shares)(\/|$)/.test(pathname) || /^\/(live-)?mcp(\/|$)/.test(pathname) || /^\/api\/files\/[^/]+\/(away|conflicts|libraries|proposals|drift|restyle|catch-up|screen-previews)(\/|$)/.test(pathname) || /^\/api\/files\/[^/]+\/brand(\/|$)/.test(pathname);
+  return /^\/api\/(peers|phone|inbox|runs|races|run-settings|comments|voice|tomacco|omarchy|live|notifications|brands|libraries|kits|code|agents\/steps|publish|shares|clients)(\/|$)/.test(pathname) || /^\/(live-)?mcp(\/|$)/.test(pathname) || /^\/api\/files\/[^/]+\/(away|conflicts|libraries|proposals|drift|restyle|catch-up|screen-previews)(\/|$)/.test(pathname) || /^\/api\/files\/[^/]+\/brand(\/|$)/.test(pathname);
 }
 
 // ---------------------------------------------------------------- one peer

@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
+import { EXTENSION_ROUTE, isExtensionOrigin } from '../extension-origin.ts';
 
 export const COOKIE = 'bogen_token';
 
@@ -61,8 +62,14 @@ export function checkRequest(req: IncomingMessage, options: GuardOptions, url: U
     const portOk = options.dev || host.port === String(options.port());
     if (!LOOPBACK.has(host.name) || !portOk) return { ok: false, status: 403, message: 'This Host is not allowed.' };
   }
-  if (req.headers['sec-fetch-site'] === 'cross-site') return { ok: false, status: 403, message: 'Cross-site requests are not allowed.' };
   const origin = req.headers.origin;
+  // A browser extension is a foreign Origin. It gets the few routes made for it, on a server on this computer only,
+  // and those check its pairing token themselves (extension.ts). Every other route still refuses it below.
+  if (isExtensionOrigin(origin) && EXTENSION_ROUTE.test(url.pathname)) {
+    if (options.token || options.strict || options.phone) return { ok: false, status: 403, message: 'Browser extensions pair only with Bogen on this computer.' };
+    return { ok: true };
+  }
+  if (req.headers['sec-fetch-site'] === 'cross-site') return { ok: false, status: 403, message: 'Cross-site requests are not allowed.' };
   if (origin !== undefined && options.deniedOrigin?.(origin)) return { ok: false, status: 403, message: 'This Origin is not allowed.' };
   // Another port on this machine counts as the same site to a browser, and a page there sends no Origin on a simple GET.
   // It could not read the answer, but nothing of ours has a reason to answer it either.

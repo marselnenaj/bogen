@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "bogen": {
+      "type": "stdio",
+      "command": "bogen",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}

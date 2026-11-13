@@ -47,3 +47,12 @@ button.publish-item:hover { background: var(--hover); }
 .publish-tag { padding: 0 6px; border-radius: var(--radius); background: color-mix(in oklab, #f2a33a 18%, var(--ui-bg)); font-size: 11.5px; line-height: 18px; }
 /* A client's words, as text: wrapped, never parsed. */
 .publish-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+/* The check before publishing: it warns, it never blocks. */
+.publish-checks { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+.publish-check-head { line-height: 1.4; }
+.publish-finding { display: grid; grid-template-columns: 64px 1fr; gap: 8px; line-height: 1.35; }
+.publish-finding-level { font-weight: 600; }
+.publish-finding.is-error .publish-finding-level { color: var(--ui-danger); }
+.publish-finding.is-warning .publish-finding-level { color: color-mix(in oklab, #b07800 80%, var(--ui-fg)); }
+.publish-finding-text { min-width: 0; overflow-wrap: anywhere; }
+.publish-finding-more { align-self: flex-start; }

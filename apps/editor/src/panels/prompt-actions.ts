@@ -4,13 +4,15 @@ import { agentApi, type LaneChoice } from '../lib/agent-api.ts';
 import { session } from '../doc/session.ts';
 import { placeImage } from '../ops/clipboard.ts';
 import { editor } from '../state/store.ts';
-import { onServerEvent, type ServerEvent } from '../lib/events.ts';
+import { onReachableChange, onServerEvent, serverReachable, type ServerEvent } from '../lib/events.ts';
 import { t } from '../i18n/store.ts';
 import type { RunLanguageChoice } from '@bogen/core';
-import type { PromptMessage } from '../state/store.ts';
+import type { PromptMessage, PromptState } from '../state/store.ts';
 import { appendReply, rememberChatOpen } from './chat-state.ts';
 
 const RUNNER_KEY = 'bogen-prompt-runner';
+/** A newer chat selection or refresh supersedes a reply still on the wire. */
+let chatRead = 0;
 
 /** Asks the chat panel to take the focus, once it is there. */
 export const CHAT_FOCUS_EVENT = 'bogen-chat-focus';
@@ -44,22 +46,26 @@ export function startPrompt(): void {
 export interface SentWith { context?: string[]; runnerLabel?: string; review?: string }
 
 /** `device`: a paired device to run it on, which has the CLI. Its changes come back by sync. */
-export async function sendPrompt(text: string, runner: string, options: { model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; device?: string; language?: RunLanguageChoice; images?: string[] } = {}, sent: SentWith = {}): Promise<void> {
+export async function sendPrompt(text: string, runner: string, options: { model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; device?: string; language?: RunLanguageChoice; images?: string[]; discipline?: string; mentions?: { kind: 'layer' | 'component' | 'token'; id: string }[]; variation?: { count: number; range: string; vary: string[] } } = {}, sent: SentWith = {}): Promise<void> {
   const state = editor();
   const fileId = state.fileId;
   const pageId = state.pageId;
-  if (!fileId || !pageId) return;
+  if (!fileId || !pageId || state.prompt.running || state.prompt.restoring) return;
+  const conversationId = conversationFor(fileId);
+  ++chatRead;
   const nodeIds = state.prompt.nodeIds;
   const mine: PromptMessage = { role: 'user', text, at: Date.now(), runner: sent.runnerLabel ?? runner, ...(sent.review ? { review: sent.review } : {}), ...(sent.context?.length ? { context: sent.context } : {}), ...(options.images?.length ? { images: options.images } : {}) };
   state.set({ prompt: { ...state.prompt, running: true, messages: [...state.prompt.messages, mine], runId: null, startedAt: Date.now() } });
   try {
     // The server puts the earlier turns of this chat ahead of the message, so a follow-up knows what came before.
-    const { runId } = await api.startRun({ fileId, pageId, nodeIds, prompt: text, runner, conversationId: conversationFor(fileId), ...options });
+    const { runId } = await api.startRun({ fileId, pageId, nodeIds, prompt: text, runner, conversationId, ...options });
     const s = editor();
+    if (s.fileId !== fileId || conversationFor(fileId) !== conversationId || !s.prompt.running || !s.prompt.messages.includes(mine)) return;
     s.set({ prompt: { ...s.prompt, runId } });
   } catch (err) {
     const s = editor();
-    s.set({ prompt: { ...s.prompt, running: false, startedAt: undefined, messages: [...s.prompt.messages, { role: 'error', text: (err as Error).message }] } });
+    if (s.fileId !== fileId || conversationFor(fileId) !== conversationId || !s.prompt.running || !s.prompt.messages.includes(mine)) return;
+    s.set({ prompt: { ...s.prompt, running: false, runId: null, startedAt: undefined, messages: [...s.prompt.messages, { role: 'error', text: (err as Error).message }] } });
   }
 }
 
@@ -67,8 +73,9 @@ export async function sendPrompt(text: string, runner: string, options: { model?
 export function newChat(): void {
   const state = editor();
   if (!state.fileId || state.prompt.running) return;
+  ++chatRead;
   startConversation(state.fileId);
-  state.set({ prompt: { ...state.prompt, messages: [], runId: null } });
+  state.set({ prompt: { ...state.prompt, messages: [], runId: null, restoring: false } });
 }
 
 /** A chat as the server kept it, as messages for the panel. */
@@ -81,14 +88,38 @@ export function turnMessages(turns: ConversationTurn[]): PromptMessage[] {
   ]);
 }
 
-/** After a reload, the panel shows the chat the file is in, as the server kept it. */
-export async function restoreChat(): Promise<void> {
-  const fileId = editor().fileId;
-  if (!fileId || editor().prompt.messages.length) return;
-  const turns = await conversationTurns(fileId, conversationFor(fileId));
+/** A restored running turn remains attached to its stream and Stop button, with its original start time. */
+function restoredChat(turns: ConversationTurn[], current?: Pick<PromptState, 'runId' | 'messages'>) {
+  const last = turns.at(-1);
+  const active = last?.status === 'running' ? last : undefined;
+  let messages = turnMessages(turns);
+  if (last && current?.runId === last.runId) {
+    // The server keeps the latest reply block, while this tab may have all the earlier ones and tool steps.
+    // On reconnect retain those, then add only the words and terminal notice missed while disconnected.
+    messages = [...current.messages];
+    if (last.reply && !messages.some((m) => m.role === 'agent' && m.runId === last.runId && m.text.includes(last.reply!))) messages = appendReply(messages, last.runId, last.reply);
+    for (const notice of turnMessages([last]).filter((m) => m.role === 'note' || m.role === 'error')) {
+      if (!messages.some((m) => m.role === notice.role && m.text === notice.text && m.runId === last.runId)) messages.push({ ...notice, runId: last.runId });
+    }
+  }
+  return { messages, running: !!active, runId: active?.runId ?? null, startedAt: active?.at };
+}
+
+/** After a reload or reconnect, recover both the transcript and the run that is still answering it. */
+export async function restoreChat({ refresh = false }: { refresh?: boolean } = {}): Promise<void> {
+  const before = editor();
+  const fileId = before.fileId;
+  if (!fileId || (!refresh && before.prompt.messages.length) || (before.prompt.running && !before.prompt.runId)) return;
+  const id = conversationFor(fileId);
+  const messages = before.prompt.messages;
+  const read = ++chatRead;
+  before.set({ prompt: { ...before.prompt, restoring: true } });
+  const turns = await conversationTurns(fileId, id);
   const state = editor();
-  if (!turns.length || state.fileId !== fileId || state.prompt.messages.length || state.prompt.running) return;
-  state.set({ prompt: { ...state.prompt, messages: turnMessages(turns) } });
+  // A snapshot must not replace newer streamed progress, a new send, or another file/chat.
+  if (read !== chatRead || state.fileId !== fileId || conversationFor(fileId) !== id) return;
+  const recovered = turns.length && state.prompt.messages === messages ? restoredChat(turns, state.prompt) : {};
+  state.set({ prompt: { ...state.prompt, ...recovered, restoring: false } });
 }
 
 /** Goes back to an earlier chat of this file: it shows, and the next message continues it. */
@@ -96,22 +127,24 @@ export async function openChat(id: string): Promise<void> {
   const state = editor();
   const fileId = state.fileId;
   if (!fileId || state.prompt.running) return;
+  const read = ++chatRead;
   continueConversation(fileId, id);
+  state.set({ prompt: { ...state.prompt, restoring: true } });
   const turns = await conversationTurns(fileId, id);
   const now = editor();
-  if (now.fileId !== fileId || now.prompt.running) return;
-  now.set({ prompt: { ...now.prompt, messages: turnMessages(turns), runId: null } });
+  if (read !== chatRead || now.fileId !== fileId || conversationFor(fileId) !== id || now.prompt.running) return;
+  now.set({ prompt: { ...now.prompt, ...restoredChat(turns), restoring: false } });
 }
 
 /** Several runs on one request, each in its own copy next to the layer. They are followed on the canvas, not here. */
-export async function startRace(text: string, nodeId: string, lanes: LaneChoice[], language?: RunLanguageChoice): Promise<void> {
+export async function startRace(text: string, nodeId: string, lanes: LaneChoice[], language?: RunLanguageChoice, variation: { range?: string; vary?: string[]; split?: boolean } = {}): Promise<void> {
   const state = editor();
   const { fileId, pageId } = state;
   if (!fileId || !pageId) return;
   const messages = [...state.prompt.messages, { role: 'user' as const, text, at: Date.now(), review: 'directions' }];
   state.set({ prompt: { ...state.prompt, messages, runId: null } });
   try {
-    const race = await agentApi.startRace({ fileId, pageId, nodeId, prompt: text, lanes, who: session().user.name, ...(language ? { language } : {}) });
+    const race = await agentApi.startRace({ fileId, pageId, nodeId, prompt: text, lanes, who: session().user.name, ...(language ? { language } : {}), ...variation });
     const s = editor();
     s.set({ prompt: { ...s.prompt, messages: [...s.prompt.messages, { role: 'agent', text: t.n(race.lanes.length, '{count} run started, each in its own copy: {agents}. Follow them on the canvas, and accept the one you like.', '{count} runs started, each in its own copy: {agents}. Follow them on the canvas, and accept the one you like.', { agents: race.lanes.map((l) => l.agent).join(', ') }) }] } });
   } catch (err) {
@@ -181,7 +214,12 @@ function onAgent(e: Extract<ServerEvent, { t: 'agent' }>): void {
   const { prompt } = state;
   if (e.fileId !== state.fileId) return;
   if (prompt.runId && e.runId !== prompt.runId) return;
-  if (!prompt.running && !prompt.runId) return;
+  if (!prompt.running && !prompt.runId) {
+    // This run may have started before the editor reopened. Its final event also supersedes a snapshot
+    // fetched just before it finished, so that an old "running" response cannot leave Stop stuck on screen.
+    if (prompt.open && (prompt.restoring || !prompt.messages.length) && e.kind !== 'tool') void restoreChat({ refresh: true });
+    return;
+  }
   const messages = [...prompt.messages];
   if (e.kind === 'text') {
     // Each block of words a CLI writes arrives whole, and is a paragraph of the reply.
@@ -228,7 +266,10 @@ function onCommentRun(e: Extract<ServerEvent, { t: 'comment-run' }>): void {
 
 /** Feeds run progress and activity into the store for the file that is open. */
 export function startAgentEvents(): () => void {
-  return onServerEvent((e) => {
+  const offReachable = onReachableChange(() => {
+    if (serverReachable() && editor().prompt.open) void restoreChat({ refresh: true });
+  });
+  const offEvents = onServerEvent((e) => {
     if (e.t === 'agent') onAgent(e);
     if (e.t === 'comment-run') onCommentRun(e);
     if (e.t === 'activity') {
@@ -241,4 +282,5 @@ export function startAgentEvents(): () => void {
       });
     }
   });
+  return () => { offReachable(); offEvents(); };
 }

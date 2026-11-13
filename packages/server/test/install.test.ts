@@ -33,9 +33,22 @@ describe('install, with no client CLIs on PATH', () => {
     expect(readFileSync(join(home, '.codex', 'config.toml'), 'utf8')).toContain('[mcp_servers.bogen]');
     expect(read('.cursor', 'mcp.json').mcpServers.bogen.command).toBe('/usr/bin/bogen');
     expect(read('.config', 'Code', 'User', 'mcp.json').servers.bogen.type).toBe('stdio');
-    expect(read('.config', 'opencode', 'opencode.json').mcp.bogen.command).toEqual(['/usr/bin/bogen', 'mcp']);
-    expect(read('.gemini', 'settings.json').mcpServers.bogen.args).toEqual(['mcp']);
+    expect(read('.config', 'opencode', 'opencode.json').mcp.bogen.command).toEqual(['/usr/bin/bogen', 'mcp', '--tools', 'compact']);
+    expect(read('.gemini', 'settings.json').mcpServers.bogen.args).toEqual(['mcp', '--tools', 'grouped']);
     expect(read('.config', 'zed', 'settings.json').context_servers.bogen.command).toBe('/usr/bin/bogen');
+    // Claude Code and Codex load tool schemas on demand, so they get the whole list; the others a shorter one.
+    expect(readFileSync(join(home, '.codex', 'config.toml'), 'utf8')).toContain('args = ["mcp"]');
+    expect(read('.cursor', 'mcp.json').mcpServers.bogen.args).toEqual(['mcp', '--tools', 'grouped']);
+    expect(results.find((r) => r.client === 'vscode')!.how).toMatch(/with the grouped tool list/);
+  });
+
+  it('writes the tool list it is told, for every client alike', async () => {
+    await install(['claude-code', 'cursor'], { command, tools: 'compact' });
+    const read = (...parts: string[]) => JSON.parse(readFileSync(join(home, ...parts), 'utf8'));
+    expect(read('.claude.json').mcpServers.bogen.args).toEqual(['mcp', '--tools', 'compact']);
+    expect(read('.cursor', 'mcp.json').mcpServers.bogen.args).toEqual(['mcp', '--tools', 'compact']);
+    await install(['cursor'], { command, tools: 'full' });
+    expect(read('.cursor', 'mcp.json').mcpServers.bogen.args).toEqual(['mcp']);
   });
 
   it('preserves what is already there, and is repeatable', async () => {

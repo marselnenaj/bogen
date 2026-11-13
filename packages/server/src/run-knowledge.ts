@@ -5,6 +5,8 @@ import { DISCIPLINE_IDS, inferDiscipline } from './design-knowledge/index.ts';
 
 /** Read cheap scope metadata, never the whole canvas, to choose one relevant skill. */
 export function runDiscipline(req: RunRequest, doc: BogenDoc, isBrand = false): string {
+  // A skill the person chose with / in the chat comes before anything read from the words.
+  if (req.discipline && DISCIPLINE_IDS.includes(req.discipline)) return req.discipline;
   const asked = inferDiscipline(req.title || req.prompt);
   if (asked !== 'foundations') return asked;
   const profiles = new Set<string>();

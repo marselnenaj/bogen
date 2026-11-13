@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bogen capture</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<main class="popup" data-state="loading">
+  <header class="head">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1 5h14" stroke="currentColor" stroke-width="1.5"/></svg>
+    <strong>Bogen capture</strong>
+    <span class="grow"></span>
+    <span class="status" id="status" role="status"></span>
+  </header>
+
+  <section data-show="unpaired">
+    <p class="dim">Send this tab to Bogen on this computer as editable layers. Pair once, then approve it in the Bogen editor.</p>
+    <label class="field">
+      <span class="dim small">Bogen address</span>
+      <input id="base" type="url" spellcheck="false" autocomplete="off" value="http://127.0.0.1:29990">
+    </label>
+    <button type="button" class="primary" id="pair">Pair with Bogen</button>
+    <p class="dim small">Only talks to this computer. Nothing is sent anywhere else.</p>
+  </section>
+
+  <section data-show="waiting">
+    <p>Approve this extension in the Bogen editor. It shows the same code.</p>
+    <div class="code" id="code" aria-label="Pairing code"></div>
+    <p class="dim small" id="waiting-hint"></p>
+    <button type="button" class="quiet" id="cancel">Cancel</button>
+  </section>
+
+  <section data-show="ready">
+    <div class="tab"><span class="tab-title" id="tab-title"></span><span class="tab-url" id="tab-url"></span></div>
+    <button type="button" class="primary" id="capture-page">Capture page</button>
+    <div class="pair-row">
+      <button type="button" class="quiet" id="capture-region"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4"/></svg>Region</button>
+      <button type="button" class="quiet" id="capture-element"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4 4 7 17 2-7 7-2z"/></svg>Element</button>
+    </div>
+    <label class="check"><input type="checkbox" id="reference" checked> Also keep as a reference</label>
+    <p class="notice" id="notice">For structure and inspiration. You need the right to use any content you keep, such as text, images or logos.</p>
+    <button type="button" class="link" id="unpair">Forget this pairing</button>
+  </section>
+
+  <section data-show="busy">
+    <p>Capturing this tab and sending it to Bogen.</p>
+  </section>
+
+  <section data-show="sent">
+    <strong class="big">Captured to Bogen</strong>
+    <p class="dim" id="sent-summary"></p>
+    <div class="pair-row">
+      <button type="button" class="primary" id="open">Open in Bogen</button>
+      <button type="button" class="quiet" id="again">Capture again</button>
+    </div>
+  </section>
+
+  <p class="error" id="error" role="alert" hidden></p>
+</main>
+<script src="shared.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

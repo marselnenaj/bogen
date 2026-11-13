@@ -1,0 +1,58 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/schemas/mcpb-manifest-v0.3.schema.json",
+  "manifest_version": "0.3",
+  "name": "bogen",
+  "display_name": "Bogen",
+  "version": "0.3.0",
+  "description": "A local design canvas where every layer is real HTML and CSS, drawn by Claude.",
+  "long_description": "Bogen is an open source design canvas on your own computer. Claude draws, checks and comments on screens through its tools while you watch and edit in the browser. This extension starts the bogen command that the install script puts in ~/.local/bin, which talks to the Bogen server on this computer only. Install Bogen first: curl -fsSL https://bogen.dev/install.sh | bash",
+  "author": {
+    "name": "Marsel Nenaj",
+    "url": "https://github.com/marselnenaj/bogen"
+  },
+  "homepage": "https://bogen.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marselnenaj/bogen.git"
+  },
+  "documentation": "https://bogen.dev/docs/agents",
+  "support": "https://github.com/marselnenaj/bogen/issues",
+  "icon": "icon.png",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "design",
+    "canvas",
+    "html",
+    "css",
+    "mcp",
+    "local-first"
+  ],
+  "server": {
+    "type": "binary",
+    "entry_point": "bogen",
+    "mcp_config": {
+      "command": "${HOME}/.local/bin/bogen",
+      "args": [
+        "mcp",
+        "--tools",
+        "${user_config.tools}"
+      ],
+      "env": {}
+    }
+  },
+  "user_config": {
+    "tools": {
+      "type": "string",
+      "title": "Tool list",
+      "description": "full lists every tool with its whole schema; compact one sentence each; grouped one tool per area. Every tool stays callable in each.",
+      "default": "full",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "linux"
+    ]
+  }
+}

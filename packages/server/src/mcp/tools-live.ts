@@ -21,7 +21,13 @@ async function publishFocus(ctx: ToolContext, args: { node_ids?: string[]; page_
   room.agentFocus(ctx.agent, { id: newId(), pageId, nodeIds: ids, ...how, ...(args.note ? { note: args.note } : {}), at: Date.now() });
   ctx.touch(ids);
   const people = [...new Set(room.humans().map((p) => p.name))];
-  return { shown_to: people, ...(people.length ? {} : { note: NOBODY }) };
+  const link = editorLink(ctx.app.localUrl(), room.id, pageId, ids);
+  return { shown_to: people, link, ...(people.length ? {} : { note: `${NOBODY} Give the person the link instead: it opens the editor with these layers selected and in view.` }) };
+}
+
+/** An address that opens the editor on a page with layers selected and in view, for an agent to give a person. */
+export function editorLink(base: string, fileId: string, pageId: string, ids: string[]): string {
+  return `${base}/#/file/${fileId}?page=${encodeURIComponent(pageId)}${ids.length ? `&select=${ids.map(encodeURIComponent).join(',')}` : ''}`;
 }
 
 export function registerLiveTools(define: ToolDefiner): void {
@@ -59,7 +65,7 @@ Each event says who caused it in source (person, peer for another device, agent,
     file_id: fileIdArg,
   }, (args, ctx) => publishFocus(ctx, args, { select: true, view: false }));
 
-  define('view_focus', { description: 'Bring layers or a page into view in the editor of whoever has this file open, to show a person what you mean or what you just finished. Use it sparingly: at the end of a piece of work, or to answer "where is it". It never interrupts: if the person is dragging or typing, it waits until they are done, and they can turn this off. Returns who it was shown to, which is empty if nobody has the file open.', readOnly: true }, {
+  define('view_focus', { description: 'Bring layers or a page into view in the editor of whoever has this file open, to show a person what you mean or what you just finished. Use it sparingly: at the end of a piece of work, or to answer "where is it". It never interrupts: if the person is dragging or typing, it waits until they are done, and they can turn this off. Returns who it was shown to, which is empty if nobody has the file open, and link: an address that opens the editor with these layers selected and in view, to give the person.', readOnly: true }, {
     node_ids: z.array(z.string()).max(200).optional().describe('The layers to show. Leave out to go to a page.'),
     page_id: z.string().optional().describe('The page to show, if no node_ids are given.'),
     select: z.boolean().default(false).describe('Also select the layers.'),

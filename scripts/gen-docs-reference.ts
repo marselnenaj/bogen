@@ -33,7 +33,7 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Layers and HTML',
     intro: 'Write HTML onto the canvas and change layers one property at a time.',
-    tools: ['artboard_create', 'html_write', 'layer_style', 'layer_text', 'text_replace', 'layer_rename', 'layers_rename', 'layer_move', 'layer_duplicate', 'layer_delete', 'layer_set_flags', 'layer_attrs', 'keyframes_get', 'keyframes_set', 'asset_upload', 'batch'],
+    tools: ['artboard_create', 'html_write', 'layer_style', 'layer_text', 'text_replace', 'layer_rename', 'layers_rename', 'layer_move', 'layer_duplicate', 'layer_delete', 'layer_set_flags', 'layer_attrs', 'keyframes_get', 'keyframes_set', 'asset_upload', 'batch', 'script_run'],
   },
   {
     title: 'Images',
@@ -53,7 +53,7 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Tokens, theme modes and text styles',
     intro: 'The design system of a file: CSS variables, their values per mode, and named type styles.',
-    tools: ['tokens_get', 'tokens_set', 'palette_suggest', 'tokens_delete', 'tokens_from_css', 'tokens_export', 'modes_list', 'mode_create', 'mode_delete', 'mode_set', 'text_styles_list', 'text_style_set', 'text_style_apply', 'text_style_delete', 'design_system_css'],
+    tools: ['tokens_get', 'tokens_set', 'palette_suggest', 'tokens_delete', 'tokens_rename', 'tokens_from_css', 'tokens_export', 'design_md_import', 'modes_list', 'mode_create', 'mode_delete', 'mode_set', 'text_styles_list', 'text_style_set', 'text_style_apply', 'text_style_delete', 'design_system_css'],
   },
   {
     title: 'Fonts and icons',
@@ -78,7 +78,7 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Code components',
     intro: 'React components from a project folder on this device, rendered by their own code, its Storybook stories, and its tokens next to the file\'s.',
-    tools: ['code_project_link', 'code_components_list', 'code_component_insert', 'code_component_update', 'storybook_import', 'tokens_repo_diff', 'tokens_repo_pull'],
+    tools: ['code_project_link', 'code_components_list', 'code_component_insert', 'code_component_update', 'storybook_import', 'tokens_repo_diff', 'tokens_repo_pull', 'repo_canvas_open'],
   },
   {
     title: 'Brands',
@@ -118,17 +118,17 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Publishing and review links',
     intro: 'Versions of a design as a static site, and review links for clients. An agent prepares and asks; the owner publishes in the editor.',
-    tools: ['publish_prepare', 'publish_list', 'share_prepare', 'share_list'],
+    tools: ['publish_check', 'publish_prepare', 'publish_list', 'share_prepare', 'share_list'],
   },
   {
     title: 'Capture and import',
-    intro: 'Live pages and whole sites as editable layers, a page redrawn in a brand, files from Figma, and app screens from Tomacco.',
-    tools: ['page_capture', 'site_capture', 'site_capture_status', 'site_restyle', 'interaction_rules', 'fonts_captured', 'figma_import', 'tomacco_import', 'tomacco_status'],
+    intro: 'Live pages and whole sites as editable layers, a page redrawn in a brand, files from Figma, app screens from Tomacco, and the person\'s own reference board.',
+    tools: ['page_capture', 'site_capture', 'site_capture_status', 'site_restyle', 'interaction_rules', 'fonts_captured', 'reference_search', 'reference_add', 'figma_import', 'pdf_import', 'diagram_insert', 'tomacco_import', 'tomacco_status'],
   },
   {
     title: 'History',
     intro: 'The timeline of changes, commits, branches, versions, and a film of how a page was built.',
-    tools: ['change_list', 'change_revert', 'commit_create', 'commit_list', 'commit_diff', 'commit_restore', 'branch_create', 'branch_merge', 'version_save', 'version_list', 'version_restore', 'replay_export'],
+    tools: ['change_list', 'change_revert', 'commit_create', 'commit_list', 'commit_diff', 'commit_restore', 'branch_create', 'branch_merge', 'version_save', 'version_list', 'version_restore', 'replay_export', 'trace_get'],
   },
   {
     title: 'Working next to a person',
@@ -138,7 +138,12 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Branches and revisions',
     intro: 'Branches are versions of the whole design inside the same file (tokens, records, components, layers), never files of their own; an agent starts and works in them, the person merges or discards them. Revisions redo artboards as a named draft next to the original instead of a new page: a commit first, the run held to the copies, and accepting keeps the original layers\' ids and edits made meanwhile. A run asked to redo gets one or the other before it starts: a theme gets a branch.',
-    tools: ['design_branch_list', 'design_branch_create', 'design_branch_switch', 'revision_start', 'revision_list', 'revision_accept', 'revision_discard'],
+    tools: ['design_branch_list', 'design_branch_compare', 'design_branch_create', 'design_branch_switch', 'revision_start', 'revision_list', 'revision_accept', 'revision_discard'],
+  },
+  {
+    title: 'Translation',
+    intro: 'Language versions that follow their original, with a translation memory per file: your agent translates only what is new or changed, and Bogen fills in the rest. See [Screens in another language](../agents.md#screens-in-another-language).',
+    tools: ['translation_status', 'translation_apply', 'translation_rules_set'],
   },
 ];
 
@@ -244,7 +249,7 @@ async function main(): Promise<void> {
     const md: string[] = [];
     md.push('# MCP tools', '');
     md.push(`Generated by \`scripts/gen-docs-reference.ts\` from what a running server lists. Do not edit by hand: run \`npx tsx scripts/gen-docs-reference.ts\` again after a change to the tools.`, '');
-    md.push(`The server offers ${tools.length} tools, ${resourceTemplates.length} resource templates and ${prompts.length} prompts. Your agent reaches them through \`bogen mcp\` (stdio) or \`http://127.0.0.1:29990/mcp\` (Streamable HTTP); see [Agents](../agents.md).`, '');
+    md.push(`The server offers ${tools.length} tools, ${resourceTemplates.length} resource templates and ${prompts.length} prompts. Your agent reaches them through \`bogen mcp\` (stdio) or \`http://127.0.0.1:29990/mcp\` (Streamable HTTP); see [Agents](../agents.md). This page is the full list; \`compact\` and \`grouped\` list the same tools shorter, with a \`schema\` tool for any tool's whole schema: see [A shorter tool list](../agents.md#a-shorter-tool-list).`, '');
     md.push('Most tools take `file_id` and `page_id` as optional arguments. Left out, `file_id` means the file last opened in this session, then the file the person has open; `page_id` means the page last used in this session, then the page the person is on, then the first page.', '');
     md.push('Read only tools change nothing. Every other tool call is one undo step for its agent, which `agent_undo` can take back. A tool that reaches past the file, to the network, a folder or program on this computer, or another person, says so with `openWorldHint`. The most used tools list an output schema, and return their result as `structuredContent` too.', '');
 

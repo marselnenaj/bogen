@@ -7,7 +7,7 @@ import { designBranches } from '../lib/design-branches-api.ts';
 import { history, type BranchRow, type ChangeRow, type CommitDiff, type CommitRow, type HistoryRow, type RevertPlanAnswer } from '../lib/history-api.ts';
 import { editor, useEditor } from '../state/store.ts';
 import { IconButton, Empty } from '../ui/controls.tsx';
-import { setStageView, useCommitFocus, useStageView } from './history-state.ts';
+import { setStageView, showCompare, useCommitFocus, useStageView } from './history-state.ts';
 import { openPullRequest } from './PullRequestDialog.tsx';
 import { useLinkedProject } from '../lib/code-api.ts';
 import '../styles/transfer.css';
@@ -342,13 +342,7 @@ export function HistoryPanel() {
 
   const showPage = async (pageId: string, pageName: string) => {
     if (!fileId || !compare) return;
-    const base = { kind: 'compare' as const, from: compare.from, to: compare.to, fromLabel: compare.fromLabel, toLabel: compare.toLabel, pageId, pageName };
-    setStageView({ ...base, visual: null });
-    try {
-      setStageView({ ...base, visual: await history.render(fileId, compare.from, compare.to, pageId) });
-    } catch (e) {
-      setStageView({ ...base, visual: null, error: (e as Error).message });
-    }
+    await showCompare(fileId, { from: compare.from, to: compare.to, fromLabel: compare.fromLabel, toLabel: compare.toLabel, pageId, pageName });
   };
 
   const toggleRun = (run: string) => {

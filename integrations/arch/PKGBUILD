@@ -2,7 +2,7 @@
 # Built from the npm tarball that scripts/release-npm.mjs packs. scripts/release.mjs fills in pkgver and
 # sha256sums for the released tarball (release/v<version>/PKGBUILD, or here with --update-pkgbuild).
 pkgname=bogen-design
-pkgver=0.2.0
+pkgver=0.3.0
 pkgrel=1
 pkgdesc='Open source HTML/CSS design canvas for your own coding agent, over MCP'
 # npm installs native helpers such as esbuild for the build host.

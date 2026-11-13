@@ -1,0 +1,42 @@
+/* The browser extension's pairing dialog and Settings rows, and the reference board. Designed on the
+   "Browser capture" page of the Bogen Brand System file. */
+.dialog-scrim.extension-scrim { z-index: 90; place-items: center; padding: 16px; }
+.dialog-scrim.extension-scrim > .dialog.extension-approve { width: min(420px, calc(100 * var(--ui-vw) - 32px)); display: flex; flex-direction: column; gap: 14px; padding: 20px; background: var(--ui-bg-2); border: 1px solid var(--ui-border); font-size: 13px; line-height: 1.45; }
+.extension-approve h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.extension-approve p { margin: 0; }
+.extension-dim { color: var(--ui-fg-2); }
+.extension-code { display: flex; align-items: center; justify-content: center; height: 56px; background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 4px; font: 24px ui-monospace, Menlo, monospace; letter-spacing: .08em; }
+.extension-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 12px; }
+.extension-facts dt { color: var(--ui-fg-2); }
+.extension-facts dd { margin: 0; min-width: 0; }
+.extension-origin { font-family: ui-monospace, Menlo, monospace; word-break: break-all; }
+.extension-error { color: var(--ui-danger); font-size: 12px; }
+.extension-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.extension-section { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; }
+.extension-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--ui-bg-2); border: 1px solid var(--ui-border); border-radius: 6px; }
+.extension-row-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.extension-row-text strong { font-weight: 600; }
+.btn.extension-revoke { color: var(--ui-danger); }
+
+.references { display: flex; flex-direction: column; gap: 12px; }
+.references-head { display: flex; align-items: flex-start; gap: 16px; }
+.references-head .settings-hint { flex: 1; margin: 0; }
+.references-search { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; background: var(--ui-bg-2); border: 1px solid var(--ui-border); border-radius: 4px; color: var(--ui-fg-2); }
+.references-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--ui-fg); font: inherit; }
+.references-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.reference-card { display: flex; flex-direction: column; min-width: 0; background: var(--ui-bg-2); border: 1px solid var(--ui-border); border-radius: 6px; overflow: hidden; }
+.reference-picture { height: 120px; background: var(--ui-bg-3); }
+.reference-picture img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.reference-text { display: flex; flex-direction: column; gap: 6px; padding: 10px; min-width: 0; }
+.reference-title-row { display: flex; align-items: flex-start; gap: 6px; }
+.reference-title-row strong { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.reference-remove { all: unset; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 4px; color: var(--ui-fg-2); cursor: pointer; }
+.reference-remove:hover, .reference-remove:focus-visible { background: var(--ui-bg-3); color: var(--ui-fg); }
+.reference-palette { display: flex; gap: 3px; }
+.reference-palette span { width: 18px; height: 12px; box-shadow: inset 0 0 0 1px rgb(127 127 127 / 25%); }
+.reference-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.reference-tag { all: unset; padding: 0 6px; background: var(--ui-bg-3); border-radius: 4px; font-size: 12px; cursor: pointer; }
+.reference-tag:focus-visible { outline: 2px solid var(--ui-accent); }
+.reference-tag-add { color: var(--ui-fg-2); }
+.reference-tag-input { width: 90px; height: 18px; padding: 0 4px; background: var(--ui-bg); color: var(--ui-fg); border: 1px solid var(--ui-border); border-radius: 4px; font-size: 12px; }

@@ -26,6 +26,8 @@ import { CHAT_FOCUS_EVENT, newChat, openChat, rebuildStoredImage, restoreChat, s
 import { screenRedoPrompt } from './redo-screen.ts';
 import { RunChoice, runnerName, useRunnerCatalogs, useRunSettings } from './RunChoice.tsx';
 import { RunResult } from './RunResult.tsx';
+import { ChatBranch, ChatPicker, loadSkills, pickerItems, SkillSheet, TraceLink, VariationControls, type ChatSkill, type PickerItem } from './ChatExtras.tsx';
+import { keptMentions, loadVariation, pickerQuery, proposalVariation, raceVariation, saveVariation, type Mention, type VariationChoice } from './chat-extras-state.ts';
 
 /**
  * The chat with an agent, one per file, docked beside the canvas (or over it in a narrow window). It runs the
@@ -222,6 +224,16 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
   // The design content language for this one request, over the file's. Choosing it starts nothing; Send does.
   const [language, setLanguage] = useState<RunLanguageChoice>({});
   const [dragging, setDragging] = useState(false);
+  // How far Propose and Directions go, and what they vary; a skill chosen with /, and what was mentioned with @.
+  const [variation, setVariationState] = useState<VariationChoice>(loadVariation);
+  const [skill, setSkill] = useState<ChatSkill | null>(null);
+  const [mentions, setMentions] = useState<Mention[]>([]);
+  const [caret, setCaret] = useState(0);
+  const [pickerIndex, setPickerIndex] = useState(0);
+  const [pickerClosed, setPickerClosed] = useState<number | null>(null);
+  const [skills, setSkills] = useState<ChatSkill[]>([]);
+  const [skillSheet, setSkillSheet] = useState<{ nodeId: string; name: string } | null>(null);
+  const [closed, setClosed] = useState<{ branch?: string; into?: string } | undefined>(undefined);
   const fileLanguage = useFileLanguage();
   const brandVoice = useBrandVoice(prompt.open ? fileId : null);
   const settings = useRunSettings();
@@ -238,6 +250,10 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
   const setReview = (value: Review) => {
     setReviewState(value);
     remember(REVIEW_KEY, value);
+  };
+  const setVariation = (value: VariationChoice) => {
+    setVariationState(value);
+    saveVariation(value);
   };
   const focusInput = useCallback(() => requestAnimationFrame(() => inputRef.current?.focus()), []);
   const voice = useVoice({ use: 'chat', onText: (words) => setText((current) => joinWords(current, words)), onDone: focusInput });
@@ -294,7 +310,20 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
     setText('');
     setImages([]);
     setView('chat');
+    setSkill(null);
+    setMentions([]);
   }, [fileId]);
+
+  // Whether this chat is over: its branch in the repository was merged.
+  const conversationId = fileId ? conversationFor(fileId) : '';
+  useEffect(() => {
+    if (!prompt.open || !fileId || !conversationId) return;
+    let live = true;
+    const load = () => void api.conversation(fileId, conversationId).then((c) => { if (live) setClosed((c as { closed?: { branch?: string; into?: string } }).closed); }, () => {});
+    load();
+    const off = onServerEvent((e) => { if (e.t === 'conversation' && e.fileId === fileId) load(); });
+    return () => { live = false; off(); };
+  }, [prompt.open, fileId, conversationId, prompt.messages.length]);
 
   const available = runners?.filter((r) => r.available) ?? [];
   const elsewhere = remoteOptions(remote);
@@ -318,11 +347,39 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
   const chosenLanguage = language.tag || language.mode ? language : undefined;
   const names = target.map((id) => ({ id, name: snap.nodes.get(id)?.name ?? id }));
   const runnerLabel = runnerName(runnerId || runner);
+  // The / and @ menu, for the word the caret is at.
+  const asked = pickerQuery(text, caret);
+  const artboard = raceTarget && snap.nodes.get(raceTarget)?.artboard ? { id: raceTarget, name: snap.nodes.get(raceTarget)!.name } : null;
+  const picking = asked && pickerClosed !== asked.start ? pickerItems(asked.trigger, asked.query, skills, artboard) : null;
+  useEffect(() => {
+    if (asked?.trigger === '/' && !skills.length) void loadSkills().then(setSkills);
+  }, [asked?.trigger, skills.length]);
+  useEffect(() => { setPickerIndex(0); }, [asked?.trigger, asked?.query]);
+  const pick = (item: PickerItem) => {
+    if (!asked) return;
+    const before = text.slice(0, asked.start);
+    const after = text.slice(caret);
+    if (item.kind === 'skill') {
+      setSkill({ id: item.id, name: item.label, purpose: item.detail, customized: item.custom });
+      setText(`${before}${after.replace(/^\s+/, '')}`);
+    } else if (item.kind === 'save-skill') {
+      setText(`${before}${after.replace(/^\s+/, '')}`);
+      setSkillSheet({ nodeId: item.id, name: artboard?.name ?? item.label });
+    } else {
+      const word = item.label;
+      setMentions((list) => [...list.filter((m) => !(m.kind === item.kind && m.id === item.id)), { kind: item.kind, id: item.id, name: word }]);
+      const next = `${before}@${word} ${after.replace(/^\s+/, '')}`;
+      setText(next);
+      // The caret goes after the mention, unless the person typed on meanwhile.
+      requestAnimationFrame(() => { const at = before.length + word.length + 2; if (inputRef.current?.value !== next) return; inputRef.current.setSelectionRange(at, at); setCaret(at); });
+    }
+    focusInput();
+  };
 
   const submit = (override?: string) => {
     const typed = override ?? text;
     const v = prompt.redo ? screenRedoPrompt(typed) : typed.trim() || (review === 'critique' ? 'Critique this.' : images.length ? 'Look at the image.' : '');
-    if (!v || !runner || prompt.running || uploading) return;
+    if (!v || !runner || prompt.running || prompt.restoring || uploading) return;
     if (prompt.redo) {
       const doc = session().doc;
       if (!doc.getNode(prompt.redo.nodeId)?.artboard || doc.pageOf(prompt.redo.nodeId) !== editor().pageId) {
@@ -340,9 +397,12 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
       if (override === undefined) setText('');
       setLastReview(review);
       setLanguage({});
-      void startRace(v, raceTarget, lanes, chosenLanguage);
+      void startRace(v, raceTarget, lanes, chosenLanguage, raceVariation(variation));
       return;
     }
+    const said = keptMentions(v, mentions);
+    const varied = review === 'proposal' ? proposalVariation(variation) : undefined;
+    setMentions([]);
     if (override === undefined) setText('');
     const sentImages = images;
     setImages([]);
@@ -363,7 +423,8 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
       ...(review !== 'direct' ? { review } : languageMode === 'add' ? {} : { intent }),
       ...(deviceId ? { device: deviceId } : {}), ...(chosenLanguage ? { language: chosenLanguage } : {}),
       ...(sentImages.length ? { images: sentImages } : {}),
-    }, { context: names.map((n) => n.name), runnerLabel: deviceName ? t('{runner} on {device}', { runner: runnerLabel, device: deviceName }) : runnerId, review });
+      ...(skill ? { discipline: skill.id } : {}), ...(said.length ? { mentions: said.map(({ kind, id }) => ({ kind, id })) } : {}), ...(varied ? { variation: varied } : {}),
+    }, { context: [...(skill ? [t('Skill: {name}', { name: skill.name })] : []), ...names.map((n) => n.name)], runnerLabel: deviceName ? t('{runner} on {device}', { runner: runnerLabel, device: deviceName }) : runnerId, review });
   };
 
   const attach = async (files: File[]) => {
@@ -405,18 +466,18 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
   const cost = review === 'directions'
     ? ` · ${t.n(lanes.length, '{count} run, each on your own plan', '{count} runs, each on your own plan')}`
     : deviceId ? ` · ${deviceName ? t('runs on {device}, its plan, and comes back by sync', { device: deviceName }) : t('runs on another device, its plan, and comes back by sync')}` : '';
-  const modeLine = review === 'proposal' ? t('Changes go into a copy next to {target}. You accept or discard it.', { target: label })
+  const modeLine = review === 'proposal' ? (proposalVariation(variation)?.count ?? 1) > 1 ? t.n(variation.count, 'Changes go into {count} copy next to {target}. You accept or discard it.', 'Changes go into {count} copies next to {target}. You accept or discard them.', { target: label }) : t('Changes go into a copy next to {target}. You accept or discard it.', { target: label })
     : review === 'critique' ? t('Notes as comments on {target}. Nothing changes.', { target: label })
     : review === 'directions' ? t('Several runs, each in its own copy of {target}, side by side.', { target: label })
     : null;
   const showNotes = lastReview === 'critique' && !prompt.running && prompt.messages.length > 0;
-  const placeholder = none
+  const placeholder = prompt.restoring ? t('Loading') : none
     ? t('Install {claude} or {codex} to use this', { claude: 'claude', codex: 'codex' })
     : prompt.running ? t('{agent} is working. Stop it, or wait for its answer.', { agent: runnerLabel })
     : review === 'critique'
       ? target.length ? t('What to look at in {target}, or just {key}', { target: label, key: 'Enter' }) : t('What to look at in this page, or just {key}', { key: 'Enter' })
       : target.length ? t('Ask about {target}', { target: label }) : t('Ask about this page');
-  const canSend = Boolean(text.trim() || images.length || review === 'critique' || prompt.redo) && Boolean(runner) && !uploading;
+  const canSend = Boolean(text.trim() || images.length || review === 'critique' || prompt.redo) && Boolean(runner) && !uploading && !prompt.restoring;
   const title = prompt.messages.find((m) => m.role === 'user')?.text.replace(/\s+/g, ' ').trim();
 
   return (
@@ -425,6 +486,7 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
       data-ui
       data-testid="prompt"
       aria-label={t('Chat with your agent')}
+      aria-busy={prompt.restoring || prompt.running}
       onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setDragging(true); } }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false); }}
       onDrop={(e) => {
@@ -459,10 +521,19 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
           />
           {showNotes ? <div className="prompt-notes"><button type="button" className="run-link" onClick={() => editor().set({ rightTab: 'comments' })} data-testid="prompt-show-notes">{t('Show the notes')}</button></div> : null}
           <footer className="chat-composer">
+            {fileId ? <ChatBranch fileId={fileId} closed={closed} onNewChat={() => { newChat(); setClosed(undefined); focusInput(); }} /> : null}
             {review === 'directions' && runners?.length ? <RaceLanes lanes={lanes} onChange={setLanes} runners={runners} catalogs={settings?.catalogs} /> : null}
+            {(review === 'proposal' || review === 'directions') && !prompt.redo ? <VariationControls mode={review} value={variation} onChange={setVariation} runs={lanes.length} sections={raceTarget ? snap.children(raceTarget).map((id) => snap.nodes.get(id)).filter((n) => n && !n.hidden).map((n) => n!.name) : []} /> : null}
             <div className={`chat-box${voice.phase === 'recording' ? ' is-recording' : ''}`}>
-              {names.length || images.length || uploading ? (
+              {picking ? <ChatPicker items={picking} active={Math.min(pickerIndex, Math.max(0, picking.length - 1))} onPick={pick} onHover={setPickerIndex} /> : null}
+              {names.length || images.length || uploading || skill ? (
                 <div className="chat-context" data-testid="chat-context">
+                  {skill ? (
+                    <span className="chat-chip is-skill" data-testid="chat-skill-chip">
+                      <span dir="auto">{t('Skill: {name}', { name: skill.name })}</span>
+                      <button type="button" title={t('Leave the skill out')} aria-label={t('Leave the skill out')} onClick={() => setSkill(null)}><X size={10} /></button>
+                    </span>
+                  ) : null}
                   <ContextChips names={names} />
                   {images.map((src) => (
                     <span key={src} className="chat-image" data-testid="chat-image">
@@ -488,8 +559,11 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
                 disabled={none}
                 onChange={(e) => {
                   setText(e.target.value);
+                  setCaret(e.target.selectionStart ?? e.target.value.length);
+                  setPickerClosed(null);
                   if (!e.target.value.trim()) setIntentOverride(null);
                 }}
+                onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
                 onPaste={(e) => {
                   const files = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'));
                   if (!files.length || none) return;
@@ -498,6 +572,25 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
                 }}
                 onKeyDown={(e) => {
                   e.stopPropagation();
+                  // The / and @ menu takes the arrows, Enter, Tab and Esc while it is open.
+                  if (picking && asked) {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      const n = picking.length || 1;
+                      setPickerIndex((i) => (i + (e.key === 'ArrowDown' ? 1 : n - 1)) % n);
+                      return;
+                    }
+                    if ((e.key === 'Enter' || e.key === 'Tab') && !e.shiftKey && picking.length) {
+                      e.preventDefault();
+                      pick(picking[Math.min(pickerIndex, picking.length - 1)]!);
+                      return;
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setPickerClosed(asked.start);
+                      return;
+                    }
+                  }
                   if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     submit();
@@ -572,6 +665,7 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
         </>
       )}
       {dragging ? <div className="chat-drop" aria-hidden="true"><Images size={16} /> {t('Drop an image to send it with the message')}</div> : null}
+      {skillSheet && fileId ? <SkillSheet fileId={fileId} nodeId={skillSheet.nodeId} name={skillSheet.name} {...(skill ? { initial: skill.id } : {})} onClose={() => { setSkillSheet(null); void loadSkills(true).then(setSkills); focusInput(); }} /> : null}
     </section>
   );
 }
@@ -775,6 +869,7 @@ function Turn({ turn, last, running, liveRunId, fileId, onRetry, onEdit }: { tur
           {done && (words || last) && !turn.error ? (
             <div className="chat-actions">
               {words ? <IconButton icon={copied ? <Check size={13} /> : <Copy size={13} />} title={copied ? t('Copied') : t('Copy the answer')} onClick={copy} testId="chat-copy" /> : null}
+              {turn.runId ? <TraceLink runId={turn.runId} /> : null}
               {last && turn.user ? <IconButton icon={<RotateCcw size={13} />} title={t('Ask again')} onClick={onRetry} testId="chat-ask-again" /> : null}
               {last && turn.user ? <IconButton icon={<Pencil size={13} />} title={t('Edit your message')} onClick={onEdit} testId="chat-edit" /> : null}
             </div>

@@ -37,3 +37,37 @@ export async function agentsCheckCommand(options: { runners?: RunnerId[]; model?
   const cases = check.runners.flatMap((r) => r.cases);
   return check.status === 'done' && cases.length > 0 && cases.every((c) => c.ok) && check.runners.every((r) => !r.error) ? 0 : 1;
 }
+
+/**
+ * `bogen agents trace <run id> [--output <file>]`: the trace of one run from the running server, as JSON, for a bug
+ * report. Without --output it goes to stdout. It reads what the server kept; it starts nothing.
+ */
+export async function agentsTraceCommand(conn: { url: string; token?: string }, runId: string | undefined, output: string | undefined, write: (text: string) => void): Promise<number> {
+  if (!runId || !/^[\w-]{1,40}$/.test(runId)) {
+    write('Usage: bogen agents trace <run id> [--output <file>]\nThe run id is in the chat (Trace) and in the Agents tab.\n');
+    return 2;
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${conn.url}/api/runs/trace/${runId}`, { headers: conn.token ? { Authorization: `Bearer ${conn.token}` } : {} });
+  } catch {
+    write(`bogen: nothing answers on ${conn.url}. Start Bogen first.\n`);
+    return 1;
+  }
+  const body = await res.text();
+  if (!res.ok) {
+    let message = body;
+    try { message = (JSON.parse(body) as { error?: string }).error ?? body; } catch { /* plain text */ }
+    write(`bogen: ${message}\n`);
+    return 1;
+  }
+  const text = `${JSON.stringify(JSON.parse(body), null, 2)}\n`;
+  if (!output) {
+    write(text);
+    return 0;
+  }
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(output, text, { mode: 0o600 });
+  write(`Wrote the trace of run ${runId} to ${output}. Read it before you share it.\n`);
+  return 0;
+}

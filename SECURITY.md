@@ -20,7 +20,8 @@ Only the latest release gets fixes. Fixes land on `main` first.
   review link that works when it should not, or a client's comment that reaches an agent or the file on its own.
 - The MCP server: a tool that reaches further than its description, or a way for document content to start a process.
 - The sanitising of imported and synced content: HTML, CSS, SVG, layer rules, keyframes, brand data.
-- The sandbox of code components, live site mode's file tools, and the address guard of Capture and data fetches.
+- The sandbox of code components, the sandbox of `script_run`, live site mode's file tools, and the address guard of
+  Capture and data fetches.
 - The handling of secrets: device and phone tokens, image provider keys, the Figma token.
 - `bogen install`, the Omarchy installer, and the npm package.
 - Releases and updates: a way to make `bogen verify` or `bogen update apply` accept a file the release key did not
@@ -298,6 +299,16 @@ Linking a project folder (`code_project_link`, the Assets panel) lets Bogen read
 with esbuild. The project's code runs only in a frame served with a CSP sandbox: `sandbox allow-scripts`, so an opaque
 origin, `default-src 'none'`, only its own inline script by hash, and no network. Tailwind 4 CSS is compiled; the
 project's Tailwind JS plugins and configs are skipped, because they would run the project's code outside the sandbox.
+
+## Agent scripts
+
+`script_run` runs JavaScript an agent wrote in QuickJS compiled to WebAssembly, in a worker thread made for that one
+run, with no environment of the server. The script has no Node, browser, network, file, module or timer access; its
+one way out is a fixed set of document calls that cross as JSON text, are parsed with prototype keys dropped, and are
+checked like tool calls on a private copy of the one file it was run on. Time, memory, stack, calls, new layers,
+written data and output are capped, and on any limit or error nothing is applied; memory and stack are watched
+from outside the engine, so catching an out of memory or stack overflow error inside the script does not help it. Locked layers, revisions and a
+brand's strict mode hold. The threat model is in [Agents](docs/guide/agents.md#what-a-script-can-and-cannot-do).
 
 ## Live site mode
 

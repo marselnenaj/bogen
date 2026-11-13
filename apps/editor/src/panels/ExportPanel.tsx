@@ -26,6 +26,7 @@ const FORMATS = [
   { value: 'avif', label: 'AVIF' },
   { value: 'svg', label: 'SVG' },
   { value: 'pdf', label: 'PDF' },
+  { value: 'pptx', label: 'PowerPoint' },
   { value: 'html', label: 'HTML' },
   { value: 'prototype', label: msg('Clickable prototype') },
   { value: 'mp4', label: msg('MP4 video') },
@@ -42,9 +43,9 @@ const SETS: { label: string; rows: Row[] }[] = [
   { label: msg('Vector'), rows: [{ format: 'svg' }, { format: 'pdf' }] },
 ];
 
-const PRESET_FORMATS = FORMATS.filter((f) => f.value !== 'mp4' && f.value !== 'webm' && f.value !== 'prototype');
+const PRESET_FORMATS = FORMATS.filter((f) => f.value !== 'mp4' && f.value !== 'webm' && f.value !== 'prototype' && f.value !== 'pptx');
 
-interface Report { fallbacks?: { id: string; name: string; reason: string }[]; native?: number; encoder?: string; codec?: string; frames?: number; width?: number; height?: number; notes?: string[] }
+interface Report { fallbacks?: { id: string; name: string; reason: string }[]; pictures?: { id: string; name: string; reason: string }[]; native?: number; encoder?: string; codec?: string; frames?: number; width?: number; height?: number; notes?: string[] }
 
 async function postExport(path: string, data: unknown): Promise<{ blob: Blob; report: Report | null }> {
   const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -91,8 +92,14 @@ function ReportView({ report }: { report: Report }) {
   const t = useT();
   return (
     <div className="export-report" data-testid="export-report">
-      {report.native !== undefined ? <div>{t.n(report.native, '{count} native vector elements.', '{count} native vector elements.')}</div> : null}
-      {report.fallbacks?.length ? (
+      {report.pictures ? (
+        <>
+          <div>{t.n(report.native ?? 0, '{count} native element: text boxes, pictures and shapes.', '{count} native elements: text boxes, pictures and shapes.')}</div>
+          {report.pictures.length ? <div>{t.n(report.pictures.length, '{count} layer became a picture:', '{count} layers became pictures:')}</div> : null}
+          {report.pictures.slice(0, 20).map((f, i) => <div key={i} className="export-fallback" data-testid="export-picture">{f.name}: {f.reason}</div>)}
+        </>
+      ) : report.native !== undefined ? <div>{t.n(report.native, '{count} native vector elements.', '{count} native vector elements.')}</div> : null}
+      {report.pictures ? null : report.fallbacks?.length ? (
         <>
           <div>{t.n(report.fallbacks.length, '{count} layer stayed HTML in a foreignObject, which vector tools do not show:', '{count} layers stayed HTML in a foreignObject, which vector tools do not show:')}</div>
           {report.fallbacks.slice(0, 20).map((f, i) => <div key={i} className="export-fallback" data-testid="export-fallback">{f.name}: {f.reason}</div>)}
@@ -133,7 +140,9 @@ export function ExportPanel() {
     setError(null);
     setReport(null);
     try {
-      const { blob, report: answer } = await postExport('/api/export', { fileId, nodeIds: ids, format, ...(scalable ? { scale } : {}), ...(video ? { duration, fps } : {}) });
+      // A deck without a selection is the page's boards in reading order, which the server works out.
+      const deck = format === 'pptx' && !selection.length;
+      const { blob, report: answer } = await postExport('/api/export', { fileId, nodeIds: deck ? [] : ids, ...(deck ? { pageId } : {}), format, ...(scalable ? { scale } : {}), ...(video ? { duration, fps } : {}) });
       downloadBlob(blob, `${name}${scalable && scale !== 1 ? `@${scale}x` : ''}.${format === 'prototype' ? 'html' : format}`);
       setReport(answer);
     } catch (err) {
@@ -186,7 +195,7 @@ export function ExportPanel() {
         </div>
       ) : null}
       <button type="button" className="btn btn-primary" disabled={busy || !ids.length} onClick={() => void run()} data-testid="export-run">
-        <Download size={14} /> {busy ? (video ? t('Rendering frames') : t('Exporting')) : format === 'prototype' ? t('Export prototype') : t('Export {format}', { format: format.toUpperCase() })}
+        <Download size={14} /> {busy ? (video ? t('Rendering frames') : t('Exporting')) : format === 'prototype' ? t('Export prototype') : t('Export {format}', { format: format === 'pptx' ? 'PowerPoint' : format.toUpperCase() })}
       </button>
       {format === 'prototype' ? <div className="hint">{t('One HTML file: these artboards and every one their links reach, with variables and interactions, and one small script that asks no network.')}</div> : null}
       {video ? <div className="hint">{t('Frame by frame, with CSS animations and shaders at exact times. A GIF or embedded page runs on its own clock.')}</div> : null}

@@ -29,3 +29,10 @@
 .content-lang-quick:hover { background: var(--hover); }
 .content-lang-file { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--ui-border); }
 .prompt-language-note { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; padding: 0 6px 2px; font-size: 12px; color: var(--ui-fg-2); }
+
+/* Language versions and the translation memory. */
+.content-lang-versions { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--ui-border); }
+.content-lang-version { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
+.content-lang-version-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.content-lang-status { height: 24px; background: var(--ui-bg-2); color: inherit; border: 0; border-radius: var(--radius); font: inherit; font-size: 12px; }
+.content-lang-keep { display: flex; flex-direction: column; gap: 4px; }

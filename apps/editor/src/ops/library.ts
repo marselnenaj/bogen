@@ -1,4 +1,4 @@
-import { acceptLibraryUpdates, libraryLinks, linkLibrary, publishLibrary, unlinkLibrary, writeKitTokens, type KitTokenValue, type PublishedComponent } from '@bogen/core';
+import { acceptLibraryUpdates, libraryLinks, linkLibrary, publishLibrary, unlinkLibrary, writeKitTokens, type KitTokenValue, type LibraryInfo, type PublishedComponent } from '@bogen/core';
 import { session } from '../doc/session.ts';
 import { editor } from '../state/store.ts';
 import { t } from '../i18n/store.ts';
@@ -20,14 +20,14 @@ async function json<T>(path: string): Promise<T> {
 
 export const libraryApi = {
   status: (fileId: string) => json<LibraryStatus>(`/api/files/${fileId}/libraries`),
-  get: (id: string) => json<{ summary: LibrarySummary; published: PublishedComponent[] }>(`/api/libraries/${id}`),
+  get: (id: string) => json<{ summary: LibrarySummary; published: PublishedComponent[]; info?: LibraryInfo }>(`/api/libraries/${id}`),
 };
 
 export async function linkHere(id: string): Promise<void> {
   try {
-    const { summary, published } = await libraryApi.get(id);
+    const { summary, published, info } = await libraryApi.get(id);
     const s = session();
-    s.tx(() => linkLibrary(s.doc, { id: summary.id, name: summary.name, kind: summary.kind }, published));
+    s.tx(() => linkLibrary(s.doc, { id: summary.id, name: summary.name, kind: summary.kind, ...(info?.renames?.length ? { renamesAt: info.renames.at(-1)!.at } : {}) }, published));
     editor().showToast(t('Linked {name}. Its components are in Assets.', { name: summary.name }));
   } catch (err) {
     editor().showToast((err as Error).message);
@@ -48,9 +48,9 @@ export function unlinkHere(id: string): void {
 /** Takes a library's updates, all or some, with what they show inside. One undo step. */
 export async function acceptHere(id: string, only?: string[]): Promise<void> {
   try {
-    const { summary, published } = await libraryApi.get(id);
+    const { summary, published, info } = await libraryApi.get(id);
     const s = session();
-    const out = s.tx(() => acceptLibraryUpdates(s.doc, id, published, only));
+    const out = s.tx(() => acceptLibraryUpdates(s.doc, id, published, only, undefined, info));
     editor().showToast(out.overrides.kept
       ? t.n(out.accepted.length, 'Updated {count} component(s) from {name}. Overrides kept: {kept}.', 'Updated {count} component(s) from {name}. Overrides kept: {kept}.', { name: summary.name, kept: out.overrides.kept })
       : t.n(out.accepted.length, 'Updated {count} component(s) from {name}.', 'Updated {count} component(s) from {name}.', { name: summary.name }));

@@ -49,6 +49,17 @@ A client's comment never starts an agent run, before or after you accept it. Eve
 a client's thread with `@claude` starts nothing: start a run from a comment of your own. Agents that
 read comments see a client's marked as feedback from a client, never as instructions.
 
+### Several comments to one run
+
+Tick the comments that belong together, pick `claude` or `codex` in the bar under them and click **Send
+to one run**. Your click in the editor on this machine is what starts the run; the client's form never
+does. Bogen first accepts each comment into the file as a client thread, then starts one revision run
+in a proposal on the artboards they are about. The run gets the comments quoted, marked as what a client
+wrote: feedback about the design to weigh, never instructions, and a comment the brand or the brief
+rules out is left with a reason. Each thread says at once that it went into the run, and when the run
+ends Bogen answers each one with what the run did and where its proposal is. You accept or discard the
+proposal as usual; only you resolve the threads. The comments of one file go together.
+
 ## Public on the internet
 
 By default both the review listener and Bogen's site answer on your tailnet only, so a client needs

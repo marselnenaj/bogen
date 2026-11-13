@@ -2,7 +2,7 @@ import type { Page } from 'puppeteer-core';
 import { nameSpecTree, RESET_CSS, sanitizeSvgMarkup, type BogenDoc, type NewNode, type StoredFontFace, type TokenKind } from '@bogen/core';
 import { fetchPublic, isPublicUrl } from './net-guard.ts';
 import { findBrowser, sharesLocalPorts, TILE, type Renderer } from './render.ts';
-import { fontFetcher, scanArgs, SHEET_SCAN, storeFonts, watchResources, type FontReport, type ScannedRule, type SheetScan } from './capture-sheets.ts';
+import { fontFetcher, scanArgs, SHEET_SCAN, storeFonts, watchResources, type FontReport, type PageResources, type ScannedRule, type SheetScan } from './capture-sheets.ts';
 import type { Storage } from './storage.ts';
 
 /**
@@ -46,8 +46,10 @@ export interface CaptureResult {
   stats: { layers: number; images: number; failedImages: string[] };
 }
 
-// A string, not a function: it must reach the browser exactly as written, untouched by the bundler.
-const CAPTURE = String.raw`(args) => {
+// A string, not a function: it must reach the browser exactly as written, untouched by the bundler. The browser
+// extension (integrations/browser-extension) runs this same text in the person's own tab, so it leaves the page as it
+// found it, and it can start at one element (`args.root`, a selector) instead of the body.
+export const CAPTURE = String.raw`(args) => {
   const SKIP = /^(-webkit-(?!font-smoothing|text-stroke|text-fill-color|background-clip|line-clamp|box-orient)|animation|transition|view-|timeline|scroll-|anchor|position-|interpolate|overscroll|perspective-origin|block-size|inline-size|min-block|min-inline|max-block|max-inline|margin-block|margin-inline|padding-block|padding-inline|border-block|border-inline|inset-|cursor|pointer-events|user-select|caret|forced-color|color-scheme|text-size-adjust|white-space-collapse|text-wrap-mode|font-optical-sizing|tab-size|orphans|widows|will-change|contain|content-visibility|field-sizing|app-region|shape-|counter-|quotes|ruby-|image-|speak|math-|dynamic-range|hyphenate-|buffered|stop-|flood-|lighting-|marker|paint-order|vector-effect|r$|rx$|ry$|cx$|cy$|d$|x$|y$|mask-(type|repeat|position|size|origin|clip|composite|mode)$|row-rule|text-emphasis-|column-rule-(color|width|style)$)/;
   const INHERITED = new Set(['color','font-family','font-feature-settings','font-kerning','font-size','font-stretch','font-style','font-synthesis-weight','font-synthesis-style','font-synthesis-small-caps','font-variant-caps','font-variant-east-asian','font-variant-ligatures','font-variant-numeric','font-variation-settings','font-weight','hyphens','letter-spacing','line-break','line-height','list-style-image','list-style-position','list-style-type','overflow-wrap','text-align','text-align-last','text-indent','text-rendering','text-shadow','text-transform','text-wrap-style','text-wrap','visibility','word-break','word-spacing','-webkit-font-smoothing','-webkit-text-fill-color','-webkit-text-stroke-color','-webkit-text-stroke-width','direction','writing-mode','text-orientation','text-decoration-skip-ink','text-underline-position','text-emphasis-color','text-emphasis-style','text-emphasis-position','text-combine-upright','text-autospace','text-spacing-trim','font-palette','font-variant-alternates','font-variant-position','font-variant-emoji','font-size-adjust','font-language-override','border-collapse','border-spacing','caption-side','empty-cells','image-orientation','word-wrap','ruby-position']);
   const COLOR_PROPS = new Set(['color','background-color','border-top-color','border-right-color','border-bottom-color','border-left-color','outline-color','text-decoration-color','-webkit-text-fill-color','-webkit-text-stroke-color']);
@@ -57,6 +59,8 @@ const CAPTURE = String.raw`(args) => {
   const unsafe = /javascript:|expression\s*\(|@import/i;
   let layers = 0;
   const LIMIT = 20000;
+  // Changes made to the live page on the way, put back at the end.
+  const restore = [];
 
   // What each element looks like on the canvas with no style of its own.
   const frame = document.createElement('iframe');
@@ -170,6 +174,8 @@ const CAPTURE = String.raw`(args) => {
       if (p === 'width' || p === 'height') continue;
       let v = cs.getPropertyValue(p);
       if ((p === 'min-width' || p === 'min-height') && v === 'auto') continue;
+      // These follow color unless a page sets them apart. Kept as a copy of it, a later change of color would not show.
+      if ((p === '-webkit-text-fill-color' || p === '-webkit-text-stroke-color') && v === cs.getPropertyValue('color')) continue;
       if (v === base[p]) { if (!(parentCs && INHERITED.has(p) && parentCs.getPropertyValue(p) !== v)) continue; }
       // A ratio is inherited as a ratio, so a child in another size cannot rely on its parent's length.
       const sameRatio = p !== 'line-height' || !parentCs || parentCs.getPropertyValue('font-size') === cs.getPropertyValue('font-size');
@@ -293,6 +299,7 @@ const CAPTURE = String.raw`(args) => {
         else copy.setAttribute(a.name, a.value);
       }
       use.replaceWith(copy);
+      restore.push(() => copy.replaceWith(use));
     }
     const clone = el.cloneNode(true);
     const liveAll = [el, ...el.querySelectorAll('*')];
@@ -455,13 +462,19 @@ const CAPTURE = String.raw`(args) => {
     return { type: 'frame', tag: outTag, name, style, attrs: attrsOf(el), children };
   }
 
-  const body = document.body;
+  let body = document.body;
+  if (args.root) { try { body = document.querySelector(args.root) || document.body; } catch {} }
   const bodyCs = getComputedStyle(body);
-  const root = walk(body, null, null);
+  let root;
+  try { root = walk(body, null, null); } finally { for (const undo of restore.reverse()) { try { undo(); } catch {} } }
   if (root && bodyCs.getPropertyValue('background-color') === 'rgba(0, 0, 0, 0)') {
-    const htmlBg = getComputedStyle(document.documentElement).getPropertyValue('background-color');
-    if (htmlBg !== 'rgba(0, 0, 0, 0)') root.style.backgroundColor = htmlBg;
+    // An element on its own keeps the ground it was seen on: the nearest ancestor with a background colour.
+    for (let up = body.parentElement; up; up = up.parentElement) {
+      const bg = getComputedStyle(up).getPropertyValue('background-color');
+      if (bg !== 'rgba(0, 0, 0, 0)') { root.style.backgroundColor = bg; break; }
+    }
   }
+  if (root && body !== document.body) for (const k of Object.keys(root.style)) if (/^(margin|top|left|right|bottom|position|inset)/.test(k)) delete root.style[k];
   frame.remove();
   return { root, tokens: pageTokens, title: document.title, layers, links: [...document.querySelectorAll('a[href]')].map((a) => a.href) };
 }`;
@@ -647,29 +660,43 @@ export async function capturePage(renderer: Renderer, storage: Storage, doc: Bog
     const fullHeight = await page.evaluate('document.documentElement.scrollHeight') as number;
     const original = await shootLivePage(page, width, Math.min(fullHeight, MAX_SHOT));
     const known = doc.getTokens().map((t) => ({ name: t.name, value: t.value }));
-    const captured = await page.evaluate(`(${CAPTURE})(${JSON.stringify({ reset: RESET_CSS, known, liveTokens: Boolean(options.liveTokens) })})`) as { root: NewNode | null; tokens: { name: string; value: string }[]; title: string; links: string[] };
+    const captured = await page.evaluate(`(${CAPTURE})(${JSON.stringify({ reset: RESET_CSS, known, liveTokens: Boolean(options.liveTokens) })})`) as SerializedCapture;
     await resources!.settle();
     const scan = await page.evaluate(`(${SHEET_SCAN})(${scanArgs(resources!)})`) as SheetScan;
-    return { ...captured, scan, resources: resources!, shots: original, shotHeight: Math.min(fullHeight, MAX_SHOT), status, finalUrl: page.url(), url, local };
+    return { captured, scan, resources: resources!, shots: original, shotHeight: Math.min(fullHeight, MAX_SHOT), status, finalUrl: page.url(), url, local };
   }, (page) => { resources = watchResources(page); });
   const originalShot = await joinShot(renderer, raw.shots, width, raw.shotHeight);
-  const { url, local } = raw;
-  if (!raw.root) throw new Error('The page rendered nothing that could be captured.');
+  return finishCapture(storage, { ...raw, width, original: originalShot, captureFonts: options.captureFonts, media: options.media });
+}
 
-  const root = nameSpecTree(raw.root, true) as typeof raw.root;
+/** What the capture script gives back, from headless Chromium or from the browser extension. */
+export interface SerializedCapture { root: NewNode | null; tokens: { name: string; value: string }[]; title: string; links: string[] }
+
+/**
+ * The second half of a capture, the same whichever browser ran the script: names the layers, stores images and font
+ * files with the document, and reads the page's tokens. `local` lets it fetch from this computer, which only a
+ * capture the person started on this computer may; anything else is fetched only from public addresses.
+ */
+export async function finishCapture(storage: Storage, raw: {
+  captured: SerializedCapture; scan: SheetScan; resources: Pick<PageResources, 'fonts'>; url: URL; local: boolean; width: number; original: Uint8Array;
+  status?: number; finalUrl?: string; captureFonts?: boolean; media?: boolean;
+}): Promise<CaptureResult> {
+  const { url, local, width } = raw;
+  if (!raw.captured.root) throw new Error('The page rendered nothing that could be captured.');
+  const root = nameSpecTree(raw.captured.root, true) as NewNode & { key?: number };
   const stats: CaptureResult['stats'] = { layers: 0, images: 0, failedImages: [] };
-  if (options.media === false) sanitizeSvgs(root);
+  if (raw.media === false) sanitizeSvgs(root);
   else await storeMedia(root, storage, url.toString(), local, stats);
   stats.layers = countLayers(root);
   root.artboard = true;
   root.style = { ...root.style, width: `${width}px`, position: 'absolute', overflow: 'hidden' };
   delete root.style.height;
-  const tokens = raw.tokens.flatMap((t) => {
+  const tokens = raw.captured.tokens.flatMap((t) => {
     const kind = tokenKind(t.value);
     return kind ? [{ name: t.name, kind, value: t.value }] : [];
   });
-  const stored = options.captureFonts === false
+  const stored = raw.captureFonts === false
     ? { faces: [], report: { stored: 0, families: [], google: [], failed: [] } }
-    : await storeFonts(raw.scan, raw.resources, storage, fontFetcher(local, isLoopbackHost));
-  return { root, tokens, title: raw.title, original: originalShot, stats, fontFaces: stored.faces, fonts: stored.report, rules: raw.scan.rules, url: url.toString(), links: raw.links, status: raw.status, finalUrl: raw.finalUrl };
+    : await storeFonts(raw.scan, { sheets: [], settle: async () => {}, ...raw.resources }, storage, fontFetcher(local, isLoopbackHost));
+  return { root, tokens, title: raw.captured.title, original: raw.original, stats, fontFaces: stored.faces, fonts: stored.report, rules: raw.scan.rules, url: url.toString(), links: raw.captured.links, status: raw.status, finalUrl: raw.finalUrl };
 }

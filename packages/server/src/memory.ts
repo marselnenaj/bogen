@@ -391,6 +391,12 @@ export class DecisionMemory {
     };
   }
 
+  /** The decisions about these proposals, as kept: what was asked for each and its note. */
+  async decisionsOf(key: string, proposalIds: string[]): Promise<Decision[]> {
+    const wanted = new Set(proposalIds);
+    return (await this.book(key)).decisions.filter((d) => wanted.has(d.id));
+  }
+
   async dismiss(key: string, suggestionId: string): Promise<void> {
     const book = await this.book(key);
     if (!book.dismissed.includes(suggestionId)) book.dismissed = [...book.dismissed, suggestionId].slice(-200);

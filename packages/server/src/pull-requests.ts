@@ -1,16 +1,17 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { join, relative, sep } from 'node:path';
-import { applyPlan, BogenDoc, docFromContent, docToContent, isProjectPath, newId, planRevert, type DesignContent, type Token } from '@bogen/core';
+import { dirname, join, relative, sep } from 'node:path';
+import { applyPlan, BogenDoc, brandLinkOf, docFromContent, docToContent, isProjectPath, newId, planRevert, type DesignContent, type Token } from '@bogen/core';
+import { DESIGN_MD_FILE, docDesignMd, writeDesignMdTokens } from './design-md.ts';
 import type { RunEnd, RunnerId } from './agents.ts';
 import { handoffCode, type HandoffFormat } from './code-handoff.ts';
 import type { CodeProject } from './code-projects.ts';
 import { createCommit, contentAt } from './history-ops.ts';
 import type { BogenServer } from './http/server.ts';
 import { historyKey } from './live-site.ts';
-import { readRepoTokens, writeTokenFile, diffTokens, type RepoTokenFormat } from './repo-tokens.ts';
-import { addWorktree, branchSlug, changedFiles, commitAll, diffText, freeBranch, ghCreatePr, git, githubRepo, pushBranch, removeWorktree, repoInfo, type ChangedFile } from './repo-git.ts';
+import { readRepoTokens, writeTokenFile, diffTokens, type RepoTokenFormat, type RepoTokenSource } from './repo-tokens.ts';
+import { addWorktree, branchSlug, changedFiles, commitAll, diffText, freeBranch, ghCreatePr, git, githubRepo, pushBranch, removeWorktree, repoInfo, type ChangedFile, ghAvailable, ghPrMerged, isBranchName } from './repo-git.ts';
 import { atomicWrite, errorMessage, HttpError } from './util.ts';
 
 /**
@@ -25,7 +26,7 @@ import { atomicWrite, errorMessage, HttpError } from './util.ts';
  */
 
 export type PullKind = 'design' | 'tokens';
-export type PullStatus = 'running' | 'ready' | 'opening' | 'opened' | 'failed';
+export type PullStatus = 'running' | 'ready' | 'opening' | 'opened' | 'merged' | 'failed';
 export type DesignSource =
   | { kind: 'proposal'; nodeId: string }
   | { kind: 'versions'; from: string; to: string; nodeIds?: string[] }
@@ -68,7 +69,22 @@ export interface PullDraft {
   digest?: string;
   url?: string;
   pushed?: boolean;
+  /** The commit the remote has, once pushed: a later commit of the same chat is pushed on top, never with force. */
+  pushedCommit?: string;
+  /** What the remote is: a folder on this machine, where Bogen only pushes, or a host, where `gh` opens the pull request. */
+  forge?: 'github' | 'folder' | 'other';
+  /** The chat this branch belongs to. Its later design changes go onto the same branch, in the same working folder. */
+  conversationId?: string;
+  /** Commits on the branch since the base. */
+  commits?: number;
+  /** Seen merged into the base: in the repository itself, or on GitHub with `gh` when the person allowed that. */
+  merged?: { at: number; via: 'local' | 'github'; into: string };
   error?: string;
+}
+
+export interface PullSettings {
+  /** Ask `gh` whether an open pull request was merged on GitHub. Off unless the person turns it on. */
+  githubMerges: boolean;
 }
 
 export interface DesignPullRequest {
@@ -82,12 +98,30 @@ export interface DesignPullRequest {
   docsDir?: string;
   pictures?: boolean;
   format?: HandoffFormat;
+  /** The chat it comes from: one branch and working folder per chat, continued by its later changes. */
+  conversationId?: string;
 }
 
-export interface TokenPullRequest { fileId: string; target?: string; names?: string[]; title?: string; base?: string }
+export interface TokenPullRequest {
+  fileId: string; target?: string; names?: string[]; title?: string; base?: string;
+  /** Also write a DESIGN.md next to the token file, or update the repository's own. Default true. */
+  designMd?: boolean;
+}
 
 const MAX_DIFF_LINES = 300;
 const DEFAULT_DOCS = 'docs/design';
+const MERGE_CHECK_MS = 60_000;
+
+function forgeOf(url: string | null): NonNullable<PullDraft['forge']> {
+  return isLocalRemote(url) ? 'folder' : githubRepo(url) ? 'github' : 'other';
+}
+
+/** A remote that is a folder on this machine, which a fetch reads without the network. */
+export function isLocalRemote(url: string | null): boolean {
+  if (!url) return false;
+  const path = url.startsWith('file://') ? url.slice('file://'.length) : url;
+  return path.startsWith('/') && !/\s/.test(path) && existsSync(path);
+}
 
 function digestOf(d: PullDraft): string {
   return createHash('sha256').update(JSON.stringify([d.branch, d.base, d.baseSha, d.commit, d.title, d.body, d.remote, d.remoteUrl, d.files])).digest('hex').slice(0, 32);
@@ -191,6 +225,9 @@ function changedRoots(before: DesignContent, after: DesignContent): string[] {
 export class PullRequests {
   private drafts: PullDraft[] = [];
   private loaded = false;
+  private timer: NodeJS.Timeout | null = null;
+  private checking: Promise<PullDraft[]> | null = null;
+  private settingsCache: PullSettings | null = null;
 
   constructor(private readonly app: BogenServer) {}
 
@@ -210,8 +247,90 @@ export class PullRequests {
     } catch {
       this.drafts = [];
     }
-    // A run does not survive a restart.
-    for (const d of this.drafts) if (d.status === 'running' || d.status === 'opening') Object.assign(d, { status: d.status === 'opening' ? 'ready' : 'failed', error: d.status === 'opening' ? 'Bogen stopped while opening it. Look at the branch on the remote before trying again.' : 'Bogen stopped during the run.' });
+    // A run does not survive a restart. A chat's branch with commits goes back to what it was before the run.
+    for (const d of this.drafts) {
+      if (d.status === 'opening') Object.assign(d, { status: 'ready', error: 'Bogen stopped while opening it. Look at the branch on the remote before trying again.' });
+      else if (d.status === 'running') Object.assign(d, { status: d.commit ? (d.pushedCommit === d.commit ? 'opened' : 'ready') : 'failed', error: 'Bogen stopped during the run.' });
+    }
+    this.watch();
+  }
+
+  /** Looks for merges once a minute while a pushed branch waits for one. */
+  private watch(): void {
+    if (this.timer || !this.drafts.some((d) => d.status === 'opened')) return;
+    this.timer = setInterval(() => {
+      if (!this.drafts.some((d) => d.status === 'opened')) {
+        if (this.timer) clearInterval(this.timer);
+        this.timer = null;
+        return;
+      }
+      void this.checkMerges().catch(() => {});
+    }, MERGE_CHECK_MS);
+    this.timer.unref();
+  }
+
+  close(): void {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+  }
+
+  async settings(): Promise<PullSettings> {
+    if (this.settingsCache) return this.settingsCache;
+    try {
+      const raw = JSON.parse(await readFile(join(this.dir, 'settings.json'), 'utf8')) as Partial<PullSettings>;
+      this.settingsCache = { githubMerges: raw.githubMerges === true };
+    } catch {
+      this.settingsCache = { githubMerges: false };
+    }
+    return this.settingsCache;
+  }
+
+  async updateSettings(patch: Partial<PullSettings>): Promise<PullSettings> {
+    const next = { ...(await this.settings()), ...(patch.githubMerges !== undefined ? { githubMerges: patch.githubMerges } : {}) };
+    await mkdir(this.dir, { recursive: true, mode: 0o700 });
+    await atomicWrite(join(this.dir, 'settings.json'), JSON.stringify(next), 0o600);
+    this.settingsCache = next;
+    return next;
+  }
+
+  /**
+   * Whether the branches that were pushed are merged now. Looked at in the repository: its base branch, and the
+   * remote's base after a fetch when the remote is a folder on this machine (no network). For a GitHub remote,
+   * also `gh pr view`, only when `gh` is there and the person turned that on. A merge closes the branch's chat.
+   */
+  checkMerges(): Promise<PullDraft[]> {
+    this.checking ??= this.checkNow().finally(() => { this.checking = null; });
+    return this.checking;
+  }
+
+  private async checkNow(): Promise<PullDraft[]> {
+    await this.load();
+    const merged: PullDraft[] = [];
+    for (const d of this.drafts.filter((x) => x.status === 'opened')) {
+      const via = await this.mergedVia(d).catch(() => null);
+      if (!via) continue;
+      d.status = 'merged';
+      d.merged = { at: Date.now(), via, into: d.base };
+      delete d.error;
+      if (existsSync(this.tree(d))) await removeWorktree(d.repo, this.tree(d));
+      await this.save(d);
+      if (d.conversationId) await this.app.conversations.closeChat(d.fileId, d.conversationId, { at: d.merged.at, reason: 'merged', branch: d.branch, into: d.base, ...(d.url ? { url: d.url } : {}) }).catch(() => {});
+      merged.push(d);
+    }
+    return merged;
+  }
+
+  private async mergedVia(d: PullDraft): Promise<'local' | 'github' | null> {
+    const commit = d.pushedCommit ?? d.commit;
+    if (!commit || !existsSync(d.repo)) return null;
+    const refs = [`refs/heads/${d.base}`];
+    if (d.remote && /^[\w.-]{1,100}$/.test(d.remote) && isBranchName(d.base)) {
+      if (isLocalRemote(d.remoteUrl)) await git(d.repo, ['fetch', '--quiet', '--no-tags', d.remote, `+refs/heads/${d.base}:refs/remotes/${d.remote}/${d.base}`]).catch(() => {});
+      refs.push(`refs/remotes/${d.remote}/${d.base}`);
+    }
+    for (const ref of refs) if (await git(d.repo, ['merge-base', '--is-ancestor', commit, ref]).then(() => true, () => false)) return 'local';
+    if (d.url && d.forge !== 'folder' && (await this.settings()).githubMerges && (await ghAvailable()) && (await ghPrMerged(d.repo, d.url))) return 'github';
+    return null;
   }
 
   private async save(d?: PullDraft): Promise<void> {
@@ -317,6 +436,8 @@ export class PullRequests {
   async startDesign(req: DesignPullRequest): Promise<PullDraft> {
     await this.load();
     const { project, doc } = await this.project(req.fileId);
+    const ongoing = req.conversationId ? this.ofConversation(req.fileId, req.conversationId) : undefined;
+    if (ongoing && ongoing.project.id === project.id) return this.continueDesign(ongoing, req, doc);
     const info = await repoInfo(project.dir);
     const base = req.base ?? (info.branch !== 'HEAD' ? info.branch : null);
     if (!base) throw new HttpError(400, 'The repository is not on a branch. Say which branch the pull request goes into.');
@@ -332,39 +453,13 @@ export class PullRequests {
       title, body: '', branch: await freeBranch(info.top, branchSlug(title)), base, baseSha, remote: info.remote, remoteUrl: info.remoteUrl,
       repo: info.top, projectPath: relative(info.top, project.dir).split(sep).join('/'), version: { id: change.versionId, url: this.versionUrl(req.fileId, change.versionId) },
       source: req.source, what: change.what, layers: change.roots, docsDir, pictures: {}, runner: req.runner, files: [],
+      forge: forgeOf(info.remoteUrl), ...(req.conversationId ? { conversationId: req.conversationId } : {}),
     };
     const home = join(this.dir, id);
     await mkdir(home, { recursive: true, mode: 0o700 });
     await addWorktree(info.top, this.tree(draft), draft.branch, baseSha);
     try {
-      if (req.pictures !== false) {
-        const slug = draft.branch.split('/').at(-1)!;
-        if (await this.render(change.before, change.roots, join(home, 'before.png'))) draft.pictures.before = `${docsDir}/${slug}/before.png`;
-        if (await this.render(change.after, change.roots, join(home, 'after.png'))) draft.pictures.after = `${docsDir}/${slug}/after.png`;
-      }
-      const after = docFromContent(change.after);
-      const deps = await readFile(join(project.dir, 'package.json'), 'utf8').catch(() => '');
-      const format = req.format ?? (/"tailwindcss"/.test(deps) ? 'react-tailwind' : 'react-inline');
-      const code = change.roots.filter((r) => after.getNode(r)).map((r) => `// ${after.getNode(r)!.name} (${r})\n${handoffCode(after, r, format, this.app.localUrl())}`).join('\n\n');
-      const lines = describeChange(change.before, change.after, change.roots);
-      const prompt = [
-        `Implement this design change in the project: ${title}.`,
-        `It is ${change.what}, in the Bogen file "${fileName}".`,
-        '',
-        '## What changed in the design',
-        lines.length ? lines.map((l) => `- ${l}`).join('\n') : '- The layers are new.',
-        '',
-        `## The design as it is now, as code (${format})`,
-        '```',
-        code,
-        '```',
-      ].join('\n');
-      const root = join(this.tree(draft), draft.projectPath);
-      const started = await this.app.live.runInFolder({
-        dir: root, key: historyKey(project.dir), name: project.dir, label: `${project.name}: ${draft.branch}`, title, prompt, runner: req.runner,
-        instructions: pullInstructions(docsDir), ...(req.model ? { model: req.model } : {}), ...(req.effort ? { effort: req.effort } : {}),
-      });
-      draft.runId = started.runId;
+      await this.launch(draft, req, project, change, title, false);
     } catch (e) {
       await removeWorktree(info.top, this.tree(draft), draft.branch);
       await rm(home, { recursive: true, force: true });
@@ -373,6 +468,66 @@ export class PullRequests {
     this.drafts.push(draft);
     await this.save(draft);
     return draft;
+  }
+
+  /** The open branch of a chat in this file, while it has a working folder: its next change goes onto it. */
+  ofConversation(fileId: string, conversationId: string): PullDraft | undefined {
+    return this.drafts.find((d) => d.kind === 'design' && d.fileId === fileId && d.conversationId === conversationId && ['ready', 'opened', 'failed'].includes(d.status) && existsSync(this.tree(d)));
+  }
+
+  /** Pictures, the prompt and the run of one design change, in the draft's working folder. */
+  private async launch(draft: PullDraft, req: DesignPullRequest, project: CodeProject, change: Awaited<ReturnType<PullRequests['change']>>, title: string, continuing: boolean): Promise<void> {
+    const home = join(this.dir, draft.id);
+    const docsDir = draft.docsDir ?? DEFAULT_DOCS;
+    if (req.pictures !== false) {
+      const slug = draft.branch.split('/').at(-1)!;
+      // A later change of the same chat replaces the pictures: they show where the branch is now.
+      if (await this.render(change.before, change.roots, join(home, 'before.png'))) draft.pictures.before = `${docsDir}/${slug}/before.png`;
+      if (await this.render(change.after, change.roots, join(home, 'after.png'))) draft.pictures.after = `${docsDir}/${slug}/after.png`;
+    }
+    const after = docFromContent(change.after);
+    const deps = await readFile(join(project.dir, 'package.json'), 'utf8').catch(() => '');
+    const format = req.format ?? (/"tailwindcss"/.test(deps) ? 'react-tailwind' : 'react-inline');
+    const code = change.roots.filter((r) => after.getNode(r)).map((r) => `// ${after.getNode(r)!.name} (${r})\n${handoffCode(after, r, format, this.app.localUrl())}`).join('\n\n');
+    const lines = describeChange(change.before, change.after, change.roots);
+    const prompt = [
+      `Implement this design change in the project: ${title}.`,
+      `It is ${change.what}, in the Bogen file "${draft.fileName}".`,
+      ...(continuing ? ['', `This branch, ${draft.branch}, already has ${draft.commits ?? 1} commit${(draft.commits ?? 1) === 1 ? '' : 's'} from earlier changes in the same chat. Build on them: keep what they did unless this change replaces it.`] : []),
+      '',
+      '## What changed in the design',
+      lines.length ? lines.map((l) => `- ${l}`).join('\n') : '- The layers are new.',
+      '',
+      `## The design as it is now, as code (${format})`,
+      '```',
+      code,
+      '```',
+    ].join('\n');
+    const root = join(this.tree(draft), draft.projectPath);
+    const started = await this.app.live.runInFolder({
+      dir: root, key: historyKey(project.dir), name: project.dir, label: `${project.name}: ${draft.branch}`, title, prompt, runner: req.runner,
+      instructions: pullInstructions(docsDir), ...(req.model ? { model: req.model } : {}), ...(req.effort ? { effort: req.effort } : {}),
+    });
+    draft.runId = started.runId;
+  }
+
+  /** The next design change of a chat: onto its branch, in its working folder, as one more commit. */
+  private async continueDesign(d: PullDraft, req: DesignPullRequest, doc: BogenDoc): Promise<PullDraft> {
+    const project = this.app.codeProjects.get(d.project.id);
+    if (!project) throw new HttpError(400, 'The project of this chat\'s branch is not linked any more.');
+    const title = d.title;
+    const change = await this.change(req.fileId, doc, req.source, req.title?.trim() || title);
+    const before = { status: d.status, what: d.what, version: d.version, layers: d.layers, runId: d.runId, runner: d.runner };
+    Object.assign(d, { status: 'running', what: change.what, version: { id: change.versionId, url: this.versionUrl(req.fileId, change.versionId) }, layers: change.roots, source: req.source, runner: req.runner });
+    delete d.error;
+    try {
+      await this.launch(d, req, project, change, req.title?.trim() || title, true);
+    } catch (e) {
+      Object.assign(d, before);
+      throw e;
+    }
+    await this.save(d);
+    return d;
   }
 
   /** A run ended. If it was one of ours, commit what it did with the pictures, and get ready to show it. */
@@ -394,7 +549,8 @@ export class PullRequests {
       }
       await this.finish(d, `${d.title}\n\nFrom ${d.what} in the Bogen file "${d.fileName}", version ${d.version.id}.`);
     } catch (e) {
-      d.status = 'failed';
+      // A chat's branch keeps its earlier commits: it goes back to where it was, with what went wrong.
+      d.status = d.commit ? (d.pushedCommit === d.commit ? 'opened' : 'ready') : 'failed';
       d.error = errorMessage(e);
       await this.save(d);
     }
@@ -406,6 +562,7 @@ export class PullRequests {
     const commit = await commitAll(tree, message);
     if (!commit) throw new Error('Nothing changed, so there is nothing to push.');
     d.commit = commit;
+    d.commits = Number((await git(tree, ['rev-list', '--count', `${d.baseSha}..${commit}`]).catch(() => '1')).trim()) || 1;
     d.files = await changedFiles(tree, d.baseSha, commit);
     const diff = await diffText(tree, d.baseSha, commit);
     d.diffTruncated = diff.truncated;
@@ -478,7 +635,10 @@ export class PullRequests {
       const path = join(this.tree(draft), draft.projectPath, target);
       const existing = existsSync(path) ? await readFile(path, 'utf8') : null;
       await mkdir(join(path, '..'), { recursive: true });
-      await writeFile(path, writeTokenFile(format, existing, picked));
+      const written = writeTokenFile(format, existing, picked);
+      await writeFile(path, written);
+      // Only beside a change: a token file that already says this stays a pull request with nothing to push.
+      if (req.designMd !== false && format !== 'design-md' && written !== existing) await this.writeDesignMd(draft, doc, repo.sources, target, picked);
       const byName = new Map(rows.map((r) => [r.name, r]));
       const table = ['| Token | In the repository | From Bogen |', '| --- | --- | --- |', ...picked.slice(0, 200).map((t) => `| \`--${t.name}\` | ${byName.get(t.name)?.repo ? `\`${byName.get(t.name)!.repo}\`` : 'new'} | \`${t.value}\` |`), ''];
       draft.body = '';
@@ -491,6 +651,28 @@ export class PullRequests {
     this.drafts.push(draft);
     await this.save(draft);
     return draft;
+  }
+
+  /**
+   * A DESIGN.md next to the token file, so that agents that read the format see the same values: the repository's own
+   * DESIGN.md takes the pushed tokens into its YAML and keeps its prose; without one, a new one beside the token file
+   * holds every token, the text styles and the prose of the file's brand.
+   */
+  private async writeDesignMd(draft: PullDraft, doc: BogenDoc, sources: RepoTokenSource[], target: string, picked: Token[]): Promise<void> {
+    const own = sources.find((s) => s.format === 'design-md')?.file;
+    const rel = own ?? [dirname(target) === '.' ? '' : dirname(target), DESIGN_MD_FILE].filter(Boolean).join('/');
+    const path = join(this.tree(draft), draft.projectPath, rel);
+    const existing = existsSync(path) ? await readFile(path, 'utf8') : null;
+    let text: string;
+    if (existing) text = writeDesignMdTokens(existing, picked);
+    else {
+      const link = brandLinkOf(doc);
+      const brand = link && this.app.storage.get(link.id)?.kind === 'brand' ? (await this.app.brands.read(link.id)).data : null;
+      text = docDesignMd(doc, draft.fileName, brand);
+    }
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, text);
+    draft.what += ` and ${rel}`;
   }
 
   private async finishTokens(d: PullDraft, table: string[]): Promise<void> {
@@ -535,12 +717,19 @@ export class PullRequests {
       if (head !== d.commit) throw new HttpError(409, 'The branch moved since the preview. Discard this draft and make it again.');
       await pushBranch(tree, d.remote, d.branch);
       d.pushed = true;
-      const bodyFile = join(this.dir, d.id, 'body.md');
-      await writeFile(bodyFile, d.body, { mode: 0o600 });
-      d.url = await ghCreatePr(tree, { base: d.base, head: d.branch, title: d.title, bodyFile });
+      d.pushedCommit = d.commit;
+      // gh opens the pull request once; a later push of the same chat's branch updates it by itself. A remote that
+      // is a folder on this machine has no pull requests: the branch is pushed, and merged there.
+      const forge = d.forge ?? forgeOf(d.remoteUrl);
+      if (forge !== 'folder' && !d.url) {
+        const bodyFile = join(this.dir, d.id, 'body.md');
+        await writeFile(bodyFile, d.body, { mode: 0o600 });
+        d.url = await ghCreatePr(tree, { base: d.base, head: d.branch, title: d.title, bodyFile });
+      }
       d.status = 'opened';
       delete d.error;
-      await removeWorktree(d.repo, tree);
+      // A chat keeps its working folder for its next change, until the branch is merged or discarded.
+      if (!d.conversationId) await removeWorktree(d.repo, tree);
     } catch (e) {
       d.status = 'ready';
       d.error = errorMessage(e);
@@ -548,6 +737,7 @@ export class PullRequests {
       throw e instanceof HttpError ? e : new HttpError(400, d.error);
     }
     await this.save(d);
+    this.watch();
     return d;
   }
 
@@ -556,7 +746,8 @@ export class PullRequests {
     const d = await this.get(id);
     if (d.status === 'running' && d.runId) this.app.runs.stop(d.runId);
     if (d.status === 'opening') throw new HttpError(409, 'It is being opened right now.');
-    if (d.status !== 'opened') await removeWorktree(d.repo, this.tree(d), d.pushed ? undefined : d.branch);
+    if (d.status !== 'opened' && d.status !== 'merged') await removeWorktree(d.repo, this.tree(d), d.pushed ? undefined : d.branch);
+    else if (existsSync(this.tree(d))) await removeWorktree(d.repo, this.tree(d));
     await rm(join(this.dir, d.id), { recursive: true, force: true });
     this.drafts = this.drafts.filter((x) => x.id !== id);
     await this.save();

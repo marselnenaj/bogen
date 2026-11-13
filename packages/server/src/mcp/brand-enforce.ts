@@ -1,4 +1,4 @@
-import { bindingBrand, type BrandData } from '@bogen/core';
+import { bindingBrand, type BogenDoc, type BrandData } from '@bogen/core';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { checkStatic, layersIn, type BrandViolation } from '../brand-check.ts';
 import type { Room } from '../sync.ts';
@@ -6,7 +6,7 @@ import { isToolResult, type ToolContext } from './kit.ts';
 
 const MAX_WARNINGS = 8;
 /** Tools that change the brand or what a brand applies to, rather than a design inside a linked file. */
-const NOT_CHECKED = /^(design_knowledge_update$|brand_|file_|page_|comment_|guide_|agent_undo|proposal_|wait_for_event)/;
+const NOT_CHECKED = /^(design_knowledge_update$|reference_|brand_|file_|page_|comment_|guide_|agent_undo|proposal_|wait_for_event)/;
 
 export interface BrandGuard {
   room: Room;
@@ -40,6 +40,18 @@ export async function brandGuard(ctx: ToolContext, tool: string, args: { file_id
   };
 }
 
+/**
+ * In strict mode, why `doc` (the file itself after a write, or a copy of it with planned changes) may not stand: the
+ * hard violations it adds to what already broke the brand. Null when it may.
+ */
+export function strictRefusal(guard: BrandGuard, doc: BogenDoc): string | null {
+  if (!guard.baseline) return null;
+  const now = checkStatic(doc, guard.data, layersIn(doc, { file: true }), true).violations.filter((v) => v.severity === 'hard');
+  const added = now.filter((v) => !guard.baseline!.has(keyOf(v)));
+  if (!added.length) return null;
+  return `Nothing was changed. The brand "${guard.data.fields.name}" is in strict mode, and this write would add ${added.length} hard violation${added.length === 1 ? '' : 's'}:\n${added.slice(0, MAX_WARNINGS).map((v) => `- ${v.message} Fix: ${v.fix.description}`).join('\n')}\nChange what you write and try again.`;
+}
+
 function addToResult(out: unknown, key: string, value: unknown): typeof out {
   if (typeof out === 'string') return `${out}\n\n${key}: ${JSON.stringify(value)}`;
   if (isToolResult(out as never)) {
@@ -56,13 +68,10 @@ export async function brandAfterWrite<T>(ctx: ToolContext, tool: string, guard: 
   const { room, data } = guard;
   const { doc } = room;
 
-  if (guard.baseline) {
-    const now = checkStatic(doc, data, layersIn(doc, { file: true }), true).violations.filter((v) => v.severity === 'hard');
-    const added = now.filter((v) => !guard.baseline!.has(keyOf(v)));
-    if (added.length) {
-      rollBack(ctx, guard);
-      throw new Error(`Nothing was changed. The brand "${data.fields.name}" is in strict mode, and this write would add ${added.length} hard violation${added.length === 1 ? '' : 's'}:\n${added.slice(0, MAX_WARNINGS).map((v) => `- ${v.message} Fix: ${v.fix.description}`).join('\n')}\nChange what you write and try again.`);
-    }
+  const refused = strictRefusal(guard, doc);
+  if (refused) {
+    rollBack(ctx, guard);
+    throw new Error(refused);
   }
 
   const ids = ctx.nodeIds ?? [];
@@ -70,7 +79,7 @@ export async function brandAfterWrite<T>(ctx: ToolContext, tool: string, guard: 
     const node = doc.getNode(id);
     return node ? [node, ...doc.descendants(id)] : [];
   });
-  const fileLevel = tool === 'tokens_set' || tool === 'tokens_delete' || tool === 'tokens_from_css';
+  const fileLevel = tool === 'tokens_set' || tool === 'tokens_delete' || tool === 'tokens_rename' || tool === 'tokens_from_css';
   if (!nodes.length && !fileLevel) return out;
   const report = checkStatic(doc, data, nodes, fileLevel);
   if (!report.violations.length) return out;

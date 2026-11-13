@@ -11,6 +11,14 @@ import { join } from 'node:path';
  */
 export const RUNTIME = ['puppeteer-core', 'esbuild', 'tailwindcss'];
 export const ORDER = ['cli', 'shaders', 'editor', 'npm'];
+/**
+ * Optional dependencies that a bundled package only probes for at runtime and works without. The bundle leaves them
+ * out and the published package does not depend on them: pdf.js looks for @napi-rs/canvas to draw pages in Node, which
+ * Bogen does in the render browser instead.
+ */
+export const NOT_SHIPPED = ['@napi-rs/canvas'];
+/** Packages whose package.json names no licence, by the licence file they ship. */
+const LICENSE_FILE_SAYS = { khroma: 'MIT' };
 
 export const nameOf = (path) => path.slice(path.lastIndexOf('node_modules/') + 'node_modules/'.length);
 /** Packages made for one platform, such as @esbuild/linux-x64. npm installs only the one that fits. */
@@ -49,6 +57,7 @@ export function shippedPackages(root) {
     const queue = group.roots.map((name) => [group.from, name]);
     while (queue.length) {
       const [from, name] = queue.shift();
+      if (NOT_SHIPPED.includes(name)) continue;
       const path = resolve(from, name);
       // An optional dependency for another platform, or a peer that nothing installs: not part of what ships.
       if (!path) continue;
@@ -82,7 +91,7 @@ export function licenseOf(root, path, entry) {
   if (typeof json.license === 'string') return json.license;
   if (json.license?.type) return json.license.type;
   if (Array.isArray(json.licenses)) return json.licenses.map((l) => l.type ?? l).join(' OR ');
-  return 'UNKNOWN';
+  return LICENSE_FILE_SAYS[nameOf(path)] ?? 'UNKNOWN';
 }
 
 export function repoOf(root, path) {

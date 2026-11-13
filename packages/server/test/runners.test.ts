@@ -289,12 +289,12 @@ describe('external MCP registration for Grok, Hermes and Oh My Pi', () => {
 
   it('registers with Grok and Hermes through their own documented commands, exactly', async () => {
     const results = await install(['grok', 'hermes'], { command });
-    expect(results.map((r) => [r.client, r.ok, r.how])).toEqual([['grok', true, 'ran grok mcp add'], ['hermes', true, 'ran hermes mcp add']]);
+    expect(results.map((r) => [r.client, r.ok, r.how])).toEqual([['grok', true, 'ran grok mcp add with the grouped tool list'], ['hermes', true, 'ran hermes mcp add with the grouped tool list']]);
     expect(calls()).toEqual([
       ['grok', '--no-auto-update', 'mcp', 'remove', 'bogen'],
-      ['grok', '--no-auto-update', 'mcp', 'add', 'bogen', '--', '/opt/bogen/bin/bogen', 'mcp'],
+      ['grok', '--no-auto-update', 'mcp', 'add', 'bogen', '--', '/opt/bogen/bin/bogen', 'mcp', '--tools', 'grouped'],
       ['hermes', 'mcp', 'remove', 'bogen'],
-      ['hermes', 'mcp', 'add', 'bogen', '--command', '/opt/bogen/bin/bogen', '--args', 'mcp'],
+      ['hermes', 'mcp', 'add', 'bogen', '--command', '/opt/bogen/bin/bogen', '--args', 'mcp', '--tools', 'grouped'],
     ]);
   });
 
@@ -303,11 +303,11 @@ describe('external MCP registration for Grok, Hermes and Oh My Pi', () => {
     mkdirSync(dir, { recursive: true });
     const before = '{\n  // my servers\n  "mcpServers": {\n    "notes": { "command": "notes-mcp" }\n  },\n  "other": true\n}\n';
     writeFileSync(join(dir, 'mcp.json'), before);
-    expect((await install(['omp'], { command }))[0]).toMatchObject({ ok: true, how: `wrote ${join(dir, 'mcp.json')}` });
+    expect((await install(['omp'], { command }))[0]).toMatchObject({ ok: true, how: `wrote ${join(dir, 'mcp.json')} with the grouped tool list` });
     const text = readFileSync(join(dir, 'mcp.json'), 'utf8');
     expect(text).toContain('// my servers');
     expect(text).toContain('"notes": { "command": "notes-mcp" }');
-    expect(JSON.parse(text.replace(/\/\/.*$/gm, '')).mcpServers.bogen).toEqual({ command: '/opt/bogen/bin/bogen', args: ['mcp'] });
+    expect(JSON.parse(text.replace(/\/\/.*$/gm, '')).mcpServers.bogen).toEqual({ command: '/opt/bogen/bin/bogen', args: ['mcp', '--tools', 'grouped'] });
     expect(await registration('omp')).toMatchObject({ registered: true, where: join(dir, 'mcp.json') });
     await uninstall(['omp']);
     expect(readFileSync(join(dir, 'mcp.json'), 'utf8')).toBe(before);

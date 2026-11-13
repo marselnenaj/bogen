@@ -13,6 +13,9 @@ import { runnerName, RunSettingsSection, useRunnerCatalogs } from './RunChoice.t
 import { DesignKnowledge } from './DesignKnowledge.tsx';
 import { SyncSection } from './SyncSection.tsx';
 import { PhoneSection } from './PhoneSection.tsx';
+import { AddToAgent } from './AddToAgent.tsx';
+import { ExtensionSection } from './BrowserExtension.tsx';
+import { ReferencesSection } from './ReferencesSection.tsx';
 
 const SCALES = [90,100,110,125,150,175,200];
 export function SettingsDialog() { return useUi(s => s.settingsOpen) ? <Body /> : null; }
@@ -69,8 +72,9 @@ function Body() {
             <Row name={t('Layout grids')}><input type="checkbox" role="switch" aria-label={t('Layout grids')} checked={st.layoutGrids} onChange={e=>set({layoutGrids:e.target.checked})} data-testid="setting-grids"/></Row>
             <section className="settings-explanation"><h2>{t('Fit screen')}</h2><p>{t('Fit screen: the selected or current artboard, held while the window changes')}</p><kbd>Shift+3</kbd></section>
           </>:null}
-          {section==='privacy'?<Row name={t('Agents in this browser')} hint={browserHasWebMcp()?t('Bogen\'s tools for an agent built into the browser (WebMCP). It asks you before deleting or reaching outside the file'):t('For an agent built into the browser (WebMCP). This browser does not offer it')}><Segmented value={st.webmcp} onChange={webmcp=>set({webmcp})} testId="setting-webmcp" options={[{value:'on',label:t('Allowed'),title:t('Offer Bogen\'s tools through WebMCP')},{value:'off',label:t('Off'),title:t('Offer nothing to agents in this browser')}]}/></Row>:null}
+          {section==='privacy'?<><Row name={t('Agents in this browser')} hint={browserHasWebMcp()?t('Bogen\'s tools for an agent built into the browser (WebMCP). It asks you before deleting or reaching outside the file'):t('For an agent built into the browser (WebMCP). This browser does not offer it')}><Segmented value={st.webmcp} onChange={webmcp=>set({webmcp})} testId="setting-webmcp" options={[{value:'on',label:t('Allowed'),title:t('Offer Bogen\'s tools through WebMCP')},{value:'off',label:t('Off'),title:t('Offer nothing to agents in this browser')}]}/></Row><ExtensionSection/></>:null}
           {section==='knowledge'?<DesignKnowledge embedded/>:null}
+          {section==='references'?<ReferencesSection/>:null}
           {section==='agents'||section==='devices'||section==='about'?<HostSettings section={section}/>:null}
         </section>
         <aside className="settings-context" hidden={section!=='appearance'}>{section==='appearance'?<><h2>{t('Preview')}</h2><div className="settings-sample"><strong>{t('Layers')}</strong><div><span>{t('Page')}</span><span className="is-selected">{t('Frame')}</span><span>{t('Text')}</span></div></div><p>{Math.round(st.uiScale*100)}% · {t(st.appearance==='dark'?'Dark':st.appearance==='light'?'Light':'Follow system')}</p></>:<><h2>{t(current.label)}</h2><p>{t(current.hint)}</p></>}</aside>
@@ -95,5 +99,5 @@ function HostSettings({section}:{section:'agents'|'devices'|'about'}) {
 function AgentSettings({runners}:{runners:Runner[]}) {
   const t=useT();const [chosen,setChosen]=useState('claude');useRunnerCatalogs(runners.some(r=>r.id===chosen&&r.available)?[chosen]:[]);
   useEffect(()=>{if(runners.length&&!runners.some(r=>r.id===chosen&&r.available))setChosen(runners.find(r=>r.available)?.id??runners[0]!.id);},[runners,chosen]);
-  return <div className="settings-integrations" data-testid="setting-agents">{!runners.length?<p role="status">{t('Reading…')}</p>:<><Row name={t('Agents on this computer')} hint={t('The model is chosen where you ask an agent.')}><SelectField value={chosen} onChange={setChosen} testId="settings-runner" options={runners.map(r=>({value:r.id,label:runnerName(r.id),disabled:!r.available}))}/></Row><div className="settings-models">{runners.some(r=>r.id===chosen&&r.available)?<RunSettingsSection onlyRunner={chosen}/>:<p className="settings-hint">{runners.find(r=>r.id===chosen)?.reason??t('{agent}: not found',{agent:runnerName(chosen)})}</p>}</div><details className="settings-runner-details"><summary>{t('Agents on this computer')}</summary>{runners.map(r=><div key={r.id} className="settings-runner-row" data-runner={r.id}><strong>{runnerName(r.id)}</strong><span className="settings-hint">{r.available?r.version??t('Available'):r.reason??t('{agent}: not found',{agent:runnerName(r.id)})}</span></div>)}</details></>}</div>;
+  return <div className="settings-integrations" data-testid="setting-agents">{!runners.length?<p role="status">{t('Reading…')}</p>:<><Row name={t('Agents on this computer')} hint={t('The model is chosen where you ask an agent.')}><SelectField value={chosen} onChange={setChosen} testId="settings-runner" options={runners.map(r=>({value:r.id,label:runnerName(r.id),disabled:!r.available}))}/></Row><div className="settings-models">{runners.some(r=>r.id===chosen&&r.available)?<RunSettingsSection onlyRunner={chosen}/>:<p className="settings-hint">{runners.find(r=>r.id===chosen)?.reason??t('{agent}: not found',{agent:runnerName(chosen)})}</p>}</div><details className="settings-runner-details"><summary>{t('Agents on this computer')}</summary>{runners.map(r=><div key={r.id} className="settings-runner-row" data-runner={r.id}><strong>{runnerName(r.id)}</strong><span className="settings-hint">{r.available?r.version??t('Available'):r.reason??t('{agent}: not found',{agent:runnerName(r.id)})}</span></div>)}</details><AddToAgent/></>}</div>;
 }

@@ -7,6 +7,7 @@ import { checkWidths } from '../width-check.ts';
 import { applyA11yFixes, auditA11y } from '../a11y.ts';
 import { TAILWIND, tailwindKey } from '../repo-tokens.ts';
 import { assertUnlocked, fileIdArg, pageIdArg, type ToolDefiner } from './kit.ts';
+import { fileDesignMd } from './tools-design-md.ts';
 
 const DIFF_RENDER_DIMENSION = 4000;
 const DIFF_IMAGE_DIMENSION = 1000;
@@ -163,14 +164,16 @@ export function registerCheckTools(define: ToolDefiner): void {
     return { ...report, fixed };
   });
 
-  define('tokens_export', { description: 'The file\'s tokens as code, for you to write into the repository with your own file tools. No tool writes into a repository. css gives a :root block, then one block per theme mode, then the text styles as classes. tailwind gives that plus a Tailwind 4 @theme inline block that maps the utilities onto the same variables, so class names and var(--name) agree. tailwind3 gives the :root block plus a theme.extend object. Use it to keep a repo in step with a design; tokens_from_css goes the other way. With a linked project, tokens_repo_diff shows what differs from the repository first.', readOnly: true }, {
-    format: z.enum(['css', 'tailwind', 'tailwind3']).default('css'),
+  define('tokens_export', { description: 'The file\'s tokens as code, for you to write into the repository with your own file tools. No tool writes into a repository. css gives a :root block, then one block per theme mode, then the text styles as classes. tailwind gives that plus a Tailwind 4 @theme inline block that maps the utilities onto the same variables, so class names and var(--name) agree. tailwind3 gives the :root block plus a theme.extend object. design-md gives a DESIGN.md (YAML tokens up front, prose below, the open format other agents read): colours, radii and spacing by name, text styles as typography, theme modes and other kinds under x-bogen, and the prose of the brand the file links to; write it next to the code as DESIGN.md, and design_md_import reads one back. Use it to keep a repo in step with a design; tokens_from_css goes the other way. With a linked project, tokens_repo_diff shows what differs from the repository first.', readOnly: true }, {
+    format: z.enum(['css', 'tailwind', 'tailwind3', 'design-md']).default('css'),
     selector: z.string().regex(/^[\w\s.:#\-[\]="']{1,80}$/).default(':root').describe('For css: the selector, such as .dark.'),
     mode_selector: z.string().regex(/^[\w\s.:#\-[\]="'{}]{1,80}$/).optional().describe('Where a theme mode\'s values go, with {mode} for its name, such as .{mode}. Default [data-mode="{mode}"].'),
     file_id: fileIdArg,
   }, async ({ format, selector, mode_selector, file_id }, ctx) => {
-    const { doc } = await ctx.room(file_id);
+    const room = await ctx.room(file_id);
+    const { doc } = room;
     const tokens = doc.getTokens();
+    if (format === 'design-md') return fileDesignMd(ctx, doc, ctx.app.storage.get(room.id)?.name ?? 'Design');
     if (!tokens.length) return '/* This file has no tokens yet. Add them with tokens_set or tokens_from_css. */';
     const modes = getModes(doc);
     const modeSelector = mode_selector ? (m: string) => mode_selector.replaceAll('{mode}', m) : undefined;

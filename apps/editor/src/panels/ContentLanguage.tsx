@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Languages } from 'lucide-react';
-import { brandLinkOf, contentLanguageOf, languageName, normalizeLanguageTag, resolveContentLanguage, setContentLanguage, type ContentLanguageMode, type RunLanguageChoice } from '@bogen/core';
+import { brandLinkOf, contentLanguageOf, languageName, languageVersions, normalizeLanguageTag, resolveContentLanguage, setContentLanguage, setLocaleStatus, setTranslationRules, translationRules, translationStatus, type ContentLanguageMode, type LocaleStatus, type RunLanguageChoice } from '@bogen/core';
 import { maybeSession, session } from '../doc/session.ts';
 import { brandApi } from '../lib/brand-api.ts';
 import { onServerEvent } from '../lib/events.ts';
@@ -197,6 +197,7 @@ export function LanguageChoice({ value, onChange, canAdd, selection, onInstructi
             {instruction ? (
               <button type="button" className="content-lang-quick" onClick={() => { onInstruction(instruction); setOpen(false); }} data-testid="prompt-language-quick" dir="auto">{instruction}</button>
             ) : null}
+            <LanguageVersions onInstruction={(text) => { onInstruction(text); setOpen(false); }} />
             <div className="content-lang-file">
               <SelectField<string> className="content-lang-select" label={t('File default')} value={file ?? FILE} options={fileOptions} onChange={(tag) => setFileLanguage(tag || null)} testId="prompt-language-file" />
               <p className="content-lang-note">
@@ -208,6 +209,90 @@ export function LanguageChoice({ value, onChange, canAdd, selection, onInstructi
         </Popover>
       ) : null}
     </>
+  );
+}
+
+/**
+ * The file's language versions and its translation memory: what each still needs, whether it takes part (included,
+ * untranslated, hidden), and the words never translated. Read from the document when the popover opens; the agent
+ * does the translating, so the button only puts an instruction into the message.
+ */
+function LanguageVersions({ onInstruction }: { onInstruction: (text: string) => void }) {
+  const t = useT();
+  const s = session();
+  const [tick, setTick] = useState(0);
+  const rows = useMemo(() => {
+    try {
+      return languageVersions(s.doc).map((v) => {
+        let needed = 0;
+        let behind = false;
+        try {
+          const st = translationStatus(s.doc, v.branch.id);
+          needed = st.needed.length;
+          behind = st.behind;
+        } catch {
+          // A version whose start is gone has nothing to follow.
+        }
+        return { id: v.branch.id, tag: v.tag, status: v.status, needed, behind };
+      });
+    } catch {
+      return [];
+    }
+  }, [s, tick]);
+  const [keep, setKeep] = useState(() => translationRules(s.doc).keep.join(', '));
+  if (!rows.length) return null;
+  const saveKeep = () => {
+    const words = keep.split(',').map((w) => w.trim()).filter(Boolean);
+    s.tx(() => setTranslationRules(s.doc, { keep: words }));
+    setKeep(words.join(', '));
+    setTick((n) => n + 1);
+  };
+  const statusOptions: { value: LocaleStatus; label: string }[] = [
+    { value: 'include', label: t('Included') },
+    { value: 'untranslated', label: t('Untranslated') },
+    { value: 'hidden', label: t('Hidden') },
+  ];
+  const changed = rows.filter((r) => r.status === 'include' && (r.needed || r.behind));
+  return (
+    <div className="content-lang-versions" data-testid="language-versions">
+      <div className="content-lang-legend">{t('Language versions')}</div>
+      <p className="content-lang-note">{t('Translations are remembered per text. Only new and changed text goes to the agent.')}</p>
+      {rows.map((r) => {
+        const name = languageName(r.tag, currentLanguage());
+        return (
+          <div key={r.id} className="content-lang-version" data-testid="language-version" data-language={r.tag} data-needed={r.needed}>
+            <span className="content-lang-version-name">{name} ({r.tag})</span>
+            <span className="content-lang-note">{r.status === 'hidden' ? '' : r.status === 'untranslated' ? t("shows the original's words") : r.needed ? t.n(r.needed, '{count} to translate', '{count} to translate') : t('up to date')}</span>
+            <select
+              className="content-lang-status"
+              value={r.status}
+              aria-label={t('{language}: how it takes part', { language: name })}
+              onChange={(e) => { s.tx(() => setLocaleStatus(s.doc, r.tag, e.target.value as LocaleStatus)); setTick((n) => n + 1); }}
+              onKeyDown={(e) => e.stopPropagation()}
+              data-testid="language-version-status"
+            >
+              {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+        );
+      })}
+      {changed.length ? (
+        <button type="button" className="content-lang-quick" onClick={() => onInstruction(changed.map((r) => t('Update the {language} version: translate only the new and changed text.', { language: languageName(r.tag, currentLanguage()) })).join(' '))} data-testid="language-versions-update">{t('Translate what changed')}</button>
+      ) : null}
+      <label className="content-lang-keep">
+        <span className="content-lang-note">{t('Never translate')}</span>
+        <input
+          className="field-input"
+          value={keep}
+          placeholder={t('Brand and product names, separated by commas')}
+          onChange={(e) => setKeep(e.target.value)}
+          onBlur={saveKeep}
+          onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); saveKeep(); } }}
+          data-testid="language-versions-keep"
+        />
+        <span className="content-lang-note">{t('Code, addresses and numbers stay as they are anyway.')}</span>
+      </label>
+    </div>
   );
 }
 

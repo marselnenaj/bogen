@@ -10,7 +10,8 @@ const CONFLICT_WORDS: Record<ConflictKind, string> = {
   'deleted-in-proposal': msg('removed here, changed in the original'),
   'added-under-removed': msg('added in the original under a layer this removes'),
 };
-import { Check, Square, X } from 'lucide-react';
+import { Check, GitCompare, Square, X } from 'lucide-react';
+import { showCompare } from '../panels/history-state.ts';
 import type { Race, RaceLane } from '../lib/agent-api.ts';
 import { useThrottledStructure } from '../doc/hooks.ts';
 import { session } from '../doc/session.ts';
@@ -57,6 +58,13 @@ function Bar({ proposal, race, lane }: { proposal: ProposalInfo; race?: Race; la
     s.tx(() => (draft ? discardRevision(s.doc, draft.id, loadUser().name || 'person', undefined) : discardProposal(s.doc, proposal.id)));
   };
   const live = lane ? laneLive(lane) : false;
+  // The same compare as for branches and versions: the original on one side, this copy on the other.
+  const compareWithOriginal = () => {
+    const { fileId } = editor();
+    if (!fileId) return;
+    const name = session().doc.getNode(proposal.of)?.name || proposal.name;
+    void showCompare(fileId, { from: proposal.of, to: proposal.id, fromLabel: t('Original'), toLabel: lane ? lane.agent : proposal.name || t('Proposal by {by}', { by: proposal.by }), pageId: proposal.pageId ?? '', pageName: name, layers: { a: proposal.of, b: proposal.id } });
+  };
   return (
     <>
       <div className="proposal-outline" data-testid="proposal-outline" style={{ left, top, width: box.w * c.z, height: box.h * c.z, ...(color ? { borderColor: color } : {}) }} />
@@ -84,6 +92,7 @@ function Bar({ proposal, race, lane }: { proposal: ProposalInfo; race?: Race; la
           <>
             {lane?.status === 'failed' || lane?.status === 'stopped' ? null : <button type="button" className="btn btn-primary proposal-accept" disabled={!proposal.sourceExists} title={proposal.sourceExists ? (draft ? t('Put every artboard of this revision into its original') : t('Put this into the original')) : t('The original layer is gone')} onClick={() => accept()} data-testid="proposal-accept"><Check size={12} /> {t('Accept')}</button>}
             <button type="button" className="btn btn-quiet proposal-discard" onClick={discard} data-testid="proposal-discard"><X size={12} /> {t('Discard')}</button>
+            {proposal.sourceExists && !draft ? <button type="button" className="btn btn-quiet proposal-discard" onClick={compareWithOriginal} title={t('Compare with the original')} aria-label={t('Compare with the original')} data-testid="proposal-compare"><GitCompare size={12} /></button> : null}
           </>
         )}
       </div>

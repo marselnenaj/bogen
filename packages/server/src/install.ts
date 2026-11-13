@@ -4,6 +4,7 @@ import { mkdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
+import type { ToolMode } from './mcp/tool-modes.ts';
 import { installSkill, removeSkill, skillPath } from './skill.ts';
 import { atomicWrite, errorMessage } from './util.ts';
 
@@ -581,16 +582,36 @@ export function detected(client: Client): boolean {
   }
 }
 
-export async function install(clients: Client[], options: { onlyDetected?: boolean; command?: Command } = {}): Promise<InstallResult[]> {
-  const command = options.command ?? selfCommand();
+/**
+ * The tool list each client gets by default (`bogen mcp --tools <mode>`), from what each client's own documentation
+ * says about MCP tools (docs/guide/agents.md, "A shorter tool list", has the sources). Claude Code and Codex load tool
+ * schemas on demand through their tool search, so the whole list costs them nothing up front. OpenCode calls tools
+ * from code by their names, so it keeps every name with short schemas. The others send every schema with each
+ * request, or stop at a number of tools (128 in VS Code and in Gemini's function calling), so they get one tool per
+ * area. In every mode every tool can still be called.
+ */
+export const DEFAULT_TOOL_MODE: Record<Client, ToolMode> = {
+  'claude-code': 'full', codex: 'full', opencode: 'compact',
+  cursor: 'grouped', vscode: 'grouped', gemini: 'grouped', zed: 'grouped', grok: 'grouped', hermes: 'grouped', omp: 'grouped',
+};
+
+/** The command with the tool list's mode added, unless it is the full list. */
+export function withToolMode(command: Command, mode: ToolMode): Command {
+  return mode === 'full' ? command : { command: command.command, args: [...command.args, '--tools', mode] };
+}
+
+export async function install(clients: Client[], options: { onlyDetected?: boolean; command?: Command; tools?: ToolMode } = {}): Promise<InstallResult[]> {
+  const base = options.command ?? selfCommand();
   const out: InstallResult[] = [];
   for (const client of clients) {
     if (options.onlyDetected && !detected(client)) {
       out.push({ client, ok: true, skipped: true, how: 'not found on this machine' });
       continue;
     }
+    const mode = options.tools ?? DEFAULT_TOOL_MODE[client];
+    const command = withToolMode(base, mode);
     try {
-      const how = await INSTALLERS[client](command);
+      const how = `${await INSTALLERS[client](command)}${mode === 'full' ? '' : ` with the ${mode} tool list`}`;
       const skill = await installSkill(client);
       out.push({ client, ok: true, how: skill ? `${how}; ${skill}` : how });
     } catch (e) {

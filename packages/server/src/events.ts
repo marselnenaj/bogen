@@ -7,6 +7,8 @@ export type BogenEvent =
   | { t: 'theme'; theme: unknown }
   | { t: 'peers' }
   | { t: 'phone' }
+  | { t: 'extension' }
+  | { t: 'references' }
   | { t: 'publish' }
   | { t: 'brand'; id: string }
   | { t: 'library'; id: string }
@@ -19,7 +21,8 @@ export type BogenEvent =
   | { t: 'agents-check'; id: string; status: string }
   | { t: 'race'; fileId: string; raceId: string }
   | { t: 'memory'; brandId?: string; fileId: string }
-  | { t: 'pull'; id: string; fileId: string; status: string };
+  | { t: 'pull'; id: string; fileId: string; status: string }
+  | { t: 'conversation'; fileId: string; conversationId: string; closed?: boolean };
 
 export type CommentRunStatus = 'queued' | 'working' | 'done' | 'failed' | 'stopped';
 

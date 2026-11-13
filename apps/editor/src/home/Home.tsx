@@ -18,6 +18,7 @@ import { useWindowSize } from '../state/chrome-layout.ts';
 import { useSettings } from '../state/settings.ts';
 import { IconButton, Popover, Segmented, SelectField } from '../ui/controls.tsx';
 import { SettingsDialog } from '../panels/SettingsDialog.tsx';
+import { ExtensionApproval } from '../panels/BrowserExtension.tsx';
 import type { ProjectType } from '@bogen/core';
 import { emptyKindTitle, filesOfKind, KindList, oneOf, platformLabel, ProjectMenu, ScopeLine, type KindScope } from './ProjectFilters.tsx';
 import { ui } from '../state/ui.ts';
@@ -542,6 +543,7 @@ export function Home() {
       />
       <input ref={openRef} type="file" accept=".bogen" multiple hidden data-testid="home-open-input" onChange={(e) => { const list = [...(e.currentTarget.files ?? [])]; e.currentTarget.value = ''; void openFiles(list); }} />
       <SettingsDialog />
+      <ExtensionApproval />
       {away ? <div className="banner" role="status" data-testid="home-offline">{stored.size ? t.n(stored.size, 'Offline. {count} file is on this phone and open without the computer.', 'Offline. {count} files are on this phone and open without the computer.') : t('Offline. No files are on this phone yet.')}</div> : null}
       <div className="home-split">
         <nav className="home-side" aria-label={t('Folders')}>

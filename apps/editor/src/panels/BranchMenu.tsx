@@ -3,8 +3,9 @@ import { Check, ChevronDown, ChevronRight, GitBranch, GitMerge, Plus, RotateCcw,
 import { session } from '../doc/session.ts';
 import { localBranch, onBranchRecords, type LocalBranch } from '../doc/branch-watch.ts';
 import { onServerEvent } from '../lib/events.ts';
-import { chooseAll, designBranches, hasBranches, heldLines, keepChoices, MAIN, resolvePayload, unresolved, type BranchConflict, type BranchSide, type BranchSummary, type Choices, type DesignBranchRow, type MergePreview } from '../lib/design-branches-api.ts';
+import { chooseAll, designBranches, hasBranches, heldLines, keepChoices, MAIN, resolvePayload, unresolved, type BranchConflict, type BranchSide, type BranchSummary, type ChangedScreen, type Choices, type DesignBranchRow, type MergePreview } from '../lib/design-branches-api.ts';
 import { useEditor } from '../state/store.ts';
+import { showCompare } from './history-state.ts';
 import { IconButton, Popover } from '../ui/controls.tsx';
 import { useT } from '../i18n/react.ts';
 import { t } from '../i18n/store.ts';
@@ -142,10 +143,12 @@ export function BranchMenu({ compact, onLabel }: { compact: boolean; /** Whether
 
   const toggle = () => {
     if (!open) {
-      setView({ kind: 'list' });
       setError(null);
       setNotice(null);
       load();
+      // Back from comparing a screen: the review it came from opens again, read afresh.
+      if (view.kind === 'merge' && openBranches.some((b) => b.id === view.branch.id)) void startMerge(view.branch);
+      else setView({ kind: 'list' });
     }
     setOpen(!open);
   };
@@ -219,6 +222,8 @@ export function BranchMenu({ compact, onLabel }: { compact: boolean; /** Whether
           <div role="dialog" aria-label={t('Branches')} data-testid="branch-panel" className="db-panel">
             {view.kind === 'merge' ? (
               <MergeReview
+                fileId={fileId}
+                onCompare={() => setOpen(false)}
                 view={view}
                 busy={busy}
                 onChoose={(key, side) => setView({ ...view, choices: { ...view.choices, [key]: side } })}
@@ -300,7 +305,7 @@ export function BranchMenu({ compact, onLabel }: { compact: boolean; /** Whether
   );
 }
 
-function MergeReview({ view, busy, onChoose, onAll, onMerge, onBack }: { view: Extract<View, { kind: 'merge' }>; busy: boolean; onChoose: (key: string, side: BranchSide) => void; onAll: (side: BranchSide) => void; onMerge: () => void; onBack: () => void }) {
+function MergeReview({ fileId, onCompare, view, busy, onChoose, onAll, onMerge, onBack }: { fileId: string; onCompare: () => void; view: Extract<View, { kind: 'merge' }>; busy: boolean; onChoose: (key: string, side: BranchSide) => void; onAll: (side: BranchSide) => void; onMerge: () => void; onBack: () => void }) {
   const t = useT();
   const { preview, conflicts, choices } = view;
   const branch = view.branch.name;
@@ -326,6 +331,7 @@ function MergeReview({ view, busy, onChoose, onAll, onMerge, onBack }: { view: E
           ) : (
             <p className="db-text">{preview.parent_changed ? t('{into} changed too, in other places. Merging keeps the changes of both.', { into }) : t('{into} has not changed since this branch started. Merging makes it what the branch is.', { into })}</p>
           )}
+          {preview.screens && preview.compare ? <ScreensThatChange fileId={fileId} preview={preview} into={into} onCompare={onCompare} /> : null}
           <p className="db-hint">{t('A commit is made first, so the merge can be undone.')}</p>
         </>
       )}
@@ -335,6 +341,39 @@ function MergeReview({ view, busy, onChoose, onAll, onMerge, onBack }: { view: E
         </button>
         <button type="button" className="btn btn-quiet" onClick={onBack} disabled={busy}>{t('Back')}</button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The merge preview: which screens of the parent the merge would change, each opening the visual compare of the parent
+ * now against the parent after the merge, with Previous and Next through the list.
+ */
+function ScreensThatChange({ fileId, preview, into, onCompare }: { fileId: string; preview: MergePreview; into: string; onCompare: () => void }) {
+  const t = useT();
+  const screens = preview.screens ?? [];
+  const compare = preview.compare!;
+  if (!screens.length) return <p className="db-text" data-testid="branch-merge-screens">{t('No screen changes when this merges.')}</p>;
+  const steps = screens.map((s) => ({ id: s.id, name: s.name, pageId: s.pageId }));
+  const word = (c: ChangedScreen['change']) => (c === 'added' ? t('added') : c === 'removed' ? t('removed') : t('changed'));
+  return (
+    <div className="db-screens" data-testid="branch-merge-screens">
+      <span className="db-meta">{t.n(screens.length, '{count} screen changes', '{count} screens change')}</span>
+      <ul className="db-screen-list">
+        {screens.map((s) => (
+          <li key={s.id} className="db-screen" data-testid="branch-merge-screen" data-screen-id={s.id} data-change={s.change}>
+            <span className="db-name" dir="auto">{s.name}</span>
+            <span className="db-meta">{word(s.change)}</span>
+            <button
+              type="button"
+              className="run-link"
+              onClick={() => { onCompare(); void showCompare(fileId, { from: compare.from, to: compare.to, fromLabel: into, toLabel: t('After the merge'), pageId: s.pageId, pageName: s.name, screenId: s.id, screens: steps }); }}
+              data-testid="branch-merge-compare"
+            >{t('Compare')}</button>
+          </li>
+        ))}
+      </ul>
+      {preview.tokens && (preview.tokens.added || preview.tokens.removed || preview.tokens.changed) ? <span className="db-meta">{t('Tokens: {added} added, {removed} removed, {changed} changed', preview.tokens)}</span> : null}
     </div>
   );
 }

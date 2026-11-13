@@ -29,10 +29,13 @@ export interface Turn {
   nudged?: boolean;
 }
 
-export interface Conversation { id: string; fileId: string; startedAt: number; updatedAt: number; turns: Turn[] }
+/** Why a chat is over: its branch in the repository was merged. The person starts a new chat for the next change. */
+export interface ConversationClosed { at: number; reason: 'merged'; branch?: string; into?: string; url?: string }
+
+export interface Conversation { id: string; fileId: string; startedAt: number; updatedAt: number; turns: Turn[]; closed?: ConversationClosed }
 
 /** A conversation in a list of a file's chats: what it is called, when, who answered, and how long it is. */
-export interface ConversationSummary { id: string; title: string; startedAt: number; updatedAt: number; turns: number; runners: RunnerId[]; running: boolean }
+export interface ConversationSummary { id: string; title: string; startedAt: number; updatedAt: number; turns: number; runners: RunnerId[]; running: boolean; closed?: ConversationClosed }
 
 /** A chat's name: the first thing the person said in it, on one line. */
 export function conversationSummary(c: Conversation): ConversationSummary {
@@ -45,6 +48,7 @@ export function conversationSummary(c: Conversation): ConversationSummary {
     turns: c.turns.length,
     runners: [...new Set(c.turns.map((t) => t.runner))],
     running: c.turns.some((t) => t.status === 'running'),
+    ...(c.closed ? { closed: c.closed } : {}),
   };
 }
 
@@ -93,8 +97,8 @@ export class Conversations implements RunObserver {
   /** Turns of runs still going, by run id. */
   private live = new Map<string, { fileId: string; turn: Turn }>();
 
-  constructor(private readonly home: string, hub: EventHub) {
-    hub.tap((event) => {
+  constructor(private readonly home: string, private readonly hub?: EventHub) {
+    hub?.tap((event) => {
       if (event.t !== 'activity' || !event.runId || TALK_TOOLS.has(event.tool)) return;
       const live = this.live.get(event.runId);
       if (!live) return;
@@ -144,6 +148,22 @@ export class Conversations implements RunObserver {
 
   async get(fileId: string, id: string): Promise<Conversation | undefined> {
     return (await this.book(fileId)).list.find((c) => c.id === id);
+  }
+
+  /**
+   * Closes a chat, as when its branch was merged. A chat that never had a turn here (one made on another device, or
+   * a pull request started before its first message) is kept as an empty chat with the reason, so that it shows.
+   */
+  async closeChat(fileId: string, id: string, closed: ConversationClosed): Promise<void> {
+    const book = await this.book(fileId);
+    let conversation = book.list.find((c) => c.id === id);
+    if (!conversation) {
+      conversation = { id, fileId, startedAt: closed.at, updatedAt: closed.at, turns: [] };
+      book.list.unshift(conversation);
+    }
+    conversation.closed = closed;
+    this.saveSoon(fileId);
+    this.hub?.broadcast({ t: 'conversation', fileId, conversationId: id, closed: true });
   }
 
   /** Puts the transcript of the earlier turns ahead of the request. Runs outside a conversation pass unchanged. */

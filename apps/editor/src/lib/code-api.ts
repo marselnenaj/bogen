@@ -99,7 +99,7 @@ export type DesignSource =
   | { kind: 'proposal'; nodeId: string }
   | { kind: 'versions'; from: string; to: string; nodeIds?: string[] }
   | { kind: 'selection'; nodeIds: string[]; since?: string };
-export type PullStatus = 'running' | 'ready' | 'opening' | 'opened' | 'failed';
+export type PullStatus = 'running' | 'ready' | 'opening' | 'opened' | 'merged' | 'failed';
 export interface ChangedFile { path: string; status: string; additions: number | null; deletions: number | null }
 export interface PullDraft {
   id: string; kind: 'design' | 'tokens'; fileId: string; fileName: string; project: { id: string; name: string }; status: PullStatus;
@@ -107,6 +107,8 @@ export interface PullDraft {
   version: { id: string; url: string }; what: string; pictures: { before?: string; after?: string }; runner?: string; runId?: string;
   commit?: string; files: ChangedFile[]; diffTruncated?: boolean; digest?: string; url?: string; error?: string;
   tokens?: { target: string; format: string; names: string[] };
+  /** A folder remote takes a push and no pull request; a host gets one from gh. */
+  forge?: 'github' | 'folder' | 'other'; conversationId?: string; commits?: number; merged?: { at: number; via: 'local' | 'github'; into: string };
 }
 
 export const pullApi = {
@@ -116,7 +118,7 @@ export const pullApi = {
   async get(id: string): Promise<PullDraft & { diff: string }> {
     return json(await fetch(`/api/code/pulls/${id}`));
   },
-  async startDesign(body: { fileId: string; source: DesignSource; runner: string; title?: string; base?: string; docsDir?: string }): Promise<PullDraft> {
+  async startDesign(body: { fileId: string; source: DesignSource; runner: string; title?: string; base?: string; docsDir?: string; conversationId?: string }): Promise<PullDraft> {
     return json(await fetch('/api/code/pulls', post(body)));
   },
   async startTokens(body: { fileId: string; names: string[]; target?: string }): Promise<PullDraft> {

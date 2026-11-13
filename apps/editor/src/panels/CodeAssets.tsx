@@ -151,7 +151,7 @@ function Stories({ link }: { link: LinkedProject }) {
   );
 }
 
-const STATUS_WORDS: Record<PullDraft['status'], string> = { running: msg('working'), ready: msg('ready to push'), opening: msg('pushing'), opened: msg('opened'), failed: msg('failed') };
+const STATUS_WORDS: Record<PullDraft['status'], string> = { running: msg('working'), ready: msg('ready to push'), opening: msg('pushing'), opened: msg('opened'), merged: msg('merged'), failed: msg('failed') };
 
 /** The toast after an import: sets and stories, each counted in its own words. */
 function storiesToast(sets: number, stories: number, changed: boolean): string {

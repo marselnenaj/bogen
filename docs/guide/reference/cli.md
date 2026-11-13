@@ -43,7 +43,13 @@ It exits 3 when the server is not running.
 
 ### bogen open
 
+```text
+bogen open [<file>[#<layer>]]
+```
+
 Opens the editor in your browser, starting the server if needed. With a token, the address carries it.
+With a file, by id or name, it opens that file; with `#<layer>`, by id or name, that layer is selected
+and in view. It prints the address. See [Layer links](../agents.md#layer-links).
 
 ### bogen welcome
 
@@ -52,8 +58,16 @@ one. Bogen makes it by itself only once, on the first start of an empty data fol
 
 ### bogen mcp
 
+```text
+bogen mcp [--tools full|compact|grouped] [--profile reviewer]
+```
+
 MCP over stdio, for agents. It relays to the server's `/mcp`, starts the server if needed, and keeps
-calls going across a reconnect. This is the command `bogen install` registers.
+calls going across a reconnect. This is the command `bogen install` registers. `--tools` (or
+`BOGEN_MCP_TOOLS`) picks how the tools are listed, and every tool stays callable in each; `--profile
+reviewer` (or `BOGEN_MCP_PROFILE`) gives a session that reads, checks and comments only. An unknown
+value is the full list or every tool, with a warning. See
+[A shorter tool list](../agents.md#a-shorter-tool-list).
 
 ## Agents
 
@@ -74,7 +88,7 @@ the end. Exits 1 if a client could not be connected.
 ### bogen install
 
 ```text
-bogen install <claude-code|codex|cursor|vscode|opencode|gemini|zed|grok|hermes|omp>... | --all
+bogen install <claude-code|codex|cursor|vscode|opencode|gemini|zed|grok|hermes|omp>... | --all [--tools full|compact|grouped]
 ```
 
 Adds Bogen to MCP clients, and for Claude Code and Codex writes the Bogen skill. `--all` (or `all`)
@@ -83,7 +97,9 @@ sets up every client found on this machine and skips the rest. Grok and Hermes a
 `mcp.json` (`~/.omp/agent`, or `PI_CODING_AGENT_DIR`; with a named profile or only `PI_CONFIG_DIR` set it
 refuses instead of guessing the folder). Registering a client lets it use Bogen in its own sessions; which
 CLIs Bogen runs itself is a separate matter, see [Agents](../agents.md). Prints one line per client: `ok`,
-`skip` or `FAIL`, and exits 1 if one failed. See [Agents](../agents.md#connect-a-client).
+`skip` or `FAIL`, and exits 1 if one failed. Each client gets the tool list that suits it: the full list
+for Claude Code and Codex, which load tool schemas on demand, `compact` for OpenCode and `grouped` for the
+others; `--tools` writes another. See [Agents](../agents.md#connect-a-client).
 
 ### bogen uninstall
 

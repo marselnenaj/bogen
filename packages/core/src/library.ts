@@ -4,6 +4,7 @@ import { getTextStyles, setTextStyle, TEXT_STYLE_PROPS, type TextStyle } from '.
 import { normalizeRules, readNestedRules, type LayerRules } from './layer-rules.ts';
 import type { BogenDoc, ComponentDef, NewNode, NodeType, PropValue, Token, TokenKind } from './doc.ts';
 import { readHandoff } from './handoff.ts';
+import { applyTokenRenames, cleanTokenRenames, resolveRenames, tokenRenames, type TokenRename, type TokenRenameReport } from './token-rename.ts';
 
 /**
  * Shared libraries. A file or a brand publishes its components: a copy of each main's tree, with
@@ -16,8 +17,13 @@ import { readHandoff } from './handoff.ts';
  * when someone accepts it.
  */
 
-export interface LibraryInfo { name: string; description?: string; version: number; publishedAt: number; by?: string }
-export interface LibraryLink { id: string; name: string; kind?: 'file' | 'brand'; linkedAt: number; by?: string }
+export interface LibraryInfo {
+  name: string; description?: string; version: number; publishedAt: number; by?: string;
+  /** Tokens the library renamed, so that files using it can follow (token-rename.ts). */
+  renames?: TokenRename[];
+}
+/** `renamesAt`: the newest library rename this file has taken over, or was linked after. */
+export interface LibraryLink { id: string; name: string; kind?: 'file' | 'brand'; linkedAt: number; by?: string; renamesAt?: number }
 
 /** One layer of a published component, with the library's own ids. */
 export interface LibraryTree {
@@ -135,7 +141,8 @@ export function libraryInfo(doc: BogenDoc): LibraryInfo | undefined {
   if (!v || typeof v !== 'object') return undefined;
   const info = v as Partial<LibraryInfo>;
   if (typeof info.name !== 'string') return undefined;
-  return { name: info.name, version: Number(info.version) || 0, publishedAt: Number(info.publishedAt) || 0, ...(typeof info.description === 'string' ? { description: info.description } : {}), ...(typeof info.by === 'string' ? { by: info.by } : {}) };
+  const renames = Array.isArray(info.renames) ? cleanTokenRenames(info.renames) : [];
+  return { name: info.name, version: Number(info.version) || 0, publishedAt: Number(info.publishedAt) || 0, ...(typeof info.description === 'string' ? { description: info.description } : {}), ...(typeof info.by === 'string' ? { by: info.by } : {}), ...(renames.length ? { renames } : {}) };
 }
 
 /** Mains a file can publish: on a page, not inside another main, and not a copy from another library. */
@@ -278,7 +285,10 @@ export function publishLibrary(doc: BogenDoc, options: { name?: string; descript
       changed.push({ main: c.main, name: c.name, version });
     }
     for (const gone of before.keys()) map.delete(gone);
-    const info: LibraryInfo = clean({ name, description: options.description ?? previous?.description, version: (previous?.version ?? 0) + (changed.length || before.size ? 1 : 0), publishedAt: changed.length || before.size ? now : previous?.publishedAt ?? now, by: options.by });
+    const renames = tokenRenames(doc);
+    const renamed = (renames.at(-1)?.at ?? 0) !== (previous?.renames?.at(-1)?.at ?? 0);
+    const moved = changed.length || before.size || renamed;
+    const info: LibraryInfo = clean({ name, description: options.description ?? previous?.description, version: (previous?.version ?? 0) + (moved ? 1 : 0), publishedAt: moved ? now : previous?.publishedAt ?? now, by: options.by, renames: renames.length ? renames : undefined });
     doc.meta.set('library', info);
   }, origin);
   return { info: libraryInfo(doc)!, changed, removed: [...before.values()].map((p) => ({ main: p.main, name: p.name })), unchanged };
@@ -383,7 +393,7 @@ export function libraryLinks(doc: BogenDoc): LibraryLink[] {
   linksMap(doc).forEach((v, id) => {
     if (!v || typeof v !== 'object') return;
     const l = v as Partial<LibraryLink>;
-    out.push(clean({ id, name: typeof l.name === 'string' ? l.name : id, kind: l.kind === 'brand' ? 'brand' as const : 'file' as const, linkedAt: Number(l.linkedAt) || 0, by: typeof l.by === 'string' ? l.by : undefined }));
+    out.push(clean({ id, name: typeof l.name === 'string' ? l.name : id, kind: l.kind === 'brand' ? 'brand' as const : 'file' as const, linkedAt: Number(l.linkedAt) || 0, by: typeof l.by === 'string' ? l.by : undefined, renamesAt: Number(l.renamesAt) || undefined }));
   });
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -495,7 +505,8 @@ function metaOf(libId: string, p: PublishedComponent): CachedMeta {
 export function linkLibrary(doc: BogenDoc, link: Omit<LibraryLink, 'linkedAt'>, published: PublishedComponent[], origin?: unknown): Record<string, string> {
   const out: Record<string, string> = {};
   doc.transact(() => {
-    linksMap(doc).set(link.id, clean({ name: link.name, kind: link.kind, by: link.by, linkedAt: Date.now() }));
+    // Renames made before linking are history: what the file takes now has the new names already.
+    linksMap(doc).set(link.id, clean({ name: link.name, kind: link.kind, by: link.by, linkedAt: Date.now(), renamesAt: link.renamesAt }));
     for (const p of published) {
       const id = libraryLayerId(link.id, p.main);
       const have = cachedMeta(doc, id);
@@ -529,10 +540,21 @@ export function libraryUpdates(doc: BogenDoc, libId: string, published: Publishe
 }
 
 /**
+ * Token renames the library made since this file last took them, as old name to new name, limited to tokens this
+ * file has. They come as an update like a changed component: `acceptLibraryUpdates` takes them over.
+ */
+export function libraryTokenRenames(doc: BogenDoc, libId: string, info: LibraryInfo | undefined): { from: string; to: string }[] {
+  const link = libraryLinks(doc).find((l) => l.id === libId);
+  if (!link || !info?.renames?.length) return [];
+  const since = link.renamesAt ?? link.linkedAt;
+  return [...resolveRenames(info.renames, since)].filter(([from]) => doc.tokens.has(from)).map(([from, to]) => ({ from, to }));
+}
+
+/**
  * Takes a library's updates, all or the named ones (main ids, copy ids or names), with what they show
  * inside them. Overrides stay: they point at layers by ids that an update keeps. One transaction.
  */
-export function acceptLibraryUpdates(doc: BogenDoc, libId: string, published: PublishedComponent[], only?: string[], origin?: unknown) {
+export function acceptLibraryUpdates(doc: BogenDoc, libId: string, published: PublishedComponent[], only?: string[], origin?: unknown, info?: LibraryInfo) {
   const updates = libraryUpdates(doc, libId, published);
   const wanted = only?.length ? updates.filter((u) => only.includes(u.main) || only.includes(u.id) || only.includes(u.name)) : updates;
   const byMain = new Map(published.map((p) => [p.main, p]));
@@ -549,7 +571,15 @@ export function acceptLibraryUpdates(doc: BogenDoc, libId: string, published: Pu
   wanted.forEach(add);
   let kept = 0;
   let orphaned = 0;
+  const pendingRenames = only?.length ? [] : libraryTokenRenames(doc, libId, info);
+  let renamed: TokenRenameReport[] = [];
   doc.transact(() => {
+    if (info?.renames?.length && !only?.length) {
+      // First, so that the components that arrive next find the file's references under the new names already.
+      renamed = applyTokenRenames(doc, new Map(pendingRenames.map((r) => [r.from, r.to])));
+      const raw = linksMap(doc).get(libId);
+      if (raw && typeof raw === 'object') linksMap(doc).set(libId, { ...(raw as object), renamesAt: info.renames.at(-1)!.at });
+    }
     for (const u of take.values()) {
       if (u.status === 'removed') {
         // Instances of a component the library dropped keep their copy, now marked as such.
@@ -573,7 +603,7 @@ export function acceptLibraryUpdates(doc: BogenDoc, libId: string, published: Pu
       }
     }
   }, origin);
-  return { accepted: [...take.values()], overrides: { kept, orphaned } };
+  return { accepted: [...take.values()], overrides: { kept, orphaned }, ...(renamed.length ? { renamed: renamed.map((r) => ({ from: r.from, to: r.to, references: r.references })) } : {}) };
 }
 
 /** Unlinks a library. Copies that instances still use stay, with what they need; the rest go. */

@@ -4,6 +4,7 @@ import { isRunnerId, RUNNER_IDS, MAX_PARALLEL_RUNS } from '@bogen/core';
 import { paletteTokens, type OmarchyTheme } from '../omarchy.ts';
 import { EFFORT_ID, MODEL_ID, CLI_DEFAULT } from '../run-settings.ts';
 import { omarchyThemeRoutes } from './omarchy-routes.ts';
+import { RunTraces } from '../run-trace.ts';
 import { HttpError } from '../util.ts';
 import type { BogenServer } from './server.ts';
 
@@ -93,6 +94,25 @@ export async function agentRoutes(app: BogenServer, req: IncomingMessage, res: S
       send(res, 200, app.remoteRuns.allowList());
       return true;
     }
+    // The playbooks for / in the chat, each with whether the person saved their own version.
+    if (b === 'skills' && !c) {
+      const { chatSkills } = await import('../chat-context.ts');
+      send(res, 200, { skills: chatSkills(app) });
+      return true;
+    }
+    // The trace of one run, for a bug report: as JSON, or as a file to save with ?download=1.
+    if (b === 'trace' && c && !d) {
+      if (!owner(req)) throw new HttpError(403, 'Only from this machine, or a phone paired with it.');
+      const trace = await app.traces.get(c);
+      if (!trace) throw new HttpError(404, 'No trace of that run. Traces are kept for the latest 200 runs on this device.');
+      if (url.searchParams.get('download') === '1') {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="${RunTraces.fileName(trace)}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+        res.end(`${JSON.stringify(trace, null, 2)}\n`);
+        return true;
+      }
+      send(res, 200, trace);
+      return true;
+    }
     // What runs and what waits, over all files, for the queue in the Agents tab.
     if (b === 'queue' && !c) {
       send(res, 200, await runQueue(app));
@@ -110,9 +130,20 @@ export async function agentRoutes(app: BogenServer, req: IncomingMessage, res: S
       const key = url.searchParams.get('fileId') ?? '';
       if (!/^[\w-]{1,80}$/.test(key) || !Id.safeParse(c).success) throw new HttpError(400, 'Say which file and which conversation.');
       const conversation = await app.conversations.get(key, c);
-      send(res, 200, { id: c, turns: conversation?.turns ?? [] });
+      send(res, 200, { id: c, turns: conversation?.turns ?? [], ...(conversation?.closed ? { closed: conversation.closed } : {}) });
       return true;
     }
+  }
+
+  // A draft of a skill from a refined artboard and its accepted proposals. Nothing is saved: the person reviews it.
+  if (a === 'runs' && b === 'skill-draft' && !c && method === 'POST') {
+    if (!owner(req)) throw new HttpError(403, 'Only from this machine, or a phone paired with it.');
+    const body = await json(req, z.object({ fileId: Id, nodeId: z.string().min(1).max(200), discipline: z.string().max(40).optional() }));
+    const { skillDraft } = await import('../chat-context.ts');
+    const { DISCIPLINE_IDS } = await import('../design-knowledge/index.ts');
+    if (body.discipline && !DISCIPLINE_IDS.includes(body.discipline)) throw new HttpError(400, 'No such skill.');
+    send(res, 200, await skillDraft(app, { fileId: body.fileId, nodeId: body.nodeId, ...(body.discipline ? { discipline: body.discipline } : {}) }));
+    return true;
   }
 
   if (a === 'runs' && b === 'remote' && c === 'allow' && !d && method === 'POST') {

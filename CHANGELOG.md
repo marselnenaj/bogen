@@ -5,6 +5,10 @@ and the website builds its "What's new" page from it, so this file only points t
 
 Add a line there for anything a user or an agent notices.
 
+## 0.3.0
+
+Shorter tool lists and plugins, script_run, browser capture, DESIGN.md, Mermaid, PDF and PowerPoint, pull request round trips, variations, visual compare, publish checks, translation memory. [What is in it](docs/guide/changelog.md#030).
+
 ## 0.2.0
 
 A chat beside the canvas, agent-made fonts, more kits and frameworks, accessibility and legal checks. [What is in it](docs/guide/changelog.md#020).

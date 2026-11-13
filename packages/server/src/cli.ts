@@ -15,12 +15,13 @@ Usage:
   bogen start [--port ${DEFAULT_PORT}]                                    Run in the background
   bogen stop                                                  Stop the background server
   bogen status                                                Show whether it runs, and which agents are active
-  bogen open                                                  Open the editor, starting the server if needed
+  bogen open [<file>[#<layer>]]                               Open the editor, or a file with a layer selected and in view
   bogen welcome                                               Open the welcome file, made anew if you deleted it
-  bogen mcp                                                   MCP over stdio, for agents; starts the server if needed
+  bogen mcp [--tools full|compact|grouped] [--profile reviewer]
+                                                              MCP over stdio, for agents; starts the server if needed
   bogen setup [--agents <claude-code,codex|all|none>]         Find your agents, connect the ones you pick, and say what to do next
-  bogen install <claude-code|codex|cursor|vscode|opencode|gemini|zed|grok|hermes|omp|--all>
-                                                              Add Bogen to an MCP client
+  bogen install <claude-code|codex|cursor|vscode|opencode|gemini|zed|grok|hermes|omp|--all> [--tools full|compact|grouped]
+                                                              Add Bogen to an MCP client, with the tool list that suits it
   bogen uninstall <client>                                    Take Bogen out of an MCP client again, skill included
   bogen omarchy install|uninstall [--dry-run]                 Bar widget, launcher, keybinding and user service on Omarchy
   bogen omarchy portrait <status|install|enable|…> [--apply]   Portrait screens show a theme's own composition; plans unless --apply
@@ -55,6 +56,10 @@ Usage:
   bogen agents check [--runner claude|codex] [--model <m>] [--json]
                                                               Run your real claude and codex on a throwaway file: a polite request,
                                                               a question and a two-turn chat. Uses your plan, a few small runs
+  bogen agents check --repo [--runner claude|codex] [--model <m>] [--keep]
+                                                              One design change to a pull request in a throwaway repository with a
+                                                              local remote: one real run, a push, a merge. Nothing leaves this machine
+  bogen agents trace <run id> [--output <file>]               The trace of one run as JSON, for a bug report, secrets masked
 
 Environment:
   BOGEN_HOME         Data folder (default $XDG_DATA_HOME/bogen or ~/.local/share/bogen)
@@ -66,6 +71,8 @@ Environment:
   BOGEN_PEER_TOKEN   For \`peer add\`: the other device's token, to keep it off the command line
   BOGEN_BROWSER      Path to a Chromium-based browser
   BOGEN_AGENTS       For \`setup\`: the agents to connect without asking, as for --agents
+  BOGEN_MCP_TOOLS    For \`mcp\`: full (default), compact or grouped, as for --tools. Every tool stays callable
+  BOGEN_MCP_PROFILE  For \`mcp\`: reviewer for a session that reads, checks and comments only, as for --profile
   BOGEN_EXPORT_DIR   Where export_file writes (default ~/Downloads/Bogen)
   BOGEN_UPDATE_CHECK off turns every update check off, also the ones you ask for
   BOGEN_UPDATE_URL   Where releases are fetched from (default the latest GitHub release)
@@ -210,6 +217,10 @@ async function main(): Promise<void> {
       runner: { type: 'string' },
       model: { type: 'string' },
       agents: { type: 'string' },
+      tools: { type: 'string' },
+      profile: { type: 'string' },
+      repo: { type: 'boolean' },
+      keep: { type: 'boolean' },
     },
   });
   const conn = connectionFromEnv(portArg(values.port));
@@ -334,13 +345,31 @@ async function main(): Promise<void> {
       return;
     }
     case 'mcp': {
+      const modes = await import('./mcp/tool-modes.ts');
+      // --tools and --profile win over the environment; an unknown value is the full list or every tool, and says so.
+      const { mode, warning: modeWarning } = modes.parseToolMode(values.tools ?? process.env[modes.TOOLS_VARIABLE]);
+      const { profile, warning: profileWarning } = modes.parseToolProfile(values.profile ?? process.env[modes.PROFILE_VARIABLE]);
+      for (const w of [modeWarning, profileWarning]) if (w) process.stderr.write(`bogen: ${w}\n`);
       await ensure(conn);
       const { runRelay } = await import('./mcp/relay.ts');
-      return runRelay({ url: `${conn.url}/mcp`, token: conn.token, ensureServer: () => ensure(conn) });
+      const headers = { ...(mode !== 'full' ? { [modes.TOOLS_HEADER]: mode } : {}), ...(profile !== 'all' ? { [modes.PROFILE_HEADER]: profile } : {}) };
+      return runRelay({ url: `${conn.url}/mcp`, token: conn.token, headers, ensureServer: () => ensure(conn) });
     }
     case 'open': {
       await ensure(conn);
       const url = conn.token ? `${conn.url}/?token=${encodeURIComponent(conn.token)}` : conn.url;
+      if (positionals[0]) {
+        const { openTarget } = await import('./cli-transfer.ts');
+        let target: { hash: string; name: string };
+        try {
+          target = await openTarget(conn, positionals.join(' '));
+        } catch (e) {
+          fail(errorMessage(e));
+        }
+        openUrl(`${conn.token ? url : `${conn.url}/`}${target.hash}`);
+        process.stdout.write(`Opening ${target.name}: ${conn.url}/${target.hash}\n`);
+        return;
+      }
       openUrl(url);
       process.stdout.write(`Opening ${conn.url}\n`);
       return;
@@ -374,7 +403,9 @@ async function main(): Promise<void> {
       const named = positionals.filter((p) => p !== 'all');
       for (const name of named) if (!(CLIENTS as readonly string[]).includes(name)) fail(`Unknown client "${name}". Use one of: ${CLIENTS.join(', ')}, or --all.`);
       if (!all && !named.length) fail(`Say which client: ${CLIENTS.join(', ')}, or --all.`);
-      const results = await install(all ? [...CLIENTS] : named as never[], { onlyDetected: all });
+      const { TOOL_MODES } = await import('./mcp/tool-modes.ts');
+      if (values.tools !== undefined && !(TOOL_MODES as readonly string[]).includes(values.tools)) fail(`Unknown tool list "${values.tools}". Use one of: ${TOOL_MODES.join(', ')}.`);
+      const results = await install(all ? [...CLIENTS] : named as never[], { onlyDetected: all, ...(values.tools ? { tools: values.tools as never } : {}) });
       for (const r of results) process.stdout.write(`${r.skipped ? 'skip' : r.ok ? 'ok  ' : 'FAIL'}  ${r.client}: ${r.how}\n`);
       if (results.some((r) => !r.ok)) process.exitCode = 1;
       return;
@@ -441,7 +472,17 @@ async function main(): Promise<void> {
       return;
     }
     case 'agents': {
-      if (positionals[0] !== 'check') fail('Usage: bogen agents check [--runner claude|codex] [--model <m>] [--json]');
+      if (positionals[0] === 'trace') {
+        const { agentsTraceCommand } = await import('./agents-check-cli.ts');
+        process.exitCode = await agentsTraceCommand(conn, positionals[1], values.output, (text) => process.stdout.write(text));
+        return;
+      }
+      if (positionals[0] !== 'check') fail('Usage: bogen agents check [--repo] [--runner claude|codex] [--model <m>] [--keep] [--json]\n       bogen agents trace <run id> [--output <file>]');
+      if (values.repo) {
+        const { repoCheckCommand } = await import('./repo-check.ts');
+        process.exitCode = await repoCheckCommand({ ...(values.runner ? { runner: values.runner } : {}), ...(values.model ? { model: values.model } : {}), keep: Boolean(values.keep), json: Boolean(values.json) }, (text) => process.stdout.write(text));
+        return;
+      }
       const runner = values.runner;
       if (runner !== undefined && runner !== 'claude' && runner !== 'codex') fail(`--runner is claude or codex, not "${runner}".`);
       const { agentsCheckCommand } = await import('./agents-check-cli.ts');

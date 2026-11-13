@@ -1,6 +1,6 @@
 import { brandBookMap, initializeBrandBook } from '@bogen/core';
 import {
-  addFontFaces, applyBrandTokens, bindingBrand, BRANCHES_ROOT, brandBrief, brandLanguages, contentLanguageOf, resolveContentLanguage, brandCounts, brandFieldsMap, brandItemsMap, BRAND_NOTICE, brandLinkOf, brandSheetHtml, brandSummary, brandVersionHead, brandVersions, brandVersionsMap, BogenDoc, colorsIn, confirmed, diffBrand,
+  addFontFaces, applyBrandTokens, applyTokenRenames, brandTokenRenames, bindingBrand, BRANCHES_ROOT, brandBrief, brandLanguages, contentLanguageOf, resolveContentLanguage, brandCounts, brandFieldsMap, brandItemsMap, BRAND_NOTICE, brandLinkOf, brandSheetHtml, brandSummary, brandVersionHead, brandVersions, brandVersionsMap, BogenDoc, colorsIn, confirmed, diffBrand,
   familyStack, getFontFaces, type StoredFontFace, importHtml, isBrandDoc, makeBrandCopy, markBrandDoc, newId, normalizeColor, publishBrandVersion, readBrand, readProject, setBrandField, setBrandLink, Y, type BrandChange, type BrandData, type BrandVersion,
 } from '@bogen/core';
 import type { RunEnd, RunRequest } from './agents.ts';
@@ -71,7 +71,7 @@ export interface BrandDrift {
   trend: ReturnType<typeof trendOf>;
   history: { at: number; score: number }[];
 }
-export interface FileImpact { file_id: string; file_name: string; from_version: number | null; layers: LayerImpact[]; layer_count: number; tokens: { name: string; from: string | null; to: string }[] }
+export interface FileImpact { file_id: string; file_name: string; from_version: number | null; layers: LayerImpact[]; layer_count: number; tokens: { name: string; from: string | null; to: string }[]; token_renames?: { from: string; to: string }[] }
 
 interface Deps {
   storage: Storage;
@@ -626,7 +626,8 @@ export class Brands {
         }
       });
     }
-    return { file_id: entry.id, file_name: entry.name, from_version: from?.n ?? null, layer_count: new Set(layers.map((l) => l.id)).size, layers: layers.slice(0, 200), tokens: tokenChanges };
+    const renames = from ? [...brandTokenRenames(from.data, to)].filter(([old]) => doc.tokens.has(old)).map(([old, now]) => ({ from: old, to: now })) : [];
+    return { file_id: entry.id, file_name: entry.name, from_version: from?.n ?? null, layer_count: new Set(layers.map((l) => l.id)).size, layers: layers.slice(0, 200), tokens: tokenChanges, ...(renames.length ? { token_renames: renames } : {}) };
   }
 
   /** Which linked files and layers a change touches, whether it is published yet or not. */
@@ -690,6 +691,8 @@ export class Brands {
             layers++;
           }
         });
+        // A token the brand renamed is renamed here first, with every reference, so that no layer keeps the old name.
+        if (from) applyTokenRenames(file.doc, brandTokenRenames(from.data, data));
         const result = applyBrandTokens(file.doc, data);
         tokens = result.set.length + result.removed.length;
         if (faces.length) addFontFaces(file.doc, faces);

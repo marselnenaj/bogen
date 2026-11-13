@@ -3,6 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { chmodSync, cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -37,7 +38,9 @@ await build({
   target: 'node22',
   // puppeteer-core reaches for many optional modules at runtime, so it stays an npm dependency.
   // esbuild has a native binary: it bundles code components at runtime, and the shader runtime in development.
-  external: ['puppeteer-core', 'esbuild'],
+  // Mermaid and pdf.js are files of their own in dist/vendor/, loaded on first use (src/vendor-files.ts): bundled,
+  // pdf.js alone would be most of cli.js and its start time.
+  external: ['puppeteer-core', 'esbuild', 'mermaid', 'mermaid/*', 'pdfjs-dist', 'pdfjs-dist/*'],
   banner: {
     js: [
       '#!/usr/bin/env node',
@@ -80,6 +83,23 @@ await build({
   legalComments: 'none',
 });
 
+// script_run's sandbox: a worker thread with QuickJS, whose WebAssembly ships as a file of its own (src/script-sandbox.ts).
+await build({
+  entryPoints: [join(root, 'src/script-worker.ts')],
+  outfile: join(dist, 'script-worker.js'),
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node22',
+  banner: { js: "import { createRequire as __bogenRequire } from 'node:module';\nconst require = __bogenRequire(import.meta.url);" },
+  logLevel: 'warning',
+  minifySyntax: true,
+  legalComments: 'none',
+});
+const quickjsWasm = createRequire(import.meta.url).resolve('@jitl/quickjs-wasmfile-release-asyncify/wasm');
+mkdirSync(join(dist, 'quickjs'), { recursive: true });
+cpSync(quickjsWasm, join(dist, 'quickjs', 'quickjs-asyncify.wasm'));
+
 // The Bogen collection's art (src/omarchy-collection.ts) sits next to the bundle, so a packaged CLI finds it offline.
 const collection = join(root, 'assets', 'omarchy-collection');
 if (existsSync(collection)) cpSync(collection, join(dist, 'omarchy-collection'), { recursive: true });
@@ -88,6 +108,18 @@ if (existsSync(collection)) cpSync(collection, join(dist, 'omarchy-collection'),
 const iconSets = join(root, '..', 'core', 'src', 'icon-sets');
 if (!existsSync(join(iconSets, 'tabler.json'))) throw new Error(`No icon sets in ${iconSets}. Run scripts/gen-icon-sets.ts.`);
 cpSync(iconSets, join(dist, 'icon-sets'), { recursive: true });
+
+// Mermaid's browser bundle (diagram_insert, in a render page) and pdf.js (pdf_import, in Node and in a render page) go
+// next to cli.js in dist/vendor/, where src/vendor-files.ts looks for them. pdf.js is its legacy build, which runs in
+// Node and in the browser alike, so that both read a PDF to the same operator list.
+const require = createRequire(import.meta.url);
+const vendor = join(dist, 'vendor');
+mkdirSync(vendor, { recursive: true });
+for (const [module, file] of [
+  ['mermaid/dist/mermaid.min.js', 'mermaid.min.js'],
+  ['pdfjs-dist/legacy/build/pdf.min.mjs', 'pdf.min.mjs'],
+  ['pdfjs-dist/legacy/build/pdf.worker.min.mjs', 'pdf.worker.min.mjs'],
+]) cpSync(require.resolve(module), join(vendor, file));
 
 if (existsSync(join(editor, 'index.html'))) {
   cpSync(editor, join(dist, 'editor'), { recursive: true });

@@ -106,8 +106,21 @@ export async function figmaImport(conn: Connection, url: string, values: Values,
   if (values['save-token']) out('The token is saved in config.json, readable by you only.');
 }
 
-async function findFile(conn: Connection, nameOrId: string): Promise<{ id: string; name: string }> {
+/**
+ * The editor's address for `bogen open <file>[#<layer>]`: the file by id or name, and a layer by id or name, which
+ * the editor selects and brings into view. A file whose whole name has a # in it is found as it is.
+ */
+export async function openTarget(conn: Connection, target: string): Promise<{ hash: string; name: string }> {
   const files = await answer<{ id: string; name: string }[]>(await fetch(`${conn.url}/api/files`, { headers: headers(conn, false) }));
+  const whole = files.some((f) => f.id === target || f.name === target);
+  const cut = whole ? -1 : target.indexOf('#');
+  const file = await findFile(conn, cut < 0 ? target : target.slice(0, cut), files);
+  const layer = cut < 0 ? '' : target.slice(cut + 1).trim();
+  return { hash: `#/file/${file.id}${layer ? `?layer=${encodeURIComponent(layer)}` : ''}`, name: layer ? `${file.name}, layer ${layer}` : file.name };
+}
+
+async function findFile(conn: Connection, nameOrId: string, known?: { id: string; name: string }[]): Promise<{ id: string; name: string }> {
+  const files = known ?? await answer<{ id: string; name: string }[]>(await fetch(`${conn.url}/api/files`, { headers: headers(conn, false) }));
   const byId = files.find((f) => f.id === nameOrId);
   if (byId) return byId;
   const named = files.filter((f) => f.name === nameOrId);

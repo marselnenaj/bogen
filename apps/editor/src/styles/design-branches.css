@@ -46,3 +46,8 @@
 .db-notice { font-size: 12px; color: var(--ui-fg-2); overflow-wrap: anywhere; }
 .db-error { overflow-wrap: anywhere; }
 .db-held { color: var(--ui-fg-2); font-style: italic; }
+/* The merge preview: screens the merge would change, each opening the visual compare. */
+.db-screens { display: flex; flex-direction: column; gap: 4px; }
+.db-screen-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 180px; overflow: auto; scrollbar-width: thin; }
+.db-screen { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-height: 24px; padding: 0 2px; }
+.db-screen .db-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

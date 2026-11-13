@@ -122,7 +122,9 @@ lists the others:
   it out. Main stays as it was. **Branch** in the History panel does the same.
 - Click a branch, or Main, to switch to it. What was live is kept as its own branch, so nothing is
   lost. Undo starts afresh after a switch, so it never writes a step from one branch into another.
-- **Review and merge** on a branch shows what it and the version it started from each changed. Where
+- **Review and merge** on a branch shows what it and the version it started from each changed, and
+  lists the screens the merge would change, added, removed or changed. **Compare** next to a screen
+  opens it as it is now next to how it would be after the merge (see [Compare](#compare)). Where
   both changed the same token, layer or setting differently, you choose per item which side keeps it,
   or **All from** one side; **Merge** waits until every conflict has an answer. A commit is taken
   first, and **Undo this merge** under **Decided** takes it back while the other side is still as the
@@ -134,6 +136,25 @@ Only you merge, discard, restore or undo a merge. An agent can start a branch (`
 or its older name `branch_create`), work in it and switch (`design_branch_switch`), never merge it. A
 request to redo a theme, such as "make it again", runs in a branch of the same file, and the next message
 of that conversation continues it.
+
+### Compare
+
+A comparison fills the canvas with two pictures of the same screen or page, rendered on this computer:
+
+- **Side by side**, with **Scroll together** on, so that a long page stays aligned on both sides.
+- **Overlay**: the second over the first, with its opacity on a slider, and **Highlight differences**
+  marking every changed pixel in red.
+- **Swipe**: drag across the picture, or use the slider, to wipe from one version to the other.
+- **Difference**: the changed pixels alone.
+
+The bar says how many pixels differ, and **Previous screen** and **Next screen** step through the screens
+a merge changes. Your choice of mode is kept on this device. **Back to now** returns to the canvas.
+
+The same view opens from **Compare with now** on a commit, from a page in a comparison of two
+versions, from **Review and merge** on a branch, and from the compare button on a proposal or a race
+lane, which sets the copy next to the original it would replace. Your agent sees the same with
+`design_branch_compare`: the screens a merge would change, and for one of them the share of pixels
+that differ and a picture of where. It can look; only you merge.
 
 One branch is live at a time. If the file is switched while an agent works on another branch, its
 writes are refused rather than mixed in, and an agent cannot switch the file away from another agent

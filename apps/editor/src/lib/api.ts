@@ -47,13 +47,20 @@ async function fileList(): Promise<FileEntry[]> {
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
-  if (!res.ok) throw new Error(t('{method} {path} failed with {status}', { method: init?.method ?? 'GET', path, status: res.status }));
+  if (!res.ok) {
+    const out: unknown = await res.json().catch(() => null);
+    const reason = out && typeof out === 'object' && 'error' in out && typeof out.error === 'string' ? out.error.trim() : '';
+    throw new Error(reason ? t(reason) : t('{method} {path} failed with {status}', { method: init?.method ?? 'GET', path, status: res.status }));
+  }
   return (await res.json()) as T;
 }
 
 const body = (data: unknown): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
 
-export type ThreadRunStatus = 'queued' | 'working' | 'done' | 'failed' | 'stopped';
+/** An MCP client in Settings, Add to agent. `connected` is null when Bogen cannot tell from the client's files. */
+export interface AgentClient { client: string; label: string; found: boolean; connected: boolean | null; skill: boolean | null; tools: 'full' | 'compact' | 'grouped' }
+
+export type ThreadRunStatus ='queued' | 'working' | 'done' | 'failed' | 'stopped';
 export interface ThreadRun { threadId: string; runner: string; status: ThreadRunStatus; runId?: string; tool?: string; queueId?: string; steps?: { tool: string; at: number }[]; reason?: string }
 
 export interface CommentTarget { runner: RunnerId; model: string; effort: string; at: number }
@@ -100,7 +107,16 @@ export const api = {
     if (!res.ok) throw new Error(t('Undo failed with {status}', { status: res.status }));
   },
   runners: () => json<Runner[]>('/api/runners'),
-  startRun: (req: { fileId: string; pageId?: string; nodeIds: string[]; prompt: string; title?: string; runner: string; model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; conversationId?: string; device?: string; images?: string[]; language?: RunLanguage }) => json<{ runId: string }>('/api/runs', body(req)),
+  /** The MCP clients on this computer and whether Bogen is in them, as `bogen setup` finds them. */
+  clients: () => json<{ clients: AgentClient[] }>('/api/clients'),
+  /** Does what `bogen install <client>` does. The error is the server's own words. */
+  connectClient: async (client: string): Promise<{ client: AgentClient; how: string }> => {
+    const res = await fetch(`/api/clients/${encodeURIComponent(client)}/connect`, { method: 'POST' });
+    const out = await res.json().catch(() => ({})) as { client?: AgentClient; how?: string; error?: string };
+    if (!res.ok || !out.client) throw new Error(out.error ?? String(res.status));
+    return { client: out.client, how: out.how ?? '' };
+  },
+  startRun: (req: { fileId: string; pageId?: string; nodeIds: string[]; prompt: string; title?: string; runner: string; model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; conversationId?: string; device?: string; images?: string[]; language?: RunLanguage; discipline?: string; mentions?: { kind: string; id: string }[]; variation?: { count: number; range: string; vary: string[] } }) => json<{ runId: string }>('/api/runs', body(req)),
   /** The turns of a chat the server keeps, so that one opened again after a reload shows what was said. */
   conversation: (fileId: string, id: string) => json<{ id: string; turns: ConversationTurn[] }>(`/api/runs/conversations/${encodeURIComponent(id)}?fileId=${encodeURIComponent(fileId)}`),
   /** The chats of a file, the one talked in last first, for the chat panel's list of earlier chats. */

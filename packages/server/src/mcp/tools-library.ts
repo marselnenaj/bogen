@@ -66,15 +66,15 @@ export function registerLibraryTools(define: ToolDefiner): void {
     return { linked: lib.name, id: lib.id, components: linkedSummary(room.doc).find((l) => l.id === lib.id)?.components ?? [], next: `instance_create component=<name> library="${lib.name}"` };
   });
 
-  define('library_updates', { description: 'What the libraries this file links have published since the file took them: components changed, new or removed, with versions and how many instances each touches. Accept with library_accept.', readOnly: true }, {
+  define('library_updates', { description: 'What the libraries this file links have published since the file took them: components changed, new or removed, with versions and how many instances each touches, and token_renames, tokens the library renamed that this file still has under the old name. Accept with library_accept.', readOnly: true }, {
     file_id: fileIdArg,
   }, async ({ file_id }, ctx) => {
     const room = await ctx.room(file_id);
     const { linked } = await ctx.app.libraries.status(room.id, room.doc);
-    return { libraries: linked.map((l) => ({ id: l.id, name: l.name, missing: l.missing, updates: l.updates.map(({ lib: _lib, ...u }) => u) })) };
+    return { libraries: linked.map((l) => ({ id: l.id, name: l.name, missing: l.missing, updates: l.updates.map(({ lib: _lib, ...u }) => u), ...(l.renames.length ? { token_renames: l.renames } : {}) })) };
   });
 
-  define('library_accept', { description: 'Accept updates of a linked library, all or the named components, with the library components they show. Instances follow and keep their overrides; an override of a layer the library removed stays stored and shows nothing. One undo step.' }, {
+  define('library_accept', { description: 'Accept updates of a linked library, all or the named components, with the library components they show. Instances follow and keep their overrides; an override of a layer the library removed stays stored and shows nothing. Accepting everything (no components named) also takes the library\'s token renames: each old token here becomes the new one, with every var() reference to it. One undo step.' }, {
     library: z.string().optional().describe('An id or a name. Default: every linked library.'),
     components: z.array(z.string()).max(500).optional().describe('Names or ids. Default: all of them.'),
     file_id: fileIdArg,
@@ -85,7 +85,7 @@ export function registerLibraryTools(define: ToolDefiner): void {
     const out = [];
     for (const link of links) {
       const done = await ctx.app.libraries.accept(room, link.id, components, (fn) => ctx.write(room, fn));
-      out.push({ library: link.name, accepted: done.accepted.map((u) => ({ name: u.name, status: u.status, ...(u.from ? { from: u.from } : {}), ...(u.to ? { to: u.to } : {}), instances: u.instances })), overrides: done.overrides });
+      out.push({ library: link.name, accepted: done.accepted.map((u) => ({ name: u.name, status: u.status, ...(u.from ? { from: u.from } : {}), ...(u.to ? { to: u.to } : {}), instances: u.instances })), overrides: done.overrides, ...(done.renamed ? { token_renames: done.renamed } : {}) });
     }
     return { results: out };
   });

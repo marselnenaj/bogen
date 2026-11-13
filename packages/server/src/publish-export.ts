@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { cleanPublishedPage, exportDocument, googleFontsHrefs, proposalMark, publishSlug, publishUrls, readCodeRef, type BogenDoc, type PublishLayer } from '@bogen/core';
+import { absoluteUrl, cleanPublishedPage, contentLanguageOf, exportDocument, googleFontsHrefs, languageDirection, proposalMark, publishSlug, publishUrls, readCodeRef, webPageMeta, type BogenDoc, type PublishHead, type PublishLayer } from '@bogen/core';
+import { imageSize } from './image-raster.ts';
 import type { CodeBuilder } from './code-build.ts';
 import { fetchPublic } from './net-guard.ts';
 import { usedFamilies, type Renderer } from './render.ts';
@@ -59,11 +60,11 @@ export function pageCsp(frames: boolean, form = false): string {
 
 const TYPES: Record<string, string> = {
   html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
-  avif: 'image/avif', svg: 'image/svg+xml', mp4: 'video/mp4', webm: 'video/webm', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', otf: 'font/otf',
+  avif: 'image/avif', svg: 'image/svg+xml', ico: 'image/x-icon', mp4: 'video/mp4', webm: 'video/webm', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', otf: 'font/otf',
 };
 
 const MIME_EXT: Record<string, string> = {
-  'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif', 'image/svg+xml': 'svg',
+  'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif', 'image/svg+xml': 'svg', 'image/x-icon': 'ico', 'image/vnd.microsoft.icon': 'ico',
   'video/mp4': 'mp4', 'video/webm': 'webm', 'font/woff2': 'woff2', 'font/woff': 'woff', 'font/ttf': 'ttf', 'font/otf': 'otf',
   'application/font-woff': 'woff', 'application/font-woff2': 'woff2', 'application/x-font-ttf': 'ttf', 'application/x-font-otf': 'otf',
 };
@@ -117,6 +118,8 @@ export async function buildSite(doc: BogenDoc, target: BuildTarget, deps: BuildD
 
   // Addresses of images, videos and fonts, as files of the site.
   const resolved = new Map<string, string | null>();
+  // The pixel size of each picture of the design, so that a page reserves its box before the picture loads.
+  const sizes = new Map<string, { width: number; height: number }>();
   const resolveUrl = async (raw: string): Promise<string | null> => {
     if (resolved.has(raw)) return resolved.get(raw)!;
     let out: string | null = null;
@@ -185,19 +188,59 @@ export async function buildSite(doc: BogenDoc, target: BuildTarget, deps: BuildD
   };
 
   const fontCss = await googleFonts(doc, deps, (path, bytes) => add(path, bytes), notes);
+  // The pixel size of every picture the site shows, read from its header. Only read: what is hidden or a proposal
+  // adds no file to the site, since the export leaves it out.
+  const measure = async (id: string): Promise<void> => {
+    const node = doc.getNode(id);
+    if (!node || node.hidden || proposalMark(doc, id)) return;
+    if (node.src?.startsWith('bogen-asset:') && !sizes.has(node.src)) {
+      const asset = await deps.storage.readAsset(node.src.slice('bogen-asset:'.length)).catch(() => null);
+      const size = asset && asset.mime.startsWith('image/') ? imageSize(asset.bytes) : null;
+      if (size && size.width > 0 && size.height > 0) sizes.set(node.src, size);
+    }
+    for (const c of doc.getChildren(id)) await measure(c.id);
+  };
+  for (const root of roots) await measure(root);
+  const fileLanguage = contentLanguageOf(doc);
+  const firstMeta = webPageMeta(doc.getNode(roots[0]!)!);
+  const base = absoluteUrl(firstMeta.canonical);
   const forbidden = knownIds(doc, roots);
   const pages: { file: string; title: string; rootId: string; pageId: string }[] = [];
   const taken = new Set<string>(['index']);
   for (const [i, root] of roots.entries()) {
     const node = doc.getNode(root)!;
     const slug = i === 0 ? 'index' : publishSlug(node.name, taken);
-    const title = (i === 0 && target.title) || node.name || 'Page';
-    const source = exportDocument(doc, [root], { ids: true, media: 'viewport', title });
+    const meta = webPageMeta(node);
+    const title = (i === 0 && target.title) || meta.title || 'Page';
+    const source = exportDocument(doc, [root], { ids: true, media: 'viewport', title, images: { size: (src) => sizes.get(src) } });
     const map = new Map<string, string | null>();
-    for (const u of publishUrls(source)) map.set(u, await resolveUrl(u));
+    // Only the addresses that layers which stay on the page use: a hidden layer or a proposal is in the export with
+    // display:none, and its picture must not become a file of the site. A first, dry pass of the cleaner says which.
+    const kept = new Set<string>();
+    try {
+      cleanPublishedPage(source, { title, layer, url: (u) => { kept.add(u); return 'assets/x.png'; }, stylesheet: `${slug}.css`, fit: target.fit ?? 'fluid', csp: null });
+    } catch {
+      for (const u of publishUrls(source)) kept.add(u);
+    }
+    for (const u of publishUrls(source)) if (kept.has(u)) map.set(u, await resolveUrl(u));
+    // The page's head: its own fields, else the site's address for its file, else the file's design language.
+    const lang = meta.lang ?? fileLanguage ?? undefined;
+    const canonical = absoluteUrl(meta.canonical) ?? (base && i > 0 ? absoluteUrl(`${slug}.html`, base) : i === 0 ? base : undefined);
+    const picture = meta.ogImage ?? (i > 0 ? firstMeta.ogImage : undefined);
+    const icon = meta.favicon ?? firstMeta.favicon;
+    const asFile = async (raw: string | undefined) => (raw && (raw.startsWith('bogen-asset:') || raw.startsWith('data:')) ? (await resolveUrl(raw)) ?? undefined : undefined);
+    const head: PublishHead = {
+      ...(lang ? { lang, dir: meta.dir ?? languageDirection(lang) } : {}),
+      ...(meta.description ? { description: meta.description } : {}),
+      ...(canonical ? { canonical } : {}),
+      ...(picture ? { ogImage: (await asFile(picture)) ?? (absoluteUrl(picture) && /^https:/i.test(picture) ? picture : undefined) } : {}),
+      ...(icon ? { favicon: await asFile(icon) } : {}),
+    };
+    if (head.ogImage === undefined) delete head.ogImage;
+    if (head.favicon === undefined) delete head.favicon;
     const page = cleanPublishedPage(source, {
       title, layer, url: (u) => map.get(u) ?? null, stylesheet: `${slug}.css`, fit: target.fit ?? 'fluid',
-      csp: pageCsp(frames.size > 0), forbidden,
+      csp: pageCsp(frames.size > 0), forbidden, head,
     });
     for (const n of page.notes) notes.add(n);
     add(`${slug}.html`, Buffer.from(page.html, 'utf8'));

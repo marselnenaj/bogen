@@ -1,7 +1,7 @@
 import { mkdir, realpath, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { contentLanguageOf, COMMENT_CHECKS, confirmed, createMode, getModes, setTokenMode, EXACT_COMMIT, toExactApp, type BogenDoc, type BogenNode, type CommentCheck, type TokenKind } from '@bogen/core';
+import { contentLanguageOf, COMMENT_CHECKS, confirmed, createMode, getModes, libraryInfo, previewTokenRename, renameToken, setTokenMode, EXACT_COMMIT, toExactApp, type BogenDoc, type BogenNode, type CommentCheck, type TokenKind } from '@bogen/core';
 import { z } from 'zod';
 import { exactFolder, writeCodeFiles, writeExactApp } from '../exact-app.ts';
 import { handoffFiles } from '../code-handoff.ts';
@@ -123,6 +123,23 @@ export function registerDesignTools(define: ToolDefiner): void {
     return { deleted: names };
   });
 
+  define('tokens_rename', { description: 'Rename a token, with every var() reference to it in the file following, also with a fallback: layer styles, rules for states and conditions, attributes, drawings, text ranges, instance props and overrides, component mains, text styles, other tokens and keyframes. Its values in every theme mode come along. One undo step. When this file publishes a library or is a brand, files that link it get the rename as an update (library_accept, brand_apply). dry_run reports what would change.' }, {
+    from: z.string().min(1).max(80).describe('The token now, without the leading dashes.'),
+    to: z.string().min(1).max(80).describe('Its new name.'),
+    dry_run: z.boolean().default(false),
+    file_id: fileIdArg,
+  }, async ({ from, to, dry_run, file_id }, ctx) => {
+    const room = await ctx.room(file_id);
+    const a = from.replace(/^--/, '').trim();
+    const b = to.replace(/^--/, '').trim();
+    const report = dry_run ? previewTokenRename(room.doc, a, b) : ctx.write(room, () => renameToken(room.doc, a, b));
+    const lib = libraryInfo(room.doc);
+    return {
+      ...report, dry_run,
+      ...(lib && !dry_run ? { next: `This file publishes the library "${lib.name}". Publish it again (library_publish) so that files linking it get the rename as an update.` } : {}),
+    };
+  });
+
   define('tokens_from_css', { description: 'Import design tokens from CSS you read in a repository, so that the design matches the codebase. Read the project\'s theme file with your own tools and pass its text. Takes custom properties from :root, html and @theme, and infers each kind. Other blocks, such as .dark, are reported as skipped; pass selector to import one of them instead, and mode to make them the values of a theme mode.' }, {
     css: z.string().min(1).max(1024 * 1024),
     selector: z.string().optional().describe('Take variables from exactly this selector, such as .dark.'),
@@ -196,8 +213,8 @@ export function registerDesignTools(define: ToolDefiner): void {
     return { thread_id, replied: true };
   });
 
-  define('export_file', { description: 'Export layers or a page to a file on this machine and return its path, for a design the person wants to keep or send. It goes to the Bogen export folder, or to path when given. Formats: png, jpg, webp, avif, svg, pdf, html, prototype, mp4, webm, vue, svelte, swiftui, and the experimental exact. Several layers give one file each, except pdf and prototype, which make one file. prototype writes a static clickable .html of the artboards with their variables and interactions (interaction_set), one small script that asks no network, and every screen its links lead to. svg writes native vector elements, and says which layers had to stay HTML in a foreignObject. mp4 and webm render frame by frame with CSS animations and shaders at exact times; give duration and fps. exact (experimental) writes a folder per layer, or per top-level layer of the page: a minimal Exact app (github.com/expo/exact) with app.contract, app.ts, app.json, app.test.contract, app.tamber for the tokens and assets/ for the pictures, and returns what Contract could not say. vue, svelte and swiftui write a folder per layer, or per top-level layer of the page, with a file per component, the page or screen, the tokens (bogen.css or Tokens.swift) and for SwiftUI the icons as SVGs in Assets/, and return what the format could not say. To just look at your work, use canvas_screenshot instead.' }, {
-    format: z.enum(['png', 'jpg', 'webp', 'avif', 'svg', 'pdf', 'html', 'prototype', 'mp4', 'webm', 'vue', 'svelte', 'swiftui', 'exact']),
+  define('export_file', { description: 'Export layers or a page to a file on this machine and return its path, for a design the person wants to keep or send. It goes to the Bogen export folder, or to path when given. Formats: png, jpg, webp, avif, svg, pdf, pptx, html, prototype, mp4, webm, vue, svelte, swiftui, and the experimental exact. Several layers give one file each, except pdf, pptx and prototype, which make one file. pptx makes a PowerPoint deck of slide artboards (the layers given, or the page\'s boards in reading order): text as editable text boxes with their runs, pictures from Bogen as themselves, plain fills, borders and radii as native shapes, and vectors, gradients, shadows, filters, transforms, shaders and embeds as pictures, which the report names layer by layer with why. prototype writes a static clickable .html of the artboards with their variables and interactions (interaction_set), one small script that asks no network, and every screen its links lead to. svg writes native vector elements, and says which layers had to stay HTML in a foreignObject. mp4 and webm render frame by frame with CSS animations and shaders at exact times; give duration and fps. exact (experimental) writes a folder per layer, or per top-level layer of the page: a minimal Exact app (github.com/expo/exact) with app.contract, app.ts, app.json, app.test.contract, app.tamber for the tokens and assets/ for the pictures, and returns what Contract could not say. vue, svelte and swiftui write a folder per layer, or per top-level layer of the page, with a file per component, the page or screen, the tokens (bogen.css or Tokens.swift) and for SwiftUI the icons as SVGs in Assets/, and return what the format could not say. To just look at your work, use canvas_screenshot instead.' }, {
+    format: z.enum(['png', 'jpg', 'webp', 'avif', 'svg', 'pdf', 'pptx', 'html', 'prototype', 'mp4', 'webm', 'vue', 'svelte', 'swiftui', 'exact']),
     duration: z.number().min(0.05).max(120).optional().describe('Video only: seconds. Default 3.'),
     fps: z.number().int().min(1).max(60).optional().describe('Video only: frames per second. Default 30.'),
     node_ids: z.array(z.string()).max(100).optional().describe('The layers to export. Leave out for the whole page.'),
@@ -213,7 +230,7 @@ export function registerDesignTools(define: ToolDefiner): void {
     const exportRoot = ctx.app.exportDir ?? process.env.BOGEN_EXPORT_DIR ?? join(homedir(), 'Downloads', 'Bogen');
     const fileName = ctx.app.storage.get(room.id)?.name ?? 'bogen';
     const whole: Target = node_ids?.length ? { nodeIds: node_ids } : { pageId: ctx.page(room, page_id) };
-    const eachAlone = format !== 'pdf' && format !== 'prototype' && (node_ids?.length ?? 0) > 1;
+    const eachAlone = format !== 'pdf' && format !== 'pptx' && format !== 'prototype' && (node_ids?.length ?? 0) > 1;
     const targets: Target[] = eachAlone ? node_ids!.map((id) => ({ nodeIds: [id] })) : [whole];
     if (format === 'exact') {
       // A folder per app: path is the folder it goes in.
@@ -274,7 +291,7 @@ export function registerDesignTools(define: ToolDefiner): void {
     const paths: string[] = [];
     const reports: ExportReport[] = [];
     for (const target of targets) {
-      const out = await exportTarget(doc, ctx.app.renderer, ctx.app.storage, target, format as ExportFormat, scale, undefined, { duration, fps });
+      const out = await exportTarget(doc, ctx.app.renderer, ctx.app.storage, target, format as ExportFormat, scale, undefined, { duration, fps, title: fileName });
       const path = file ?? await freePath(dir, nameFor(doc, fileName, target), out.ext);
       // wx: a file that appeared meanwhile is not replaced either.
       await writeFile(path, out.bytes, { flag: file && overwrite ? 'w' : 'wx' });

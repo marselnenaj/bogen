@@ -4,6 +4,7 @@ import { useModes, usePages, useSnapVersion, useTextStyles, useTokens } from '..
 import { session } from '../doc/session.ts';
 import { resolveAsset } from '../lib/api.ts';
 import { pasteImage } from '../ops/clipboard.ts';
+import { dropLayerFile, isLayerFile } from '../ops/import-layers.ts';
 import { camera } from '../state/camera.ts';
 import { useEditor } from '../state/store.ts';
 import { setWorldEl } from './measure.ts';
@@ -98,12 +99,16 @@ export function Canvas() {
     const onDragLeave = () => vp.classList.remove('is-dropping');
     const onDrop = (e: DragEvent) => {
       vp.classList.remove('is-dropping');
-      const files = [...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith('image/'));
-      if (!files.length) return;
+      const all = [...(e.dataTransfer?.files ?? [])];
+      // A PDF or an SVG comes in as editable layers; other pictures as images.
+      const layers = all.filter(isLayerFile);
+      const files = all.filter((f) => f.type.startsWith('image/') && !isLayerFile(f));
+      if (!files.length && !layers.length) return;
       e.preventDefault();
       camera.measureViewport();
       const at = camera.worldAt(e.clientX, e.clientY);
       files.forEach((f, i) => void pasteImage(f, { x: at.x + i * 24, y: at.y + i * 24 }));
+      layers.forEach((f, i) => void dropLayerFile(f, { x: at.x + (files.length + i) * 24, y: at.y + (files.length + i) * 24 }));
     };
 
     vp.addEventListener('pointerdown', onDown);

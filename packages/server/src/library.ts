@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import {
-  acceptLibraryUpdates, BogenDoc, brandLinkOf, cachedMains, libraryInfo, libraryLinks, libraryUpdates, linkLibrary, readPublished, unpublishedChanges,
-  type LibraryUpdate, type PublishedComponent,
+  acceptLibraryUpdates, BogenDoc, brandLinkOf, cachedMains, libraryInfo, libraryLinks, libraryTokenRenames, libraryUpdates, linkLibrary, readPublished, unpublishedChanges,
+  type LibraryInfo, type LibraryUpdate, type PublishedComponent,
 } from '@bogen/core';
 import type { EventHub } from './events.ts';
 import type { Storage } from './storage.ts';
@@ -28,6 +28,8 @@ export interface LinkedLibrary {
   version?: number;
   components: { id: string; main: string; name: string; version: number; removed?: boolean }[];
   updates: LibraryUpdate[];
+  /** Tokens the library renamed since this file took its last update: accepting renames them here too. */
+  renames: { from: string; to: string }[];
 }
 
 /**
@@ -36,7 +38,7 @@ export interface LinkedLibrary {
  * transaction made by the caller, so that it is one undo step for whoever made it.
  */
 export class Libraries {
-  private probes = new Map<string, { updatedAt: number; summary: LibrarySummary | null; published: PublishedComponent[] }>();
+  private probes = new Map<string, { updatedAt: number; summary: LibrarySummary | null; published: PublishedComponent[]; info?: LibraryInfo }>();
 
   constructor(private deps: { storage: Storage; rooms: Rooms; hub: EventHub }) {}
 
@@ -60,13 +62,13 @@ export class Libraries {
     });
   }
 
-  private summarize(id: string, doc: BogenDoc): { summary: LibrarySummary | null; published: PublishedComponent[] } {
+  private summarize(id: string, doc: BogenDoc): { summary: LibrarySummary | null; published: PublishedComponent[]; info?: LibraryInfo } {
     const info = libraryInfo(doc);
     const published = info ? readPublished(doc) : [];
     const entry = this.deps.storage.get(id);
     if (!info || !entry || !published.length) return { summary: null, published: [] };
     return {
-      published,
+      published, info,
       summary: {
         id, name: info.name, kind: entry.kind === 'brand' ? 'brand' : 'file', fileName: entry.name, ...(info.description ? { description: info.description } : {}),
         version: info.version, publishedAt: info.publishedAt,
@@ -76,7 +78,7 @@ export class Libraries {
   }
 
   /** A library as it is now: from the open room, else from disk without loading a room. */
-  private async read(id: string): Promise<{ summary: LibrarySummary | null; published: PublishedComponent[] }> {
+  private async read(id: string): Promise<{ summary: LibrarySummary | null; published: PublishedComponent[]; info?: LibraryInfo }> {
     const live = this.deps.rooms.peek(id);
     if (live) return this.summarize(id, live.doc);
     const entry = this.deps.storage.get(id);
@@ -84,7 +86,7 @@ export class Libraries {
     const known = this.probes.get(id);
     if (known && known.updatedAt === entry.updatedAt) return known;
     const state = await this.deps.storage.readDoc(id);
-    let out: { summary: LibrarySummary | null; published: PublishedComponent[] } = { summary: null, published: [] };
+    let out: { summary: LibrarySummary | null; published: PublishedComponent[]; info?: LibraryInfo } = { summary: null, published: [] };
     if (state) {
       const probe = new BogenDoc(new Y.Doc());
       try {
@@ -110,9 +112,9 @@ export class Libraries {
   }
 
   /** The published components of a library, or null when it is not here or publishes nothing. */
-  async get(id: string): Promise<{ summary: LibrarySummary; published: PublishedComponent[] } | null> {
-    const { summary, published } = await this.read(id);
-    return summary ? { summary, published } : null;
+  async get(id: string): Promise<{ summary: LibrarySummary; published: PublishedComponent[]; info?: LibraryInfo } | null> {
+    const { summary, published, info } = await this.read(id);
+    return summary ? { summary, published, ...(info ? { info } : {}) } : null;
   }
 
   /** A library by id, by its published name, or by its file's name. */
@@ -136,6 +138,7 @@ export class Libraries {
         ...(found ? { version: found.summary.version } : {}),
         components: mine.map((c) => ({ id: c.id, main: c.meta.main, name: c.meta.name, version: c.meta.version, ...(c.meta.removed ? { removed: true } : {}) })),
         updates: found ? libraryUpdates(doc, link.id, found.published) : [],
+        renames: found ? libraryTokenRenames(doc, link.id, found.info) : [],
       });
     }
     const brandId = brandLinkOf(doc)?.id;
@@ -155,13 +158,13 @@ export class Libraries {
     if (library.id === room.id) throw new Error('A file cannot link its own library: its components are here already.');
     const found = await this.get(library.id);
     if (!found) throw new Error(`The library ${library.name} publishes nothing any more.`);
-    const ids = write(() => linkLibrary(room.doc, { id: library.id, name: library.name, kind: library.kind }, found.published));
+    const ids = write(() => linkLibrary(room.doc, { id: library.id, name: library.name, kind: library.kind, ...(found.info?.renames?.length ? { renamesAt: found.info.renames.at(-1)!.at } : {}) }, found.published));
     return { library, ids };
   }
 
   async accept(room: Room, libId: string, only: string[] | undefined, write: <T>(fn: () => T) => T) {
     const found = await this.get(libId);
     if (!found) throw new Error('That library is not on this device, or publishes nothing now. Its instances go on showing the copies this file has.');
-    return write(() => acceptLibraryUpdates(room.doc, libId, found.published, only));
+    return write(() => acceptLibraryUpdates(room.doc, libId, found.published, only, undefined, found.info));
   }
 }

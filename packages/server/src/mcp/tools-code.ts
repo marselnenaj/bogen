@@ -4,7 +4,11 @@ import type { CodeProject } from '../code-projects.ts';
 import { measureCode } from '../code-measure.ts';
 import { syncStories } from '../http/code-routes.ts';
 import { diffTokens, pullTokens, readRepoTokens } from '../repo-tokens.ts';
+import { agentOrigin } from '../sync.ts';
 import { errorMessage } from '../util.ts';
+import { DESIGN_MD_FILE } from '../design-md.ts';
+import { fileDesignMd } from './tools-design-md.ts';
+import { dirname, join } from 'node:path';
 import { assertUnlocked, fileIdArg, nextArtboardX, pageIdArg, type ToolContext, type ToolDefiner } from './kit.ts';
 
 /** Code components: a person's own React components, from their repository, as layers. See code-projects.ts and code-build.ts. */
@@ -98,6 +102,25 @@ export function registerCodeTools(define: ToolDefiner): void {
     };
   });
 
+  define('repo_canvas_open', { description: 'Open a repository\'s page as a canvas: a design branch inside this file named after the project and its Git branch (main stays as it is), a page with a capture of the person\'s running dev server at url and path, and an artboard of the project\'s components rendered by its own code. Design on that branch, then the person makes a pull request from the change. Bogen starts no program of the repository: the dev server must already be running. Needs code_project_link first, or dir.' }, {
+    url: z.string().max(2000).optional().describe('The dev server, such as http://localhost:5173. Left out, only the components are placed.'),
+    path: z.string().max(500).optional().describe('The route to capture, such as /pricing.'),
+    width: z.number().int().min(320).max(2560).default(1440),
+    components: z.number().int().min(0).max(40).default(12).describe('How many of the project\'s components to place. 0 places none.'),
+    dir: z.string().min(1).max(1000).optional().describe('The project folder, to link it first.'),
+    file_id: fileIdArg,
+  }, async ({ url, path, width, components, dir, file_id }, ctx) => {
+    if (!LOOPBACK.has(ctx.app.options.host)) throw new Error('Repositories open only on a server that listens on this machine alone.');
+    const room = await ctx.room(file_id);
+    const { openRepoCanvas } = await import('../repo-canvas.ts');
+    const conversationId = ctx.session.runId ? ctx.app.runs.conversationOf(ctx.session.runId) : undefined;
+    ctx.wrote = true;
+    const out = await openRepoCanvas(ctx.app, { fileId: room.id, ...(dir ? { dir } : {}), ...(url ? { url } : {}), ...(path ? { path } : {}), width, components, ...(conversationId ? { conversationId } : {}), by: ctx.agent, kind: 'agent', origin: agentOrigin(ctx.agent) });
+    ctx.touch([out.capture?.nodeId, out.components.boardId].filter((id): id is string => Boolean(id)));
+    ctx.pinBranch(room, out.branch.id);
+    return { ...out, next: 'Design on this branch: change the capture or the components. The person makes a pull request from the change in the editor.' };
+  });
+
   define('code_component_update', { description: 'Change the props of a code component layer. Props you leave out stay as they are; list names in remove to go back to the component\'s own default. fit: true measures the size again after the change.' }, {
     layer_id: z.string(),
     props: propsArg.default({}),
@@ -134,7 +157,7 @@ export function registerCodeTools(define: ToolDefiner): void {
     return { ...report, next: report.components.length ? 'instance_create with component set to a set name places a story; component_get shows its props.' : 'No story file with a component was found. Story files end in .stories.tsx and name their component in the meta.' };
   });
 
-  define('tokens_repo_diff', { description: 'The linked repository\'s design tokens next to this file\'s, by name: same, changed, only in the file, or only in the repository, with the values of each and per theme mode. Read from CSS variables (:root and mode blocks such as .dark), a Tailwind 4 @theme block, a Tailwind 3 config read as text, and DTCG tokens.json files. tokens_repo_pull takes the repository\'s values into the file. To push the file\'s tokens into the repository, the person opens a pull request from the Tokens panel.', readOnly: true }, {
+  define('tokens_repo_diff', { description: 'The linked repository\'s design tokens next to this file\'s, by name: same, changed, only in the file, or only in the repository, with the values of each and per theme mode. Read from CSS variables (:root and mode blocks such as .dark), a Tailwind 4 @theme block, a Tailwind 3 config read as text, DTCG tokens.json files, and the YAML of a DESIGN.md. tokens_repo_pull takes the repository\'s values into the file. To push the file\'s tokens into the repository, the person opens a pull request from the Tokens panel.', readOnly: true }, {
     status: z.enum(['all', 'changed', 'file', 'repo', 'same']).default('all').describe('Only rows with this status. changed differs, file is only in the file, repo only in the repository.'),
     file_id: fileIdArg,
   }, async ({ status, file_id }, ctx) => {
@@ -146,14 +169,22 @@ export function registerCodeTools(define: ToolDefiner): void {
     return { project: project.name, sources: repo.sources, counts: { same: count('same'), changed: count('changed'), file: count('file'), repo: count('repo') }, rows: rows.filter((r) => status === 'all' || r.status === status).slice(0, 500), unclassified: repo.unclassified.slice(0, 50) };
   });
 
-  define('tokens_repo_pull', { description: 'Take tokens from the linked repository into this file, with their theme mode values, as one undo step: all of them, or the names you give. A token the file has gets the repository\'s value. Call tokens_repo_diff first to see what changes.' }, {
+  define('tokens_repo_pull', { description: 'Take tokens from the linked repository into this file, with their theme mode values, as one undo step: all of them, or the names you give. A token the file has gets the repository\'s value. A DESIGN.md in the repository counts as a token source too. Call tokens_repo_diff first to see what changes. With design_md true the result also holds the file\'s tokens afterwards as a DESIGN.md and where it goes, next to the main token file, for you to write with your own file tools.' }, {
     names: z.array(z.string().max(120)).max(2000).optional().describe('Only these tokens, without the leading dashes.'),
+    design_md: z.boolean().default(false).describe('Also return the tokens as a DESIGN.md, with the path next to the token file it belongs beside.'),
     file_id: fileIdArg,
-  }, async ({ names, file_id }, ctx) => {
+  }, async ({ names, design_md, file_id }, ctx) => {
     const room = await ctx.room(file_id);
     const project = linkedProject(ctx, room.doc);
     const repo = await readRepoTokens(ctx.app.codeProjects, project);
     const pulled = ctx.write(room, () => pullTokens(room.doc, repo.tokens, names, undefined));
-    return { pulled, missing: (names ?? []).filter((n) => !repo.tokens.some((t) => t.name === n)) };
+    const out: Record<string, unknown> = { pulled, missing: (names ?? []).filter((n) => !repo.tokens.some((t) => t.name === n)) };
+    if (design_md) {
+      const own = repo.sources.find((s) => s.format === 'design-md')?.file;
+      const main = repo.sources.find((s) => s.writable && s.format !== 'design-md')?.file;
+      const rel = own ?? [main && dirname(main) !== '.' ? dirname(main) : '', DESIGN_MD_FILE].filter(Boolean).join('/');
+      out.design_md = { path: join(project.dir, rel), relative: rel, exists: Boolean(own), text: await fileDesignMd(ctx, room.doc, ctx.app.storage.get(room.id)?.name ?? 'Design'), next: own ? 'The repository has this DESIGN.md already: change only its YAML, or keep its prose when you replace it.' : 'Write it with your own file tools. No tool writes into a repository.' };
+    }
+    return out;
   });
 }

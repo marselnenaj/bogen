@@ -13,6 +13,7 @@ Select layers, or nothing for the whole page, and open the Export tab (Shift+E).
 | AVIF | Encoded by the browser, or by ffmpeg. Transparency needs ffmpeg. |
 | SVG | Real vector elements; see [SVG](#svg). |
 | PDF | One page per layer, or several layers merged into one document. |
+| PowerPoint | A deck of slide artboards with editable text boxes; see [PowerPoint](#powerpoint). |
 | HTML | A page that plays its animations and shaders. |
 | Clickable prototype | One HTML file that runs the prototype; see [Clickable prototype](#clickable-prototype). |
 | MP4, WebM | Video; see [Video](#video). |
@@ -73,6 +74,32 @@ under 0.1 % of pixels, pseudo-elements in under 0.7 %, and text in under 4.5 % i
 smooths glyph edges differently (under 0.5 % in Chromium). Not yet opened in Illustrator, Figma or
 Inkscape.
 
+### PowerPoint
+
+**PowerPoint** in the Export tab, or `export_file` with `format: "pptx"`, writes one `.pptx` file with a
+slide per artboard: the selected ones, or every board of the page in reading order (rows from the top,
+then left to right). The slide size is the first board's size at 96 px to the inch, so a 1920 x 1080
+board is a 20 x 11.25 inch slide; a board of another size is scaled to fit and the report says so.
+
+Each layer is rendered and read back with its measured box and computed style, and placed as:
+
+- **Text** as an editable text box with its runs: font name, size, weight, italic, colour, underline,
+  strike, alignment, line height and letter spacing. A single line gets a little room, so a font that
+  sets wider does not wrap.
+- **Pictures** from Bogen (PNG, JPEG, GIF) as themselves, with cover or contain.
+- **Frames** with a plain fill, an even border and one radius as native rectangles, rounded rectangles or
+  ellipses; a border on some sides only becomes lines. The first board's fill is the slide background.
+- **Everything else as a picture** of that layer alone, at twice the size, with what is inside it kept
+  apart and native: vectors, gradients, shadows, filters, transforms, blend modes, `::before` and
+  `::after`, shaders, video, embeds and code components, see-through groups, and pictures in WebP or
+  AVIF.
+
+The report lists the native elements and names each layer that became a picture, with why. Fonts are
+named, not embedded: PowerPoint uses them when they are installed. PowerPoint does not cut layers off
+at a frame's edge as Bogen does, and the report counts those. Made with
+[PptxGenJS](https://github.com/gitbrent/PptxGenJS) (MIT); checked by opening the file with a parser and in
+LibreOffice, not yet in PowerPoint or Keynote.
+
 ### Clickable prototype
 
 The **Clickable prototype** format writes one static HTML file of the selected artboards (a layer
@@ -130,6 +157,21 @@ An artboard or a whole page can go out as a static website. Open the Export tab 
 | A folder | The files are written into a folder under your home folder, such as `~/Sites/couchette`, for any web server or host. Bogen replaces only files it wrote there; a folder with other files needs your yes. |
 | GitHub Pages | One commit on the branch you name, through your own `gh`. Click **Show what gets pushed** first: the plan lists every file sent, removed or left alone, and nothing is pushed if the branch changed since. Turn on Pages for that branch in the repository's settings. |
 
+**Check before publishing.** The dialog checks the version you are about to send, on this computer and
+without the network: the page title, meta description, language, canonical address, the social picture
+(`og:image`) and its size, the icon, links and `#anchors` that lead nowhere inside the site, images
+that are missing, heavy or have no width and height, and short results of the accessibility,
+responsive and brand checks. A language version that is hidden or not fully translated is said too.
+Only what is broken on the published site is a **Problem**: a missing language, and a link, anchor or
+file that is not there. The rest are warnings. The check never stops you: the button says
+**Publish anyway** when it found something. **Copy for your agent** copies a request to fix it.
+
+What a search engine and a link preview read comes from the artboard: its name as the title, and
+from your agent `web_page_set` with `title`, `description`, `lang`, `canonical` (the full address it
+will have), `og_image` and `favicon`. A page without its own language takes the file's design
+language. Images of the design get their width and height from the picture, so the page does not
+jump while they load. Your agent runs the same check with `publish_check`.
+
 **Versions.** Every publish keeps its version. Pick an older one and publish it again to roll back.
 **Unpublish** takes the site off the target you picked: the listener stops serving it, a folder loses
 the files Bogen wrote, and GitHub gets a commit that removes them. Bogen keeps the last 20 versions
@@ -140,7 +182,7 @@ style, hidden layer, proposal, Bogen address, history, agent or brand data. If a
 is still found anywhere in a page, the version is not made. Shaders are shown as a still picture,
 code components run in sandboxed frames, and embeds of other sites are left out.
 
-**From your agent.** `publish_prepare` makes a version and asks you to publish it. You see the
+**From your agent.** `publish_check` says what to fix first, and `publish_prepare` makes a version and asks you to publish it. You see the
 request in the Publish dialog, marked with the agent's name, and decide. An agent cannot publish.
 
 **From the terminal.** `bogen publish prepare <file> [<artboard id>]` makes a version, `bogen
@@ -360,6 +402,37 @@ Until then nothing leaves your machine. **Discard** removes the working folder a
 draft waits under **Pull requests** in Assets when you close the dialog, and a run that ends without
 changing a file fails and says so.
 
+### One branch per chat
+
+A pull request belongs to the chat the file is in. The next design change you send from the same chat
+goes onto the same branch, in the same working folder, as one more commit: the agent is told what the
+earlier commits did and builds on them, the pictures show where the branch is now, and the preview
+lists everything since the base. Confirming it pushes the new commit on top of what was pushed, never
+with force; on GitHub the open pull request updates itself, and `gh` is not asked again. A run that
+changes nothing leaves the branch where it was. **New chat** starts the next change on a branch of its
+own.
+
+When the remote is a folder on this machine (a bare repository), **Push** pushes the branch and there is
+no pull request to open; merge it there.
+
+### When it is merged
+
+Bogen looks once a minute, while a branch waits, whether it was merged: in the repository itself (its
+base branch, and for a folder remote the remote's base after a fetch, which reads the folder and does
+not use the network). For GitHub it also asks `gh pr view`, only when `gh` is there and you turned it on
+(`PATCH /api/code/pulls/settings {"githubMerges": true}`; off by default, as it calls GitHub). A merged
+branch's working folder goes, the branch stays, and its chat closes: the chat says it was merged into
+the base and offers **New chat**. A squash merge on GitHub is seen only through `gh`.
+
+### Open a repository's page as a canvas
+
+`repo_canvas_open` (or `POST /api/code/canvas`) opens a linked repository's page as a canvas on a design
+branch inside the file, named after the project and its Git branch, so main stays as it is: a page with
+a capture of your running dev server at the address and route you give, and an artboard of the
+project's components rendered by its own code. Bogen starts no program of the repository; the dev
+server must already be running, and a dev server on this machine is captured as a local address.
+Design there, then make a pull request from the change.
+
 Limits:
 
 - Pull requests are made only on the machine with the repository, not from a phone or another device.
@@ -368,16 +441,45 @@ Limits:
   picture links in the description are paths, not addresses.
 - Git hooks do not run, also not on commit and push, and commits are not signed.
 - Tried with a fixture repository, a bare repository as its remote and stand-ins for `claude`,
-  `codex` and `gh`. Not yet with a real GitHub repository.
+  `codex` and `gh`, and once with a real `claude` through `bogen agents check --repo` (see
+  [The repository round trip](agents.md#the-repository-round-trip)). Not yet with a real GitHub
+  repository.
 
 ## Tokens
 
 - `tokens_export` returns the file's tokens as CSS (a `:root` block, one block per theme mode, the text
-  styles as classes), as CSS plus a Tailwind 4 `@theme inline` block, or as a Tailwind 3
-  `theme.extend` object.
+  styles as classes), as CSS plus a Tailwind 4 `@theme inline` block, as a Tailwind 3
+  `theme.extend` object, or as a [DESIGN.md](#designmd).
 - `design_system_css` returns tokens and text styles as one style sheet.
 - `tokens_from_css` goes the other way: it reads custom properties from your repo's CSS or Tailwind
   theme into the file, and with `mode` into a theme mode.
+
+### DESIGN.md
+
+DESIGN.md is an open format for a design system in one Markdown file: YAML tokens up front (colours,
+typography, rounded, spacing, components) and prose sections below (Overview, Colors, Typography,
+Layout, Elevation & Depth, Shapes, Components, Do's and Don'ts). Many coding agents read it. The format
+is described at [github.com/google-labs-code/design.md](https://github.com/google-labs-code/design.md)
+(Apache-2.0); Bogen reads and writes it with its own code, written from that description.
+
+- `tokens_export` with `format: "design-md"` writes one from the file: colour, radius and spacing tokens
+  by name, `var(--x)` as `{colors.x}`, text styles as typography levels, and the prose of the brand the
+  file links to (or lists of the tokens). Theme mode values and token kinds the format has no group for
+  (font families, sizes, breakpoints and the like) go under Bogen's own key `x-bogen`, which other readers
+  ignore, so that reading it back gives the same tokens.
+- `brand_export` with `format: "design-md"` writes a brand's: what binds of its colours, radii, spacing,
+  families and type scale, and its positioning, brandbook chapters (drafts marked), rules and words as
+  prose. Suggestions stay out.
+- `design_md_import` reads one into the file's tokens and text styles as one undo step, into the brand as
+  suggestions, or both; see [Bring in what exists](brand.md#bring-in-what-exists). `dry_run` only reads it.
+  It reads the front matter and every fenced `yaml` block, refuses what the format refuses (a top-level
+  key or section defined twice), and returns the format's lint: broken references, a missing primary
+  colour, component colours under 4.5:1, colours no component uses, sections out of order and near-typos
+  of known keys, each with the `brand_check` rule that enforces that part once it is in a brand.
+- With a linked repository, a `DESIGN.md` counts as a token source for the diff, the pull and the push.
+  A token pull request also writes a `DESIGN.md` next to the token file it changes, or updates the
+  repository's own `DESIGN.md` in its YAML and keeps its prose. `tokens_repo_pull` with `design_md: true`
+  returns the file's tokens as a DESIGN.md and where it belongs, for your agent to write.
 
 ### Tokens and the repository
 
@@ -391,7 +493,8 @@ tokens next to the file's, by name: **Changed**, **Only in the file**, **Only in
 - a Tailwind 3 `tailwind.config.js` or `.ts`, read as text and never run;
 - DTCG files (the W3C Design Tokens format): `tokens.json`, `design-tokens.json`, `*.tokens.json` and
   JSON in a `tokens` folder, with groups, inherited `$type`, aliases such as `{color.brand}`, and
-  dimension and colour objects.
+  dimension and colour objects;
+- the YAML of a `DESIGN.md`, see [DESIGN.md](#designmd).
 
 Pick the rows you want, then:
 

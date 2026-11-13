@@ -12,6 +12,7 @@ import { agentOrigin } from '../sync.ts';
 import { exportBogen, exportNote, importBogen } from '../bogen-transfer.ts';
 import { fileIdArg, type ToolContext, type ToolDefiner } from './kit.ts';
 import { exportLocation, freePath } from './tools-design.ts';
+import { writeBrandDesignMd } from './tools-design-md.ts';
 import { fileCreateGuard } from './tools-files.ts';
 
 const MCP_SITE_LIMIT = 50;
@@ -64,13 +65,15 @@ export function registerTransferTools(define: ToolDefiner): void {
     return writeBogen(ctx, room.id, { brand, path, overwrite, allow_hidden });
   });
 
-  define('brand_export', { description: 'Write a brand on its own as a .bogen file: its whole document, versions, brandbook, examples and assets. Importing it on another device adds the brand there under the same id, so files linked to it find it. Goes to the Bogen export folder, or to path.' }, {
+  define('brand_export', { description: 'Write a brand on its own as a .bogen file: its whole document, versions, brandbook, examples and assets. Importing it on another device adds the brand there under the same id, so files linked to it find it. format design-md writes a DESIGN.md instead, the open format other agents read: what binds of its colours, radii, spacing, families and type scale as YAML tokens, and its positioning, brandbook chapters, rules and words as prose; suggestions stay out. Goes to the Bogen export folder, or to path.' }, {
     brand_id: z.string(),
-    path: z.string().min(1).max(4096).optional().describe('An absolute path under the home folder ending in .bogen, or a folder ending in /.'),
+    format: z.enum(['bogen', 'design-md']).default('bogen'),
+    path: z.string().min(1).max(4096).optional().describe('An absolute path under the home folder ending in .bogen (or .md for design-md), or a folder ending in /.'),
     overwrite: z.boolean().default(false),
     allow_hidden: z.boolean().default(false),
-  }, async ({ brand_id, path, overwrite, allow_hidden }, ctx) => {
+  }, async ({ brand_id, format, path, overwrite, allow_hidden }, ctx) => {
     ctx.app.brands.requireBrand(brand_id);
+    if (format === 'design-md') return writeBrandDesignMd(ctx, brand_id, { path, overwrite, allow_hidden });
     return writeBogen(ctx, brand_id, { brand: true, path, overwrite, allow_hidden });
   });
 

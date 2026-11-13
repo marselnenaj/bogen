@@ -8,11 +8,11 @@ import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { z } from 'zod';
 import { addFontFaces, cleanRunLanguage, getGlyphFont, newId, setInteractionRecord, Y, BogenDoc } from '@bogen/core';
-import { Runs, type RunEnd } from '../agents.ts';
+import { runInstructions, Runs, type RunEnd } from '../agents.ts';
 import { handleBrandRoute } from '../brand-http.ts';
 import { exampleList, runTemplate, EXAMPLES } from '../templates/index.ts';
 import { DesignQuality } from '../design-quality.ts';
-import { KNOWLEDGE_ACTIONS, readKnowledge } from '../design-knowledge/index.ts';
+import { DISCIPLINE_IDS, KNOWLEDGE_ACTIONS, readKnowledge } from '../design-knowledge/index.ts';
 import { KnowledgeLibrary, KnowledgeChange } from '../design-knowledge/library.ts';
 import { Welcome } from '../welcome.ts';
 import { Brands } from '../brand-store.ts';
@@ -21,6 +21,9 @@ import { AgentSteps } from '../agent-steps.ts';
 import { AwayLog } from '../away.ts';
 import { LiveSites } from '../live-site.ts';
 import { PullRequests } from '../pull-requests.ts';
+import { RunTraces } from '../run-trace.ts';
+import { resolveMentions } from '../chat-context.ts';
+import { ClientRuns } from '../client-runs.ts';
 import { StorybookWatch } from '../storybook.ts';
 import { CodeBuilder } from '../code-build.ts';
 import { frameFromUrl } from '../code-measure.ts';
@@ -35,13 +38,16 @@ import { DecisionMemory } from '../memory.ts';
 import { ScoreHistory } from '../brand-scores.ts';
 import { Races } from '../race.ts';
 import { RunSettingsStore, EFFORT_ID, MODEL_ID } from '../run-settings.ts';
-import { RUNNER_IDS, MAX_DIRECTION_LANES } from '@bogen/core';
+import { RUNNER_IDS, MAX_DIRECTION_LANES, cleanVariation, VARIATION_ASPECTS, VARIATION_RANGES } from '@bogen/core';
 import { agentRoutes } from './agent-routes.ts';
+import { clientRoutes } from './client-routes.ts';
+import { install, type Client, type InstallResult } from '../install.ts';
 import { exportBogen, importBogen } from '../bogen-transfer.ts';
 import { CommentRuns } from '../comment-runs.ts';
 import { ReplyTargets } from '../reply-targets.ts';
 import { EventHub, type BogenEvent } from '../events.ts';
 import { exportTarget, reportHeader } from '../exporter.ts';
+import { importPdf, importSummary, importSvg, MAX_IMPORT_BYTES, sniffLayerFile } from '../layer-import.ts';
 import { checkWidths } from '../width-check.ts';
 import { FileEvents } from '../file-events.ts';
 import { History, type HistoryOptions } from '../history.ts';
@@ -94,6 +100,9 @@ import { Shares } from '../shares.ts';
 import { StaticListener } from '../static-listener.ts';
 import { fetchPublic } from '../net-guard.ts';
 import { handleDriftRoutes } from './drift-routes.ts';
+import { extensionCors, ExtensionPairings, handleExtensionRoute } from '../extension.ts';
+import { EXTENSION_ROUTE } from '../extension-origin.ts';
+import { cleanTags, imagePalette, References } from '../references.ts';
 import { handleComplianceRoutes } from './compliance-routes.ts';
 import { MemoryGauge, type MemoryReading } from '../memory-pressure.ts';
 import { prepareRunIntent, settleRunRevision } from '../run-intent.ts';
@@ -212,7 +221,7 @@ const CreateBody = z.object({ name: z.string().trim().min(1).max(200).optional()
 const VectorizeBody = z.object({ src: z.string().max(200), colors: z.number().int().min(MIN_COLORS).max(MAX_COLORS).optional(), detail: z.enum(VECTORIZE_DETAILS).optional() });
 const ExportBody = z.object({
   fileId: z.string(), nodeIds: z.array(z.string()).max(200).default([]), pageId: z.string().optional(),
-  format: z.enum(['png', 'jpg', 'webp', 'avif', 'svg', 'pdf', 'html', 'prototype', 'mp4', 'webm']), scale: z.number().min(0.1).max(4).optional(), transparent: z.boolean().optional(),
+  format: z.enum(['png', 'jpg', 'webp', 'avif', 'svg', 'pdf', 'pptx', 'html', 'prototype', 'mp4', 'webm']), scale: z.number().min(0.1).max(4).optional(), transparent: z.boolean().optional(),
   duration: z.number().min(0.05).max(120).optional(), fps: z.number().int().min(1).max(60).optional(), encoder: z.enum(['ffmpeg', 'webcodecs']).optional(), svgMode: z.enum(['vector', 'foreignObject']).optional(),
 });
 const WidthCheckBody = z.object({ fileId: z.string(), nodeId: z.string(), widths: z.array(z.number().int().min(200).max(3000)).min(1).max(4) });
@@ -243,12 +252,22 @@ const RunBody = z.object({
   images: z.array(z.string().max(120)).max(4).optional(),
   /** The design content language for this request, over the file's. Starts nothing by itself. */
   language: RunLanguage,
+  /** For Propose: how many copies, how far they go, and which aspects they change. */
+  variation: z.object({ count: z.number().int().min(1).max(6).optional(), range: z.enum(VARIATION_RANGES).default('explore'), vary: z.array(z.enum(VARIATION_ASPECTS)).max(4).default([]) }).optional(),
+  /** A design playbook chosen with / in the chat. */
+  discipline: z.enum(DISCIPLINE_IDS).optional(),
+  /** Layers, components and tokens mentioned with @, checked against the file before the run starts. */
+  mentions: z.array(z.object({ kind: z.enum(['layer', 'component', 'token']), id: z.string().min(1).max(200) })).max(20).optional(),
 });
 const Lane = z.object({ runner: z.enum(RUNNER_IDS), model: z.string().regex(MODEL_ID).optional(), effort: z.string().regex(EFFORT_ID).or(z.literal('default')).optional() });
 const RaceBody = z.object({
   fileId: Id, pageId: Id.optional(), nodeId: Id, prompt: z.string().min(1).max(20_000), lanes: z.array(Lane).min(2).max(MAX_DIRECTION_LANES),
   who: z.string().trim().min(1).max(80).default('Someone'),
   language: RunLanguage,
+  range: z.enum(VARIATION_RANGES).optional(),
+  vary: z.array(z.enum(VARIATION_ASPECTS)).max(4).optional(),
+  /** The lanes take sections of the layer instead of a copy each of all of it. */
+  split: z.boolean().optional(),
 });
 const RebuildBody = z.object({ fileId: Id, nodeId: Id, runner: z.enum(RUNNER_IDS), model: z.string().regex(MODEL_ID).optional(), effort: z.string().regex(EFFORT_ID).or(z.literal('default')).optional(), prompt: z.string().max(4000).optional() });
 const CommentBody = z.object({
@@ -299,7 +318,13 @@ export class BogenServer {
   readonly brands: Brands;
   readonly scores: ScoreHistory;
   readonly libraries: Libraries;
+  /** Browser extensions the person paired, which may add captures and nothing else. */
+  readonly extensions: ExtensionPairings;
+  /** The person's reference board on this device. */
+  readonly references: References;
   readonly mcp: McpGateway;
+  /** What Settings, Add to agent, runs to connect a client: `bogen install`. Tests put a stand-in here. */
+  connectClients: (clients: Client[]) => Promise<InstallResult[]> = (clients) => install(clients);
   readonly peers: PeerManager;
   /** Commits of files. Not to be confused with `history`, which is about agent runs. */
   readonly commits: History;
@@ -310,6 +335,7 @@ export class BogenServer {
   readonly siteJobs = new SiteJobs();
   readonly runSettings: RunSettingsStore;
   readonly history: RunHistory;
+  readonly traces: RunTraces;
   /** Chats with agents from the prompt bar and the phone, so that a run knows what came before it. */
   readonly conversations: Conversations;
   /** Agents asked of and for paired devices. */
@@ -346,6 +372,7 @@ export class BogenServer {
   readonly publisher: Publisher;
   /** Review links and the inbox of comments from clients. */
   readonly shares: Shares;
+  readonly clientRuns: ClientRuns;
   /** The listener of the published site, and the one of review links: static files only, each on its own port. */
   readonly siteListener: StaticListener;
   readonly reviewListener: StaticListener;
@@ -422,6 +449,7 @@ export class BogenServer {
       void this.pulls.runEnded(end);
       this.fileEvents.append(end.fileId, 'agent_finished', { source: 'agent', actor: end.runner }, { agent: end.runner, run_id: end.runId, status: end.status, ...(end.error ? { error: end.error.slice(0, 500) } : {}), ...(end.threadId ? { thread_id: end.threadId } : {}) });
       this.commentRuns.runEnded(end);
+      this.clientRuns.runEnded(end);
       this.races.runEnded(end);
       void this.brands.runEnded(end);
       void this.commitRun(end);
@@ -438,13 +466,17 @@ export class BogenServer {
       return room.doc.getComments().find((t) => t.id === req.threadId)?.messages.filter((m) => m.author === agent && m.at >= since).at(-1)?.text;
     };
     this.libraries = new Libraries({ storage: this.storage, rooms: this.rooms, hub: this.hub });
+    this.extensions = new ExtensionPairings(options.home, () => this.hub.broadcast({ t: 'extension' }));
+    this.references = new References(options.home, () => this.hub.broadcast({ t: 'references' }));
     this.runSettings = new RunSettingsStore(options.home);
     // One probe cache for listings, catalogs and runs, so that a CLI is asked at most once in a while.
     this.runs.probes = this.runSettings.probes;
     this.history = new RunHistory(options.home, this.hub);
     this.conversations = new Conversations(options.home, this.hub);
     this.runSummaries = new RunSummaries({ home: options.home, rooms: this.rooms, renderer: this.renderer, history: this.history });
-    const runObserver = observers(this.history, this.conversations, this.runSummaries);
+    this.traces = new RunTraces(options.home, this.hub);
+    this.traces.instructions = runInstructions;
+    const runObserver = observers(this.history, this.conversations, this.runSummaries, this.traces);
     const started = runObserver.started;
     runObserver.started = (runId, req) => {
       const room = this.rooms.peek(req.fileId);
@@ -479,7 +511,7 @@ export class BogenServer {
     this.codeProjects = new CodeProjects(options.home);
     this.codeBuilder = new CodeBuilder(this.codeProjects, join(options.home, 'cache', 'code'));
     this.renderer.codeFrames = (url) => frameFromUrl(this.codeBuilder, url);
-    this.live = new LiveSites({ home: options.home, runs: this.runs, localUrl: () => this.localUrl(), recordFiles: (runId, files) => this.history.noteFiles(runId, files) });
+    this.live = new LiveSites({ home: options.home, runs: this.runs, localUrl: () => this.localUrl(), recordFiles: (runId, files) => { this.history.noteFiles(runId, files); this.traces.noteFiles(runId, files); }, traces: this.traces });
     this.pulls = new PullRequests(this);
     this.storybook = new StorybookWatch({
       loaded: () => this.rooms.loaded(), projects: this.codeProjects, intervalMs: options.storybookIntervalMs,
@@ -544,6 +576,7 @@ export class BogenServer {
         return { png: shot.bytes, width: Math.round(shot.width / shot.scale) };
       },
     });
+    this.clientRuns = new ClientRuns(this);
     this.shares = new Shares({
       home: options.home, publisher: this.publisher, changed: publishChanged,
       doc: async (id) => {
@@ -666,10 +699,12 @@ export class BogenServer {
     this.storybook.close();
     await this.live.close();
     this.races.close();
+    this.pulls.close();
     this.remoteRuns.close();
     this.runs.close();
     await this.history.close();
     await this.conversations.close();
+    await this.traces.flush();
     await this.away.close();
     for (const timer of this.thumbTimers.values()) clearTimeout(timer);
     if (this.thumbPaused) clearTimeout(this.thumbPaused);
@@ -874,6 +909,7 @@ export class BogenServer {
       const verdict = checkRequest(req, guard, url);
       if (!verdict.ok) return sendJson(res, verdict.status, { error: verdict.message });
       if (guard.strict && isLocalOnlyPath(url.pathname)) return sendJson(res, 403, { error: 'Only from this machine.' });
+      if (EXTENSION_ROUTE.test(url.pathname) && extensionCors(req, res)) return;
       await this.route(req, res, url, guard);
     } catch (e) {
       if (res.headersSent) {
@@ -950,6 +986,7 @@ export class BogenServer {
       catch (error) { throw new HttpError(400, errorMessage(error)); }
     }
     if (await agentRoutes(this, req, res, url, parts, { json: jsonBody, send: sendJson, local: (r) => fromThisDevice(r, guard), owner: (r) => fromOwner(r, guard) })) return;
+    if (await clientRoutes(req, res, parts, { send: sendJson, local: (r) => fromThisDevice(r, guard) }, this.connectClients)) return;
 
     if (a === 'status' && method === 'GET') {
       return sendJson(res, 200, { version: this.options.reportVersion ?? FULL_VERSION, port: this.port, pid: process.pid, files: this.storage.list().length, agents: this.rooms.agentInfos(), device: this.peers.device(), peers: this.peers.status(), conflicts: this.peers.conflicts.all().length, update: this.updates.note() });
@@ -962,6 +999,28 @@ export class BogenServer {
     if (await handleTomacco(this, req, res, parts, guard)) return;
     if (await handleDriftRoutes(this, req, res, url, parts, fromThisDevice(req, guard))) return;
     if (await handleComplianceRoutes(this, req, res, parts)) return;
+
+    if (a === 'extension') return handleExtensionRoute(this, req, res, url, parts, { local: fromThisDevice(req, guard), send: sendJson, readBody, json: jsonBody });
+    if (a === 'references') {
+      // The person's own board, on this device: the editor here or on a paired phone. Agents use reference_add and reference_search.
+      if (!fromOwner(req, guard)) throw new HttpError(403, 'Only from this machine or a paired phone.');
+      if (!b && method === 'GET') return sendJson(res, 200, this.references.list());
+      if (!b && method === 'POST') {
+        const body = await jsonBody(req, z.object({ image: z.string().regex(/^bogen-asset:[a-f0-9]{64}\.[a-z0-9]{2,5}$/), title: z.string().max(200).default(''), tags: z.array(z.string().max(40)).max(12).default([]), note: z.string().max(1000).optional() }));
+        let palette: Awaited<ReturnType<typeof imagePalette>> = [];
+        try { palette = await imagePalette(this.storage, this.renderer, body.image); } catch (err) { throw new HttpError(400, errorMessage(err)); }
+        return sendJson(res, 201, this.references.add({ title: body.title || 'Picture', source: 'image', image: body.image, tags: cleanTags(body.tags), palette, ...(body.note ? { note: body.note } : {}) }));
+      }
+      if (b && !c && method === 'PATCH') {
+        const body = await jsonBody(req, z.object({ title: z.string().max(200).optional(), tags: z.array(z.string().max(40)).max(12).optional(), note: z.string().max(1000).optional() }));
+        try { return sendJson(res, 200, this.references.update(b, body)); } catch (err) { throw new HttpError(404, errorMessage(err)); }
+      }
+      if (b && !c && method === 'DELETE') {
+        if (!this.references.remove(b)) throw new HttpError(404, 'No such reference.');
+        return sendJson(res, 200, { removed: b });
+      }
+      throw new HttpError(405, 'Method not allowed.');
+    }
 
     if (a === 'capture' && !b && method === 'POST') {
       const body = await jsonBody(req, CaptureBody);
@@ -1149,6 +1208,18 @@ export class BogenServer {
 
     if (a === 'voice') return handleVoiceRoute(this, req, res, url, parts, fromOwner(req, guard), sendJson);
     if (a === 'assets' && !b && method === 'POST') return sendJson(res, 201, await receiveAsset(req, res, this.storage, String(req.headers['content-type'] ?? '')));
+    // A PDF or SVG dropped on the canvas: the layers it makes, for the editor to place as one undo step of its own.
+    if (a === 'layers' && b === 'import' && !c && method === 'POST') {
+      const raw = await readBody(req, MAX_IMPORT_BYTES);
+      const header = req.headers['x-bogen-filename'];
+      const name = typeof header === 'string' ? (() => { try { return decodeURIComponent(header); } catch { return header; } })().slice(0, 200) : '';
+      const kind = sniffLayerFile(raw, name);
+      if (!kind) throw new HttpError(415, 'Only a PDF or an SVG file can come in as layers.');
+      const out = await (kind === 'pdf' ? importPdf(this.storage, this.renderer, raw, { name: name.replace(/\.pdf$/i, '') || undefined }) : Promise.resolve(importSvg(raw, name || 'Vector'))).catch((e) => {
+        throw new HttpError(400, errorMessage(e));
+      });
+      return sendJson(res, 200, { ...out, summary: importSummary(out) });
+    }
     if (a === 'assets' && b === 'vectorize' && method === 'POST') {
       // Only a stored asset is traced: nothing here fetches an address for anyone.
       const body = await jsonBody(req, VectorizeBody);
@@ -1163,7 +1234,7 @@ export class BogenServer {
       this.requireFile(body.fileId);
       const room = await this.rooms.get(body.fileId);
       const pageId = body.pageId ?? room.doc.getPages()[0]?.id;
-      const out = await exportTarget(room.doc, this.renderer, this.storage, body.nodeIds.length ? { nodeIds: body.nodeIds } : { pageId }, body.format, body.scale, body.transparent, { duration: body.duration, fps: body.fps, encoder: body.encoder, svgMode: body.svgMode }).catch((e) => {
+      const out = await exportTarget(room.doc, this.renderer, this.storage, body.nodeIds.length ? { nodeIds: body.nodeIds } : { pageId }, body.format, body.scale, body.transparent, { duration: body.duration, fps: body.fps, encoder: body.encoder, svgMode: body.svgMode, title: this.storage.get(body.fileId)?.name }).catch((e) => {
         throw e instanceof HttpError ? e : new HttpError(/^No layer|^The page is empty|^Nothing to/.test(errorMessage(e)) ? 400 : 500, errorMessage(e));
       });
       const name = (this.storage.get(body.fileId)?.name ?? 'export').replace(/[^\w.-]+/g, '-');
@@ -1202,9 +1273,11 @@ export class BogenServer {
         }
         try {
           const choice = await this.runSettings.resolve(body.runner, 'prompt', { ...(body.model ? { model: body.model } : {}), ...(body.effort ? { effort: body.effort } : {}) });
-          const { model: _model, effort: _effort, device: _device, images: sources, ...rest } = body;
+          const { model: _model, effort: _effort, device: _device, images: sources, mentions: asked, variation: varied, ...rest } = body;
           const images = sources?.length ? await runImages(this.storage, sources) : [];
-          const runId = await this.runs.start({ ...rest, ...choice, fileName: entry.name, ...(images.length ? { images } : {}) });
+          const mentions = asked?.length ? resolveMentions((await this.rooms.get(body.fileId)).doc, asked) : [];
+          const variation = varied ? { ...cleanVariation(varied)!, ...(varied.count ? { count: varied.count } : {}) } : undefined;
+          const runId = await this.runs.start({ ...rest, ...choice, fileName: entry.name, ...(images.length ? { images } : {}), ...(mentions.length ? { mentions } : {}), ...(variation ? { variation } : {}) });
           return sendJson(res, 201, { runId });
         } catch (e) {
           throw e instanceof HttpError ? e : new HttpError(409, errorMessage(e));
@@ -1232,7 +1305,9 @@ export class BogenServer {
         const body = await jsonBody(req, RaceBody);
         this.requireFile(body.fileId);
         const lanes = body.lanes.map((l) => ({ runner: l.runner, ...(l.model ? { model: l.model } : {}), ...(l.effort ? { effort: l.effort } : {}) }));
-        return sendJson(res, 201, await this.races.start({ ...body, lanes }));
+        const { range, vary, split, ...rest } = body;
+        const variation = range || vary?.length ? cleanVariation({ range: range ?? 'explore', vary: vary ?? [] }) : undefined;
+        return sendJson(res, 201, await this.races.start({ ...rest, lanes, ...(variation ? { variation } : {}), ...(split ? { split } : {}) }));
       }
       if (b && c === 'stop' && method === 'POST') {
         const { laneId } = await jsonBody(req, z.object({ laneId: z.string().max(8).optional() }));

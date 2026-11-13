@@ -153,14 +153,22 @@ export class FileRoot {
 }
 
 /** Registers the tools on a server of their own. */
-export function registerLiveFileTools(server: McpServer, files: FileRoot, onChange?: () => void): void {
+export function registerLiveFileTools(server: McpServer, files: FileRoot, onChange?: () => void, onCall?: (call: { tool: string; args: unknown; startedAt: number; result: string; error: boolean }) => void): void {
   const tool = <S extends z.ZodRawShape>(name: string, description: string, shape: S, run: (args: z.infer<z.ZodObject<S>>) => Promise<unknown>, readOnly = true) => {
     server.registerTool(name, { description, inputSchema: shape, annotations: { readOnlyHint: readOnly, destructiveHint: false, openWorldHint: false } }, (async (args: z.infer<z.ZodObject<S>>) => {
+      const startedAt = Date.now();
+      let text = '';
+      let error = false;
       try {
         const out = await run(args);
-        return { content: [{ type: 'text' as const, text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
+        text = typeof out === 'string' ? out : JSON.stringify(out, null, 1);
+        return { content: [{ type: 'text' as const, text }] };
       } catch (e) {
-        return { isError: true, content: [{ type: 'text' as const, text: errorMessage(e) }] };
+        text = errorMessage(e);
+        error = true;
+        return { isError: true, content: [{ type: 'text' as const, text }] };
+      } finally {
+        onCall?.({ tool: name, args, startedAt, result: text, error });
       }
     }) as never);
   };

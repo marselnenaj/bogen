@@ -11,6 +11,7 @@
 //   assets/bogen-design-<v>.tgz                  the npm package, with .sha256 and .sig
 //   assets/bogen-design-<v>.cdx.json             a CycloneDX SBOM from package-lock.json, with .sha256 and .sig
 //   assets/bogen-release.json                    the manifest `bogen update` reads, with .sha256 and .sig
+//   assets/bogen-<v>.mcpb                        the Claude Desktop extension (scripts/build-mcpb.mjs), with .sha256 and .sig
 //   assets/bogen-design-<v>-provenance.intoto.json   commit, inputs, builder and every file's SHA-256, with .sig
 //   notes.md                                     the release notes, from docs/guide/changelog.md
 //   PKGBUILD                                     integrations/arch/PKGBUILD with this tarball's checksum
@@ -28,6 +29,7 @@ import { createServer } from 'node:net';
 import { release as kernel, tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildMcpb } from './build-mcpb.mjs';
 import { REPOSITORY, versionNotes } from './changelog-notes.mjs';
 import { checkVersions } from './set-version.mjs';
 import { isPlatform, licenseOf, nameOf, ORDER, shippedPackages } from './shipped-packages.mjs';
@@ -147,6 +149,7 @@ if (!flag('--no-checks')) {
   step('Checks');
   run('npm', ['run', 'typecheck']);
   run('npm', ['run', 'check:docs']);
+  run('node', ['--import', 'tsx', 'scripts/gen-plugins.ts', '--check']);
 } else must(false, '--no-checks leaves out the typecheck and the documentation checks');
 
 step('Pack');
@@ -169,6 +172,65 @@ const freePort = () => new Promise((done) => {
 
 const fail = (message) => { throw new Error(message); };
 
+/** A one-page PDF with one line of Helvetica, written by hand: offsets and all, so the smoke test needs no library. */
+function smokePdf(line) {
+  const stream = `BT /F1 24 Tf 72 720 Td (${line}) Tj ET`;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+  ];
+  let body = '%PDF-1.4\n';
+  const offsets = objects.map((o, i) => {
+    const at = body.length;
+    body += `${i + 1} 0 obj\n${o}\nendobj\n`;
+    return at;
+  });
+  const xref = body.length;
+  body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(body, 'latin1');
+}
+
+/**
+ * pdf_import and diagram_insert from the installed package: pdf.js and Mermaid are files of their own in dist/vendor/,
+ * not part of cli.js, so the package must carry them and the server must find them there.
+ */
+async function smokeFormats(port, vendor) {
+  const files = ['mermaid.min.js', 'pdf.min.mjs', 'pdf.worker.min.mjs'];
+  const absent = files.filter((f) => !existsSync(join(vendor, f)));
+  if (absent.length) fail(`the installed package has no ${absent.join(', ')} in dist/vendor`);
+  const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+  const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
+  const client = new Client({ name: 'release-smoke', version });
+  await client.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)));
+  const call = async (name, args) => {
+    const r = await client.callTool({ name, arguments: args });
+    const text = r.content?.find((c) => c.type === 'text')?.text ?? '';
+    if (r.isError) throw new Error(`${name}: ${text}`);
+    return JSON.parse(text);
+  };
+  try {
+    const file = await call('file_create', { name: 'Release smoke' });
+    const pdf = await call('pdf_import', { file_id: file.id, data_base64: smokePdf('Release smoke test').toString('base64') }).catch((e) => fail(e.message));
+    if (pdf.report?.[0]?.text !== 1 || !String(pdf.tree).includes('Release smoke test')) fail(`pdf_import did not bring the text in: ${JSON.stringify(pdf).slice(0, 400)}`);
+    console.log(`  pdf_import: ${pdf.summary}`);
+    try {
+      const diagram = await call('diagram_insert', { file_id: file.id, source: 'flowchart LR\n  A[Packed] --> B[Installed]' });
+      if (diagram.counts?.nodes !== 2 || diagram.counts?.connectors !== 1) fail(`diagram_insert drew ${JSON.stringify(diagram.counts)}, not 2 nodes and 1 connector`);
+      console.log(`  diagram_insert: ${diagram.type}, ${diagram.counts.nodes} nodes and ${diagram.counts.connectors} connector, with Mermaid from dist/vendor`);
+    } catch (e) {
+      // Mermaid lays out in the render browser: a machine without one cannot check it, which a real release refuses.
+      if (/No Chromium-based browser|Could not start/.test(e.message)) must(false, `diagram_insert needs a browser here: ${e.message}`);
+      else fail(e.message);
+    }
+  } finally {
+    await client.close().catch(() => {});
+  }
+}
+
 async function smoke() {
   const prefix = mkdtempSync(join(tmpdir(), 'bogen-smoke-prefix-'));
   const home = mkdtempSync(join(tmpdir(), 'bogen-smoke-home-'));
@@ -189,6 +251,10 @@ async function smoke() {
     const missing = wanted.filter((f) => !existsSync(join(sets, f)));
     if (!wanted.length || missing.length) fail(`the installed package has no ${missing.join(', ') || 'icon sets'} in dist/icon-sets`);
     console.log(`  icon sets: ${wanted.length} files in dist/icon-sets`);
+    // script_run's sandbox loads its worker and QuickJS's WebAssembly from files next to cli.js.
+    const sandbox = ['script-worker.js', 'quickjs/quickjs-asyncify.wasm'].filter((f) => !existsSync(join(prefix, 'lib', 'node_modules', NAME, 'dist', f)));
+    if (sandbox.length) fail(`the installed package has no ${sandbox.join(', ')} in dist`);
+    console.log('  script sandbox: dist/script-worker.js and dist/quickjs/quickjs-asyncify.wasm');
 
     server = spawn(bin, ['serve', '--port', String(port)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
     let log = '';
@@ -205,6 +271,26 @@ async function smoke() {
     const page = await fetch(`http://127.0.0.1:${port}/`).then((r) => r.text());
     if (!/<div id="root">/.test(page)) fail('bogen serve does not serve the editor');
     console.log(`  bogen serve: ${status.version} answers on 127.0.0.1:${port} with the editor`);
+    await smokeFormats(port, join(prefix, 'lib', 'node_modules', NAME, 'dist', 'vendor'));
+
+    // One script through MCP, so that the packed worker and WebAssembly are known to run, not only to be there.
+    const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+    const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
+    const mcp = new Client({ name: 'release-smoke', version: version });
+    await mcp.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)));
+    try {
+      const tool = async (name, args) => {
+        const r = await mcp.callTool({ name, arguments: args });
+        if (r.isError) fail(`${name} failed in the installed package: ${r.content[0]?.text}`);
+        return JSON.parse(r.content[0].text);
+      };
+      const made = await tool('file_create', { name: 'Smoke' });
+      const script = await tool('script_run', { file_id: made.id, dry_run: true, code: 'return { pages: bogen.pages().length, node: typeof process };' });
+      if (script.result?.pages !== 1 || script.result?.node !== 'undefined') fail(`script_run answered ${JSON.stringify(script.result)}`);
+      console.log('  script_run: a script ran in the packed QuickJS sandbox');
+    } finally {
+      await mcp.close();
+    }
 
     const doctor = spawnSync(bin, ['doctor', '--json'], { env, encoding: 'utf8', timeout: 120_000 });
     let checks;
@@ -303,6 +389,15 @@ writeFileSync(manifest, `${JSON.stringify({
 }, null, 2)}\n`);
 writeChecksum(manifest);
 signFile(manifest);
+
+// The Claude Desktop extension, from integrations/claude-desktop/: signed like the rest, and listed in the provenance.
+const mcpb = buildMcpb();
+if (mcpb.version !== version) refuse(`integrations/claude-desktop/manifest.json says ${mcpb.version}, not ${version}: run npx tsx scripts/gen-plugins.ts`);
+const extension = join(assets, `bogen-${version}.mcpb`);
+writeFileSync(extension, mcpb.bytes);
+writeChecksum(extension);
+signFile(extension);
+console.log(`  ${basename(extension)}: the Claude Desktop extension, ${mcpb.bytes.length} bytes`);
 
 const firstLine = (command, argv) => {
   try {

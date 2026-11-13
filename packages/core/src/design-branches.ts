@@ -517,6 +517,88 @@ export function previewMerge(doc: BogenDoc, id: string): { branch: DesignBranch;
 }
 
 /**
+ * What the parent would hold after merging, without merging: the same three-way merge as `mergeDesignBranch`. Where a
+ * conflict has no answer in `resolve`, the parent's side is shown, as the merge would keep it until the person chooses.
+ */
+export function previewMergeContent(doc: BogenDoc, id: string, resolve?: BranchResolution): { into: DesignBranch; before: DesignContent; after: DesignContent; conflicts: BranchConflict[] } {
+  const rec = getDesignBranch(doc, id);
+  if (!rec.parent || rec.status !== 'open') throw new Error(rec.parent ? `The branch "${rec.name}" was ${rec.status} already.` : 'Main has nothing to merge into.');
+  const into = getDesignBranch(doc, rec.parent);
+  const base = readBlob(doc, rec.base, `where "${rec.name}" started`);
+  const before = branchContent(doc, into.id);
+  const { content, conflicts } = mergeDesignContent(base, before, branchContent(doc, id), resolve);
+  return { into, before, after: content, conflicts };
+}
+
+export type ScreenChange = 'added' | 'removed' | 'changed';
+
+/** A screen (a top-level layer of a page) that differs between two versions of a design. */
+export interface ChangedScreen { id: string; name: string; pageId: string; page: string; change: ScreenChange; /** Layers inside it that differ. */ layers: number }
+
+const VAR_NAME = /var\(\s*--([\w-]+)/g;
+
+/**
+ * Which screens differ between two versions: added, removed, or with any layer inside them changed, moved in or out,
+ * or using a token whose value changed. In page order, then the order on the page.
+ */
+export function changedScreens(a: DesignContent, b: DesignContent): ChangedScreen[] {
+  const pageNames = new Map<string, string>();
+  for (const p of [...a.pages, ...b.pages]) pageNames.set(p.id, p.name);
+  const pageIds = new Set([...a.pages, ...b.pages].map((p) => p.id));
+  const screensOf = (c: DesignContent) => {
+    const byId = new Map(c.nodes.map((n) => [n.id, n]));
+    const screenOf = new Map<string, string>();
+    const find = (id: string): string | undefined => {
+      if (screenOf.has(id)) return screenOf.get(id);
+      const n = byId.get(id);
+      if (!n) return undefined;
+      const out = pageIds.has(n.parent) ? n.id : find(n.parent);
+      if (out) screenOf.set(id, out);
+      return out;
+    };
+    const members = new Map<string, Map<string, string>>();
+    for (const n of c.nodes) {
+      const screen = find(n.id);
+      if (!screen) continue;
+      let m = members.get(screen);
+      if (!m) members.set(screen, (m = new Map()));
+      m.set(n.id, canonicalJson(n));
+    }
+    return { byId, members };
+  };
+  const sa = screensOf(a);
+  const sb = screensOf(b);
+  const tokensA = new Map(a.tokens.map((t) => [t.name, canonicalJson(t)]));
+  const tokensB = new Map(b.tokens.map((t) => [t.name, canonicalJson(t)]));
+  const changedTokens = new Set([...new Set([...tokensA.keys(), ...tokensB.keys()])].filter((k) => tokensA.get(k) !== tokensB.get(k)));
+  const usesChanged = (m: Map<string, string> | undefined) => {
+    if (!changedTokens.size || !m) return false;
+    for (const json of m.values()) for (const hit of json.matchAll(VAR_NAME)) if (changedTokens.has(hit[1]!)) return true;
+    return false;
+  };
+  const out: (ChangedScreen & { order: string; pageOrder: string })[] = [];
+  const pageOrder = new Map([...a.pages, ...b.pages].map((p) => [p.id, p.order]));
+  for (const id of new Set([...sa.members.keys(), ...sb.members.keys()])) {
+    const ma = sa.members.get(id);
+    const mb = sb.members.get(id);
+    const node = sb.byId.get(id) ?? sa.byId.get(id)!;
+    let change: ScreenChange | null = null;
+    let layers = 0;
+    if (!ma) change = 'added';
+    else if (!mb) change = 'removed';
+    else {
+      for (const k of new Set([...ma.keys(), ...mb.keys()])) if (ma.get(k) !== mb.get(k)) layers++;
+      if (layers || usesChanged(mb)) change = 'changed';
+    }
+    if (!change) continue;
+    if (change !== 'changed') layers = (mb ?? ma)!.size;
+    out.push({ id, name: node.name || node.type, pageId: node.parent, page: pageNames.get(node.parent) ?? '', change, layers, order: node.order, pageOrder: pageOrder.get(node.parent) ?? '' });
+  }
+  out.sort((x, y) => (x.pageOrder !== y.pageOrder ? (x.pageOrder < y.pageOrder ? -1 : 1) : x.order !== y.order ? (x.order < y.order ? -1 : 1) : x.id.localeCompare(y.id)));
+  return out.map(({ order: _o, pageOrder: _p, ...rest }) => rest);
+}
+
+/**
  * The person's decision: the branch goes into its parent, which is then checked out. Conflicts stop it unless
  * `resolve` settles every one. One transaction; the parent's content before it is kept so that `undoMerge` can go back.
  */
@@ -552,6 +634,38 @@ export function mergeDesignBranch(doc: BogenDoc, id: string, options: { by: stri
     collect(doc);
   }, origin);
   return { branch: getDesignBranch(doc, id), into: getDesignBranch(doc, into.id) };
+}
+
+/**
+ * Brings an open branch onto its parent as it is now: `content` becomes what the branch holds and the parent's present
+ * content its new start, so that a later merge or update compares from here. One transaction. Used by a language
+ * version that follows its original (translation-memory.ts); the caller computes `content`, usually a merge.
+ */
+export function rebaseDesignBranch(doc: BogenDoc, id: string, content: DesignContent, origin?: unknown): DesignBranch {
+  const rec = getDesignBranch(doc, id);
+  if (!rec.parent || rec.status !== 'open') throw new Error(rec.parent ? `The branch "${rec.name}" was ${rec.status} already.` : 'Main has no parent to follow.');
+  assertContent(content);
+  doc.transact(() => {
+    const base = putBlob(doc, branchContent(doc, rec.parent!));
+    if (currentBranchId(doc) === id) {
+      applyContent(doc, content);
+      const { head: _h, ...rest } = getDesignBranch(doc, id);
+      saveRecord(doc, { ...rest, base, updatedAt: Date.now() });
+    } else saveRecord(doc, { ...getDesignBranch(doc, id), base, head: putBlob(doc, content), updatedAt: Date.now() });
+    labelChange(doc, { label: `Brought "${rec.name}" up to date with its original` });
+    collect(doc);
+  }, origin);
+  return getDesignBranch(doc, id);
+}
+
+/** The content a branch started from, or null when its snapshot is gone. */
+export function branchBaseContent(doc: BogenDoc, id: string): DesignContent | null {
+  const rec = getDesignBranch(doc, id);
+  try {
+    return readBlob(doc, rec.base, `where "${rec.name}" started`);
+  } catch {
+    return null;
+  }
 }
 
 /** Takes a merge back while its parent is as the merge left it: the parent returns to before, the branch opens again. */

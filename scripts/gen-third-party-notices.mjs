@@ -101,7 +101,7 @@ node scripts/gen-third-party-notices.mjs --check   # exits 1 when it is out of d
 
 | Where | What it is | Packages |
 | --- | --- | --- |
-| CLI | \`packages/server/dist/cli.js\`, one bundle made by esbuild from the server, \`@bogen/core\` and their dependencies. Counted from the declared dependencies, so a few the bundler leaves out as unused may be listed. | ${count('cli')} |
+| CLI | \`packages/server/dist/cli.js\`, one bundle made by esbuild from the server, \`@bogen/core\` and their dependencies, with its worker bundles next to it, QuickJS's WebAssembly in \`dist/quickjs/\` for \`script_run\`, and \`dist/vendor/\` with Mermaid's browser bundle and pdf.js as files of their own, read on first use. Counted from the declared dependencies, so a few the bundler leaves out as unused may be listed. | ${count('cli')} |
 | Shader runtime | \`packages/server/dist/shader-runtime.js\`, the page script that draws shader layers in renders. | ${count('shaders')} |
 | Editor | The built editor in \`apps/editor/dist\`, copied to \`packages/server/dist/editor\`. Fonts included. | ${count('editor')} |
 | npm install | Not bundled: the published package \`bogen-design\` depends on \`puppeteer-core\`, \`esbuild\` and \`tailwindcss\`, and npm installs them with what they need. | ${count('npm')} |

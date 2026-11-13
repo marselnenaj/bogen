@@ -1,6 +1,6 @@
 import { LANE_COLORS } from '@bogen/core';
 import type { RunLanguageChoice } from '@bogen/core';
-import { acceptProposal, createProposals, discardProposal, listProposals, newId, rectFromStyle } from '@bogen/core';
+import { acceptProposal, createProposals, discardProposal, listProposals, newId, rectFromStyle, variationNote, type Variation } from '@bogen/core';
 import type { RunEnd, RunnerId, Runs } from './agents.ts';
 import type { EventHub } from './events.ts';
 import { copiedIds, proposalBoxes } from './mcp/tools-proposals.ts';
@@ -39,6 +39,8 @@ export interface Lane {
   error?: string;
   /** What the person did with its copy. */
   decision?: 'accepted' | 'discarded';
+  /** In a split race: the sections of the page this lane works on, each with its copy. */
+  sections?: { original: string; proposalId: string; name: string }[];
 }
 
 export interface Race {
@@ -50,12 +52,33 @@ export interface Race {
   at: number;
   /** The design language the person chose for this race. */
   language?: RunLanguageChoice;
+  /** How far the lanes go, and which aspects they change. */
+  variation?: Variation;
+  /** The lanes take sections of the page instead of a copy each of all of it. */
+  split?: boolean;
   lanes: Lane[];
   /** Set once the person picked a lane, or dropped them all. */
   decided?: { laneId?: string; at: number; branch?: { id: string; name: string; fileId?: string; internal?: boolean } };
 }
 
-export interface RaceStart { fileId: string; pageId?: string; nodeId: string; prompt: string; lanes: LaneSpec[]; who: string; /** The design content language every lane writes in, over the file's. */ language?: RunLanguageChoice }
+export interface RaceStart {
+  fileId: string; pageId?: string; nodeId: string; prompt: string; lanes: LaneSpec[]; who: string;
+  /** The design content language every lane writes in, over the file's. */ language?: RunLanguageChoice;
+  /** The range and the aspects every lane keeps to. */ variation?: Variation;
+  /** Each lane takes sections of the layer (its visible children) instead of a copy of all of it. */ split?: boolean;
+}
+
+/** The sections of a page, in order, shared out over the lanes in runs next to each other: 5 over 3 is 2, 2 and 1. */
+export function splitSections<T>(sections: T[], lanes: number): T[][] {
+  const out: T[][] = [];
+  let at = 0;
+  for (let i = 0; i < lanes; i++) {
+    const size = Math.floor(sections.length / lanes) + (i < sections.length % lanes ? 1 : 0);
+    out.push(sections.slice(at, at + size));
+    at += size;
+  }
+  return out;
+}
 
 interface Deps {
   rooms: Rooms;
@@ -142,21 +165,53 @@ export class Races {
       id: `l${i + 1}`, runner: spec.runner, ...(spec.model ? { model: spec.model } : {}), ...(spec.effort ? { effort: spec.effort } : {}),
       agent: names[i]!, color: LANE_COLORS[i % LANE_COLORS.length]!, status: 'queued',
     }));
-    const measured = await proposalBoxes(this.deps.renderer, room, input.nodeId, pageId);
+    const variation = input.variation;
+    const note = (agent: string) => (variation ? `${agent} · ${variationNote(variation)}` : agent);
     let ids: string[];
-    try {
-      ids = doc.transact(() => createProposals(doc, input.nodeId, {
-        by: lanes[0]!.agent, count: lanes.length, notes: lanes.map((l) => l.agent),
-        lanes: lanes.map((l) => ({ by: l.agent, race: { id: raceId, lane: l.id, color: l.color } })),
-        ...measured, ...(measured.rect ? {} : { rect: rectFromStyle(node) }),
-      }), `person:${input.who}`);
-    } catch (e) {
-      throw new HttpError(400, errorMessage(e));
+    let sections: Lane['sections'][] | undefined;
+    if (input.split) {
+      const parts = doc.getChildren(input.nodeId).filter((n) => !n.hidden);
+      if (parts.length < lanes.length) throw new HttpError(400, `"${node.name}" has ${parts.length} section${parts.length === 1 ? '' : 's'}, fewer than the ${lanes.length} runs. Start fewer runs, or race copies of the whole page.`);
+      const shares = splitSections(parts, lanes.length);
+      // Each section's copy goes next to the page, clear of the copies made before it.
+      const boxes = new Map<string, Awaited<ReturnType<typeof proposalBoxes>>>();
+      for (const part of parts) boxes.set(part.id, await proposalBoxes(this.deps.renderer, room, part.id, pageId));
+      const placed: { x: number; y: number; w: number; h: number }[] = [];
+      try {
+        sections = doc.transact(() => shares.map((share, i) => share.map((part) => {
+          const lane = lanes[i]!;
+          const box = boxes.get(part.id) ?? {};
+          const others = box.others ? [...box.others, ...placed] : undefined;
+          const [id] = createProposals(doc, part.id, { by: lane.agent, count: 1, notes: [note(lane.agent)], lanes: [{ by: lane.agent, race: { id: raceId, lane: lane.id, color: lane.color } }], ...(variation ? { variation } : {}), ...(box.rect ? { rect: box.rect } : {}), ...(others ? { others } : {}) });
+          const made = doc.getNode(id!);
+          if (made) placed.push(rectFromStyle(made));
+          return { original: part.id, proposalId: id!, name: part.name };
+        })), `person:${input.who}`);
+      } catch (e) {
+        throw new HttpError(400, errorMessage(e));
+      }
+      ids = sections.map((list) => list![0]!.proposalId);
+    } else {
+      const measured = await proposalBoxes(this.deps.renderer, room, input.nodeId, pageId);
+      try {
+        ids = doc.transact(() => createProposals(doc, input.nodeId, {
+          by: lanes[0]!.agent, count: lanes.length, notes: lanes.map((l) => note(l.agent)),
+          lanes: lanes.map((l) => ({ by: l.agent, race: { id: raceId, lane: l.id, color: l.color } })),
+          ...(variation ? { variation } : {}),
+          ...measured, ...(measured.rect ? {} : { rect: rectFromStyle(node) }),
+        }), `person:${input.who}`);
+      } catch (e) {
+        throw new HttpError(400, errorMessage(e));
+      }
     }
-    const race: Race = { id: raceId, fileId: input.fileId, pageId, nodeId: input.nodeId, prompt: input.prompt, at: Date.now(), ...(input.language ? { language: input.language } : {}), lanes: lanes.map((l, i) => ({ ...l, proposalId: ids[i]! })) };
+    const race: Race = {
+      id: raceId, fileId: input.fileId, pageId, nodeId: input.nodeId, prompt: input.prompt, at: Date.now(), ...(input.language ? { language: input.language } : {}),
+      ...(variation ? { variation } : {}), ...(input.split ? { split: true } : {}),
+      lanes: lanes.map((l, i) => ({ ...l, proposalId: ids[i]!, ...(sections ? { sections: sections[i]! } : {}) })),
+    };
     for (const lane of race.lanes) {
       rooms.agentColors.set(lane.agent, lane.color);
-      this.deps.noteOrigin(input.fileId, lane.proposalId, { request: input.prompt, runner: lane.runner, ...(lane.model ? { model: lane.model } : {}) });
+      for (const id of lane.sections?.map((x) => x.proposalId) ?? [lane.proposalId]) this.deps.noteOrigin(input.fileId, id, { request: input.prompt, runner: lane.runner, ...(lane.model ? { model: lane.model } : {}) });
     }
     this.races.set(raceId, race);
     this.trim(input.fileId);
@@ -201,11 +256,14 @@ export class Races {
       if (!room.doc.getNode(lane.proposalId)) throw new Error('Its copy is gone.');
       const choice = await this.deps.choice(lane.runner, { ...(lane.model ? { model: lane.model } : {}), ...(lane.effort ? { effort: lane.effort } : {}) });
       const others = race.lanes.length - 1;
+      const copies = lane.sections ?? [{ original: race.nodeId, proposalId: lane.proposalId, name: '' }];
+      const layers = Object.assign({}, ...copies.map((x) => copiedIds(room.doc, x.original, x.proposalId))) as Record<string, string>;
+      const otherSections = lane.sections ? race.lanes.filter((l) => l.id !== lane.id).flatMap((l) => (l.sections ?? []).map((x) => `"${x.name}"`)) : undefined;
       const runId = await this.deps.runs.start({
-        fileId: race.fileId, fileName: this.deps.storage.get(race.fileId)?.name ?? race.fileId, pageId: race.pageId, nodeIds: [lane.proposalId],
+        fileId: race.fileId, fileName: this.deps.storage.get(race.fileId)?.name ?? race.fileId, pageId: race.pageId, nodeIds: copies.map((x) => x.proposalId),
         prompt: race.prompt, title: race.prompt, runner: lane.runner, agent: lane.agent, review: 'directions',
-        race: { raceId: race.id, laneId: lane.id, proposalId: lane.proposalId, layers: copiedIds(room.doc, race.nodeId, lane.proposalId), others },
-        ...(race.language ? { language: race.language } : {}),
+        race: { raceId: race.id, laneId: lane.id, proposalId: lane.proposalId, layers, others, ...(lane.sections ? { sections: lane.sections, otherSections: otherSections! } : {}) },
+        ...(race.language ? { language: race.language } : {}), ...(race.variation ? { variation: race.variation } : {}),
         ...choice,
       }, { onTool: (_id, tool) => { lane.tool = tool; this.changed(race); } });
       // A stop that came while it was starting.
@@ -274,6 +332,7 @@ export class Races {
     if (!lane) throw new HttpError(404, 'No such lane in this race.');
     const room = await this.deps.rooms.get(race.fileId);
     if (!listProposals(room.doc).some((p) => p.id === lane.proposalId)) throw new HttpError(409, 'That copy is gone: accepted, discarded, or deleted.');
+    if (race.split) return this.acceptSections(race, lane, options.who);
     this.stop(raceId);
     await this.settled(race);
     this.deps.beforeDecision(race.fileId);
@@ -290,6 +349,34 @@ export class Races {
     return { nodeId: result.sourceId, discarded: result.discarded, ...(branch ? { branch } : {}) };
   }
 
+  /**
+   * In a split race the lanes made different sections, so taking one lane's sections in leaves the others: that
+   * lane stops first, each of its copies goes into its section, and the race is decided once every lane is.
+   */
+  private async acceptSections(race: Race, lane: Lane, who: string): Promise<{ nodeId: string; discarded: string[] }> {
+    this.stop(race.id, lane.id);
+    await this.settled(race);
+    this.deps.beforeDecision(race.fileId);
+    const room = await this.deps.rooms.get(race.fileId);
+    const open = new Set(listProposals(room.doc).map((p) => p.id));
+    let nodeId = '';
+    try {
+      room.doc.transact(() => {
+        for (const part of lane.sections ?? []) {
+          if (!open.has(part.proposalId)) continue;
+          const { sourceId } = acceptProposal(room.doc, part.proposalId);
+          nodeId ||= sourceId;
+        }
+      }, `person:${who}`);
+    } catch (e) {
+      throw new HttpError(409, errorMessage(e));
+    }
+    lane.decision = 'accepted';
+    if (race.lanes.every((l) => l.decision)) race.decided = { at: Date.now() };
+    this.changed(race);
+    return { nodeId: nodeId || race.nodeId, discarded: [] };
+  }
+
   /** Drops one lane's copy, stopping its run first. */
   async discard(raceId: string, laneId: string, who: string): Promise<void> {
     const race = this.require(raceId);
@@ -298,9 +385,10 @@ export class Races {
     this.stop(raceId, laneId);
     const room = await this.deps.rooms.get(race.fileId);
     this.deps.beforeDecision(race.fileId);
-    if (room.doc.getNode(lane.proposalId)) room.doc.transact(() => discardProposal(room.doc, lane.proposalId), `person:${who}`);
+    const copies = lane.sections?.map((x) => x.proposalId) ?? [lane.proposalId];
+    room.doc.transact(() => { for (const id of copies) if (room.doc.getNode(id)) discardProposal(room.doc, id); }, `person:${who}`);
     lane.decision = 'discarded';
-    if (race.lanes.every((l) => l.decision === 'discarded')) race.decided = { at: Date.now() };
+    if (race.split ? race.lanes.every((l) => l.decision) : race.lanes.every((l) => l.decision === 'discarded')) race.decided = { at: Date.now() };
     this.changed(race);
   }
 

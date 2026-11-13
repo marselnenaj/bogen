@@ -68,6 +68,27 @@ brand's Reference page, and the second uses that copy again rather than capturin
 Values given in `vw` come out as their size at the width of the capture, so spacing and sizes from a
 live page need a look from you. A Tailwind config that computes its values cannot be read.
 
+### From a DESIGN.md
+
+A [DESIGN.md](export-and-code.md#designmd) goes in with `design_md_import` and `into: "brand"` (or
+`"both"`, for the file's tokens as well). Everything arrives as a suggestion, through the same review as
+an extraction, and binds nobody until you confirm it:
+
+| In the DESIGN.md | In the brand | Held to it by `brand_check` |
+| --- | --- | --- |
+| `colors` | colours with their names as tokens, the role guessed from the name | `color.off-palette`, `color.contrast`, `tokens.missing`, `tokens.drift` |
+| a component's `backgroundColor` with `textColor` | an allowed pair, its contrast checked at import | `color.contrast`, `color.forbidden-pair` |
+| `typography` | font families and the type scale with weight, line height and tracking | `type.off-brand-font`, `type.size-off-scale`, `type.weight-off-scale` |
+| `rounded` | the radius scale | `layout.radius-off-scale` |
+| `spacing` | the spacing scale | `layout.spacing-off-scale` |
+| each line of Do's and Don'ts | a rule, do or don't, soft | the rule, on the checklist when no machine can check it |
+| `description`, or the first paragraph of Overview | the positioning, when the brand has none | |
+| Overview, Colors, Typography, Layout, Components prose | draft brandbook chapters, where a chapter is still empty | |
+
+The import also returns the format's own lint with the `brand_check` rule each finding maps onto, so a
+contrast problem in the DESIGN.md reads the same as one on the canvas. `brand_export` with
+`format: "design-md"` writes the brand back out, from what binds.
+
 ## Languages
 
 A brand speaks one or more languages: a **primary** language and any number of others, each as a
@@ -407,8 +428,8 @@ Every brand tool, by what it is for. The [MCP tool reference](reference/mcp-tool
 | Step | Tools |
 | --- | --- |
 | Find and manage brands | `brand_list`, `brand_create`, `brand_rename`, `brand_duplicate`, `brand_delete`, `brand_default` |
-| Move it to another device | `brand_export`, `file_export`, `file_import` |
-| Fill a brand | `brand_extract`, `brand_update`, `brand_asset_add`, `brand_book_get`, `brand_book_update` |
+| Move it to another device | `brand_export` (also as a DESIGN.md), `file_export`, `file_import` |
+| Fill a brand | `brand_extract`, `design_md_import`, `brand_update`, `brand_asset_add`, `brand_book_get`, `brand_book_update` |
 | Confirm | `brand_confirm`, only when you say so |
 | Read a brand | `brand_get`, `brand_asset_list`, `brand_example_get`, `brand_sheet`, and the resource `bogen://brand/<id>` |
 | Use it in a file | `brand_link`, `brand_asset_use`, `brand_template_use`, `template_list`, `template_use` |

@@ -1,4 +1,4 @@
-import { MAX_PARALLEL_RUNS } from '@bogen/core';
+import { MAX_PARALLEL_RUNS, variationBrief, type Variation } from '@bogen/core';
 import { contentLanguageLines, type ContentLanguage, type ProjectInfo, type RunIntent, type RunLanguageChoice } from '@bogen/core';
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -21,8 +21,11 @@ export interface RunLanguageEnd { tag: string; source: ContentLanguage['source']
 /** Where the work of a run lands. `critique` changes nothing and leaves comments; its session only gets tools that read and comment. */
 export type RunReview = 'direct' | 'proposal' | 'directions' | 'critique';
 
-/** One lane of a race: a run that works in its own proposal, next to the others. */
-export interface RaceLane { raceId: string; laneId: string; proposalId: string; layers: Record<string, string>; others: number }
+/**
+ * One lane of a race: a run that works in its own proposal, next to the others. In a split race each lane has
+ * sections of one page instead, a proposal per section, and the lanes together make the whole page.
+ */
+export interface RaceLane { raceId: string; laneId: string; proposalId: string; layers: Record<string, string>; others: number; sections?: { original: string; proposalId: string; name: string }[]; otherSections?: string[] }
 
 /** An image the CLI gets with the request, as Codex's `-i` or an image block on Claude's stream-json input. */
 export interface RunImage { data: Buffer; mime: string; name: string }
@@ -72,6 +75,12 @@ export interface RunRequest {
   branch?: { id: string; name: string; reused: boolean };
   /** The design content language the person chose for this one request, and what to do with it. Overrides the file's. */
   language?: RunLanguageChoice;
+  /** How far a proposal or a race goes, which aspects it changes, and for a proposal how many copies. */
+  variation?: Variation & { count?: number };
+  /** A design playbook the person chose with / in the chat, over the one Bogen would pick. */
+  discipline?: string;
+  /** Layers, components and tokens the person mentioned with @, resolved on the server. */
+  mentions?: RunMention[];
   /** The language the run writes in, as the server resolved it (this request, else the file, else the brand). */
   contentLanguage?: ContentLanguage;
   /** The linked brand's primary language, when it sets one, so that a run in another language knows those checks do not apply. */
@@ -79,6 +88,9 @@ export interface RunRequest {
   /** All the languages the linked brand speaks, the primary first, so that a run knows whether its language is one. */
   brandLanguages?: string[];
 }
+
+/** Something the person mentioned with @ in a message, as the server found it in the file. */
+export interface RunMention { kind: 'layer' | 'component' | 'token'; id: string; name: string; detail?: string }
 
 /** A run in live site mode. The address is valid for one run, and its tools never leave `dir`. */
 export interface LiveRunTarget { dir: string; mcpUrl: string; instructions: string; label: string }
@@ -209,9 +221,14 @@ function systemPrompt(req: RunRequest): string {
     ...languageLines(req),
     ...(req.context ? ['The request comes after what was said and done earlier in this conversation. Treat the earlier turns as context for it, not as new requests.'] : []),
     ...(req.images?.length ? [`The person attached ${req.images.length === 1 ? 'an image' : `${req.images.length} images`} to this request. You see it with the request itself.`] : []),
-    ...(req.review === 'proposal' ? ['The person wants to review this before it counts. Call proposal_create on the layer you would change, make every change in the copy it returns, using the ids of the copy from its layers map rather than the ids you read before, and leave the original alone. The person accepts or discards it on the canvas, so do not accept it yourself.'] : []),
-    ...(req.review === 'directions' && !req.race ? ['The person wants three different directions to choose from. Call proposal_create on the layer with count 3 and a short note for each, then make each copy a clearly different take, using the ids of that copy from its layers map. Leave the original alone. The person accepts one on the canvas, so do not accept it yourself.'] : []),
-    ...(req.race ? [
+    ...(req.review === 'proposal' ? [req.variation ? proposalVariationLine(req.variation) : 'The person wants to review this before it counts. Call proposal_create on the layer you would change, make every change in the copy it returns, using the ids of the copy from its layers map rather than the ids you read before, and leave the original alone. The person accepts or discards it on the canvas, so do not accept it yourself.'] : []),
+    ...(req.review === 'directions' && !req.race ? [req.variation ? proposalVariationLine({ ...req.variation, count: req.variation.count ?? 3 }) : 'The person wants three different directions to choose from. Call proposal_create on the layer with count 3 and a short note for each, then make each copy a clearly different take, using the ids of that copy from its layers map. Leave the original alone. The person accepts one on the canvas, so do not accept it yourself.'] : []),
+    ...((req.review === 'proposal' || req.review === 'directions' || req.race) && req.variation ? variationBrief(req.variation, req.race ? req.race.others + 1 : req.variation.count ?? 1) : []),
+    ...(req.mentions?.length ? [`The person mentioned these with @ in the message; the names in the message stand for them: ${req.mentions.map((m) => `@${m.name} is ${m.kind === 'token' ? `the token --${m.id}` : `${m.kind} ${m.id}`}${m.detail ? ` (${m.detail})` : ''}`).join('; ')}.`] : []),
+    ...(req.race?.sections ? [
+      `This is a split race: ${req.race.others} other agents work on the same page at the same time, each on other sections of it. Yours are ${req.race.sections.map((x) => `"${x.name}" (copy ${x.proposalId})`).join(', ')}. Make every change in those copies, and nowhere else: not in the originals, and not in the other agents' sections${req.race.otherSections?.length ? ` (${req.race.otherSections.join(', ')})` : ''}.`,
+      `Your copies' layers, as original id to copy id: ${JSON.stringify(req.race.layers)}. Use the copy ids. Keep to the page's tokens, type and spacing, so that the sections still read as one page when they go back in. Do not call proposal_create, proposal_accept or proposal_discard: the person takes the sections in.`,
+    ] : req.race ? [
       `This is a race: ${req.race.others} other agents work on the same request at the same time, each in a copy of its own. Yours is proposal ${req.race.proposalId}. Make every change in it, and nowhere else: not in the original, and not in the other copies.`,
       `Your copy's layers, as original id to copy id: ${JSON.stringify(req.race.layers)}. Use the copy ids. Do not call proposal_create, proposal_accept or proposal_discard: the person compares the copies and picks one.`,
     ] : []),
@@ -223,6 +240,13 @@ function systemPrompt(req: RunRequest): string {
     ] : []),
   ];
   return lines.filter(Boolean).join('\n');
+}
+
+/** What a run asked for copies with a range and aspects is told to call. */
+function proposalVariationLine(v: Variation & { count?: number }): string {
+  const count = v.count ?? 1;
+  const args = [`count ${count}`, `range "${v.range}"`, ...(v.vary.length ? [`vary ${JSON.stringify(v.vary)}`] : [])].join(', ');
+  return `The person wants to review this before it counts, as ${count === 1 ? 'a copy' : `${count} copies`} with a set range. Call proposal_create on the layer you would change with ${args}, make every change in the copies it returns, using the ids of each copy from its layers map, and leave the original alone. Before you finish, call proposal_list: held lists what a copy changed outside its aspects; put those back. The person accepts or discards them on the canvas, so do not accept one yourself.`;
 }
 
 /** The design content language, when the run has one. Runs in copies of their own translate only there. */
@@ -257,6 +281,11 @@ function intentLines(req: RunRequest): string[] {
   }
   if (req.intent === 'new_page') return ['The person asked for a new page: make it with page_create, and leave the existing pages as they are.'];
   return ['Change the existing layers in place. Do not make a new page or a second copy of the design: a redo of existing work is a revision (revision_start with intent revise), and a new page only comes when the person asks for one.'];
+}
+
+/** What a CLI is told besides the request, for its trace: the instructions of a canvas run, or of a run on a folder. */
+export function runInstructions(req: RunRequest): string {
+  return req.live ? req.live.instructions : systemPrompt(req);
 }
 
 /** The name a run works under. Two lanes of one race on the same runner need different names, or they would share a cursor and an undo. */

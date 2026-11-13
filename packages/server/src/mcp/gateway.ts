@@ -11,6 +11,7 @@ import { registerPrompts } from './prompts.ts';
 import { registerResources } from './resources.ts';
 import { registerAllTools } from './tools.ts';
 import { releaseSession, type Session } from './kit.ts';
+import { modeInstructions, parseToolMode, parseToolProfile, PROFILE_HEADER, TOOLS_HEADER } from './tool-modes.ts';
 
 const SESSION_TTL_MS = 24 * 3600_000;
 const MAX_SESSIONS = 256;
@@ -125,7 +126,18 @@ export class McpGateway {
       runAgent = bound.agent;
       runFile = bound.fileId;
     }
-    const server = new McpServer({ name: 'bogen', version: VERSION }, { instructions: INSTRUCTIONS });
+    // The tool list's size and profile: a header from `bogen mcp`, or ?tools=…&profile=… on the URL for a client that
+    // connects over HTTP. A profile only ever takes tools away, so a client may pick it; a run's own scope still wins.
+    const query = new URL(req.url ?? '/mcp', 'http://local').searchParams;
+    const pick = (header: string, param: string) => {
+      const h = req.headers[header];
+      return (typeof h === 'string' ? h : undefined) ?? query.get(param) ?? undefined;
+    };
+    const { mode, warning: modeWarning } = parseToolMode(pick(TOOLS_HEADER, 'tools'));
+    const { profile, warning: profileWarning } = parseToolProfile(pick(PROFILE_HEADER, 'profile'));
+    for (const w of [modeWarning, profileWarning]) if (w) console.warn(`bogen: ${w}`);
+    const note = modeInstructions(mode, profile);
+    const server = new McpServer({ name: 'bogen', version: VERSION }, { instructions: note ? `${INSTRUCTIONS}\n\n${note}` : INSTRUCTIONS });
     const session: Session = {
       // A run's session is on the run's file, also when the CLI left the header out.
       fileId: typeof fileHeader === 'string' ? fileHeader : runFile,
@@ -136,7 +148,8 @@ export class McpGateway {
     // A run's tools are decided by the run, here on the server, whatever the CLI was told.
     const scope = session.runId ? this.app.runs.scopeOf(session.runId) : undefined;
     if (scope) session.scope = scope;
-    registerAllTools(server, this.app, session);
+    if (profile === 'reviewer') session.scope = 'critique';
+    registerAllTools(server, this.app, session, { mode });
     registerPrompts(server);
     const stopResources = registerResources(server, this.app, session);
     // What this server really does: its tools and prompts are fixed, and its resources change with the files.

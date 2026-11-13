@@ -110,7 +110,7 @@ export const agentApi = {
   runnerCatalog: async (runner: string) => asJson<RunnerCatalog>(await fetch(`/api/run-settings/catalog/${encodeURIComponent(runner)}`)),
   saveRunSetting: async (patch: { runner?: string; scope?: RunScope; model?: string | null; effort?: string | null; shareCursors?: boolean; limit?: number }) => asJson<RunSettings>(await fetch('/api/run-settings', send('PATCH', patch))),
   races: async (fileId: string) => asJson<Race[]>(await fetch(`/api/races?fileId=${encodeURIComponent(fileId)}`)),
-  startRace: async (body: { fileId: string; pageId?: string; nodeId: string; prompt: string; lanes: LaneChoice[]; who: string; language?: RunLanguageChoice }) => asJson<Race>(await fetch('/api/races', send('POST', body))),
+  startRace: async (body: { fileId: string; pageId?: string; nodeId: string; prompt: string; lanes: LaneChoice[]; who: string; language?: RunLanguageChoice; range?: string; vary?: string[]; split?: boolean }) => asJson<Race>(await fetch('/api/races', send('POST', body))),
   stopRace: async (raceId: string, laneId?: string) => asJson<{ stopped: string[] }>(await fetch(`/api/races/${raceId}/stop`, send('POST', laneId ? { laneId } : {}))),
   acceptRace: async (raceId: string, laneId: string, keep: 'discard' | 'branch', who: string) => asJson<{ nodeId: string; discarded: string[]; branch?: { id: string; name: string } }>(await fetch(`/api/races/${raceId}/accept`, send('POST', { laneId, keep, who }))),
   discardRace: async (raceId: string, laneId: string, who: string) => asJson<{ ok: boolean }>(await fetch(`/api/races/${raceId}/discard`, send('POST', { laneId, who }))),

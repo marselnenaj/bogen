@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "bogen",
+  "owner": {
+    "name": "Marsel Nenaj",
+    "url": "https://github.com/marselnenaj/bogen"
+  },
+  "description": "Bogen, the open source design canvas for coding agents.",
+  "plugins": [
+    {
+      "name": "bogen",
+      "source": "./integrations/claude-code",
+      "description": "An open source design canvas where every layer is real HTML and CSS, drawn by your own coding agent over MCP. Needs Bogen installed: curl -fsSL https://bogen.dev/install.sh | bash",
+      "version": "0.3.0",
+      "category": "design",
+      "homepage": "https://bogen.dev"
+    }
+  ]
+}

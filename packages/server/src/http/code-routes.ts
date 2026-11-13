@@ -19,6 +19,8 @@ import type { BogenServer } from './server.ts';
  * - `GET /api/code/:project/tokens?fileId=`, `POST /api/code/:project/tokens/pull {fileId, names?}`: the repository's tokens
  * - `GET|POST /api/code/pulls`, `POST /api/code/pulls/tokens`, `GET|PATCH|DELETE /api/code/pulls/:id`,
  *   `GET /api/code/pulls/:id/picture/before|after`, `POST /api/code/pulls/:id/open {digest}`: pull requests
+ * - `GET|PATCH /api/code/pulls/settings {githubMerges}`, `POST /api/code/pulls/check`: merges of pushed branches
+ * - `POST /api/code/canvas {fileId, url?, path?, components?}`: a repository's page as a canvas on a design branch
  * Stories, tokens and pull requests read the disk, so they are for this machine only. None of this is on the tailnet listener.
  */
 
@@ -42,8 +44,15 @@ const DesignBody = z.object({
   docsDir: z.string().min(1).max(200).optional(),
   pictures: z.boolean().optional(),
   format: z.enum(['html', 'react-inline', 'react-tailwind']).optional(),
+  /** The chat it comes from: its later changes go onto the same branch. */
+  conversationId: z.string().regex(/^[\w-]{1,64}$/).optional(),
 });
-const TokenBody = z.object({ fileId: FileId, target: z.string().min(1).max(500).optional(), names: z.array(z.string().max(120)).max(2000).optional(), title: z.string().max(200).optional(), base: z.string().regex(/^[A-Za-z0-9][\w./-]{0,120}$/).optional() });
+const PullSettingsBody = z.object({ githubMerges: z.boolean().optional() });
+const CanvasBody = z.object({
+  fileId: FileId, url: z.string().min(1).max(2000).optional(), path: z.string().max(500).optional(), width: z.number().int().min(320).max(2560).optional(),
+  components: z.number().int().min(0).max(40).optional(), conversationId: z.string().regex(/^[\w-]{1,64}$/).optional(),
+});
+const TokenBody = z.object({ fileId: FileId, target: z.string().min(1).max(500).optional(), names: z.array(z.string().max(120)).max(2000).optional(), title: z.string().max(200).optional(), base: z.string().regex(/^[A-Za-z0-9][\w./-]{0,120}$/).optional(), designMd: z.boolean().optional() });
 const PatchBody = z.object({ title: z.string().max(200).optional(), body: z.string().max(60_000).optional() });
 const OpenBody = z.object({ digest: z.string().min(1).max(100) });
 const PullBody = z.object({ fileId: FileId, names: z.array(z.string().max(120)).max(2000).optional() });
@@ -80,6 +89,13 @@ async function handlePulls(app: BogenServer, req: IncomingMessage, res: ServerRe
     throw new HttpError(405, 'Method not allowed.');
   }
   if (id === 'tokens' && !d && method === 'POST') return h.send(res, 201, await app.pulls.startTokens(await h.json(req, TokenBody)));
+  // Whether gh may be asked about merges on GitHub; off unless the person turns it on.
+  if (id === 'settings' && !d) {
+    if (method === 'GET') return h.send(res, 200, await app.pulls.settings());
+    if (method === 'PATCH') return h.send(res, 200, await app.pulls.updateSettings(await h.json(req, PullSettingsBody)));
+  }
+  // Looks for merges now, instead of within the minute.
+  if (id === 'check' && !d && method === 'POST') return h.send(res, 200, { merged: (await app.pulls.checkMerges()).map((x) => x.id) });
   if (!/^[\w-]{1,40}$/.test(id)) throw new HttpError(404, 'No such pull request draft.');
   if (!d) {
     if (method === 'GET') return h.send(res, 200, { ...(await app.pulls.get(id)), diff: await app.pulls.diff(id) });
@@ -106,6 +122,13 @@ export async function handleCodeRoute(app: BogenServer, req: IncomingMessage, re
   if (b === 'pulls') {
     if (!local) throw new HttpError(403, 'Pull requests are made only from this machine.');
     return handlePulls(app, req, res, url, parts, h);
+  }
+  // A repository's page as a canvas, on a design branch: the capture of its dev server and its components.
+  if (b === 'canvas' && !c && method === 'POST') {
+    if (!local) throw new HttpError(403, 'Repositories are opened only from this machine.');
+    const body = await h.json(req, CanvasBody);
+    const { openRepoCanvas } = await import('../repo-canvas.ts');
+    return h.send(res, 201, await openRepoCanvas(app, { ...body, by: 'editor', kind: 'person', origin: 'person:editor' }));
   }
   if (b === 'projects') {
     if (!c && method === 'GET') return h.send(res, 200, app.codeProjects.list());

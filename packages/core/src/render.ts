@@ -179,6 +179,30 @@ export function isWebPage(node: Pick<BogenNode, 'artboard' | 'attrs'>): boolean 
 }
 
 /**
+ * What a web page tells search engines and link previews, kept as attributes of its artboard: `data-title` (else the
+ * artboard's name), `data-description`, `lang` and `dir`, `data-canonical` (its full address), `data-og-image` (the
+ * picture a link preview shows) and `data-favicon`. None of the `data-` ones reach a published page as attributes;
+ * publishing writes them into its head.
+ */
+export const WEB_META_ATTRS = { title: 'data-title', description: 'data-description', canonical: 'data-canonical', ogImage: 'data-og-image', favicon: 'data-favicon' } as const;
+
+export interface WebPageMeta { title?: string; description?: string; lang?: string; dir?: 'ltr' | 'rtl'; canonical?: string; ogImage?: string; favicon?: string }
+
+export function webPageMeta(node: Pick<BogenNode, 'name' | 'attrs'>): WebPageMeta {
+  const a = node.attrs ?? {};
+  const out: WebPageMeta = {};
+  const title = a[WEB_META_ATTRS.title]?.trim() || node.name?.trim();
+  if (title) out.title = title;
+  for (const key of ['description', 'canonical', 'ogImage', 'favicon'] as const) {
+    const v = a[WEB_META_ATTRS[key]]?.trim();
+    if (v) out[key] = v;
+  }
+  if (a.lang?.trim()) out.lang = a.lang.trim();
+  if (a.dir === 'rtl' || a.dir === 'ltr') out.dir = a.dir;
+  return out;
+}
+
+/**
  * A web page handed to code: on the canvas an artboard is as wide as its design, on the web the page is as wide as the
  * window. Only an artboard marked as a web page (`data-web="page"`, set by section_insert and web_page_set) changes:
  * its fixed width becomes the most it grows to (width 100%, max-width, centred) and a fixed height the least it takes
@@ -344,10 +368,11 @@ export function exportDocument(doc: BogenDoc, rootIds: string[], options: HtmlOp
 function webHead(doc: BogenDoc, rootIds: string[]): { html: string; title?: string; lang?: string } {
   const page = rootIds.map((id) => doc.getNode(id)).find((n) => n && isWebPage(n));
   if (!page) return { html: '' };
-  const description = page.attrs?.['data-description'];
+  const meta = webPageMeta(page);
+  const description = meta.description;
   return {
     html: `<meta name="viewport" content="width=device-width, initial-scale=1">${description ? `<meta name="description" content="${escapeAttr(description)}">` : ''}`,
-    title: page.name,
+    title: meta.title ?? page.name,
     ...(page.attrs?.lang ? { lang: page.attrs.lang } : {}),
   };
 }

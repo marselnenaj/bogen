@@ -146,6 +146,9 @@ describe('token sync with a repository', () => {
       'src/index.css': THEME_CSS,
       'design/tokens.json': JSON.stringify({ space: { $type: 'dimension', md: { $value: '16px' } } }, null, 2),
     });
+    // GitHub as the remote people see, where gh opens the pull request; pushes still go to the bare folder.
+    fx.git(['remote', 'set-url', 'origin', 'https://github.com/acme/tokens.git']);
+    fx.git(['remote', 'set-url', '--push', 'origin', fx.remote]);
     process.env.PATH = `${fx.bin}:${savedPath}`;
     h = await startServer();
     agent = await connectAgent(h.base, 'claude');

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { session } from '../doc/session.ts';
 import { pullApi, useLinkedProject, type DesignSource, type PullDraft } from '../lib/code-api.ts';
+import { conversationFor } from '../lib/conversation.ts';
 import { onServerEvent } from '../lib/events.ts';
 import { editor } from '../state/store.ts';
 import { ui, useUi, type PullDialog } from '../state/ui.ts';
@@ -66,6 +67,21 @@ function Shell({ pull }: { pull: PullDialog }) {
   );
 }
 
+/** Whether Bogen may ask gh about merges on GitHub. Off until the person turns it on: it calls GitHub. */
+function GithubMerges() {
+  const t = useT();
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => { void fetch('/api/code/pulls/settings').then((r) => r.json()).then((s: { githubMerges: boolean }) => setOn(s.githubMerges), () => setOn(null)); }, []);
+  if (on === null) return null;
+  const set = (value: boolean) => void fetch('/api/code/pulls/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ githubMerges: value }) }).then((r) => r.json()).then((s: { githubMerges: boolean }) => setOn(s.githubMerges));
+  return (
+    <label className="pr-check" data-testid="pr-github-merges">
+      <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} />
+      <span>{t('Close the chat when GitHub says it was merged. Asks your gh once a minute.')}</span>
+    </label>
+  );
+}
+
 function sourceWords(source: DesignSource, label: string): string {
   if (source.kind === 'proposal') return t('The proposal accepted on {layers}, against how it was before.', { layers: label });
   if (source.kind === 'selection') return t('{layers}, as it is now, against the last version.', { layers: label });
@@ -91,7 +107,7 @@ function Start({ start, label }: { start: DesignSource; label: string }) {
     setBusy(true);
     setError(null);
     try {
-      const draft = await pullApi.startDesign({ fileId, source, runner, ...(title.trim() ? { title: title.trim() } : {}), ...(base.trim() ? { base: base.trim() } : {}), docsDir: docsDir.trim() || 'docs/design' });
+      const draft = await pullApi.startDesign({ fileId, source, runner, ...(title.trim() ? { title: title.trim() } : {}), ...(base.trim() ? { base: base.trim() } : {}), docsDir: docsDir.trim() || 'docs/design', conversationId: conversationFor(fileId) });
       ui().set({ pull: { draft: draft.id } });
     } catch (e) {
       setError((e as Error).message);
@@ -210,12 +226,16 @@ function Draft({ id }: { id: string }) {
     );
   }
 
-  if (draft.status === 'opened') {
+  if (draft.status === 'opened' || draft.status === 'merged') {
     return (
       <>
-        <div className="pr-body" data-testid="pr-draft" data-status="opened">
-          <div className="pr-from">{t.rich('Opened {title} from {branch} into {base}.', { title: <span className="pr-strong" dir="auto">{draft.title}</span>, branch: <span className="pr-mono">{draft.branch}</span>, base: <span className="pr-mono">{draft.base}</span> })}</div>
+        <div className="pr-body" data-testid="pr-draft" data-status={draft.status}>
+          <div className="pr-from">{draft.status === 'merged'
+            ? t.rich('{branch} was merged into {base}. Its chat is closed.', { branch: <span className="pr-mono">{draft.branch}</span>, base: <span className="pr-mono">{draft.base}</span> })
+            : draft.url ? t.rich('Opened {title} from {branch} into {base}.', { title: <span className="pr-strong" dir="auto">{draft.title}</span>, branch: <span className="pr-mono">{draft.branch}</span>, base: <span className="pr-mono">{draft.base}</span> })
+            : t.rich('Pushed {branch} to {remote}. Merge it there; this chat closes when Bogen sees the merge.', { branch: <span className="pr-mono">{draft.branch}</span>, remote: <span className="pr-mono">{draft.remote ?? ''}</span> })}</div>
           {draft.url ? <a className="pr-link" href={draft.url} target="_blank" rel="noreferrer" data-testid="pr-url"><ExternalLink size={12} /> {draft.url}</a> : null}
+          {draft.status === 'opened' && draft.url && draft.forge !== 'folder' ? <GithubMerges /> : null}
         </div>
         {foot('', <button type="button" className="btn" onClick={() => ui().set({ pull: null })}>{t('Close')}</button>)}
       </>
@@ -223,6 +243,8 @@ function Draft({ id }: { id: string }) {
   }
 
   const stop = (e: React.KeyboardEvent) => { if (e.key !== 'Escape') e.stopPropagation(); };
+  // A remote that is a folder on this machine takes the push without gh.
+  const pushOnly = draft.forge === 'folder' || Boolean(draft.url);
   return (
     <>
       <div className="pr-body pr-scroll" data-testid="pr-draft" data-status={draft.status}>
@@ -264,10 +286,10 @@ function Draft({ id }: { id: string }) {
         {draft.error ? <div className="error">{draft.error}</div> : null}
         {error ? <div className="error" data-testid="pr-error">{error}</div> : null}
       </div>
-      {foot(gh ? t('Nothing has left this machine. This pushes one branch and opens the pull request with your gh.') : t('gh was not found, so the pull request cannot be opened from here. The branch is ready in the repository.'),
+      {foot(pushOnly ? t('Nothing has left this machine. This pushes one branch, on top of what was pushed, never with force.') : gh ? t('Nothing has left this machine. This pushes one branch and opens the pull request with your gh.') : t('gh was not found, so the pull request cannot be opened from here. The branch is ready in the repository.'),
         <>
           {discardButton}
-          <button type="button" className="btn btn-primary" disabled={busy || !gh || !draft.remote} onClick={() => void push()} data-testid="pr-push">{busy ? t('Working') : t('Push and open')}</button>
+          <button type="button" className="btn btn-primary" disabled={busy || (!gh && !pushOnly) || !draft.remote} onClick={() => void push()} data-testid="pr-push">{busy ? t('Working') : pushOnly ? t('Push') : t('Push and open')}</button>
         </>)}
     </>
   );

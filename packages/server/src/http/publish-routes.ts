@@ -1,5 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
+import { runPublishCheck } from '../publish-check.ts';
+import { RUNNER_IDS } from '@bogen/core';
+import { EFFORT_ID, MODEL_ID } from '../run-settings.ts';
 import { funnelPolicyHint } from '../static-listener.ts';
 import { HttpError } from '../util.ts';
 import type { GuardOptions } from './security.ts';
@@ -20,11 +23,13 @@ import { fromThisDevice, type BogenServer } from './server.ts';
  * - `POST /api/publish/sites/:site/github-plan {version?, repo, branch}` → what a push would do
  * - `POST /api/publish/sites/:site/unpublish {target?}` (editor for github), `DELETE /api/publish/sites/:site`
  * - `GET /api/publish/versions/:version/files` → the paths and sizes of a version's files
+ * - `POST /api/publish/check {fileId, pageId?, nodeId?, versionId?, summaries?, compliance?}` → the pre-publish check, local only
  * - `DELETE /api/publish/requests/:id`
  * - `POST /api/publish/listeners/:site|review {on, public?, httpsPort?}` (editor to turn on or make public)
  * - `POST /api/shares {siteId, versionId, label, days?, maxViews?, comments}` (editor) → the link, once
  * - `DELETE /api/shares/:id` revokes
  * - `POST /api/shares/inbox/:id/accept` (editor), `DELETE /api/shares/inbox/:id`
+ * - `POST /api/shares/inbox/run {ids, runner}` (editor): several client comments as one revision run
  */
 
 const Id = z.string().regex(/^[\w-]{1,64}$/);
@@ -36,6 +41,7 @@ const PublishBody = z.object({
   repo: z.string().max(201).optional(), branch: z.string().max(100).optional(), allowForeign: z.boolean().default(false), fingerprint: z.string().regex(/^[a-f0-9]{32}$/).optional(),
   requestId: Hex12.optional(),
 });
+const CheckBody = z.object({ fileId: Id.optional(), pageId: Id.optional(), nodeId: z.string().regex(/^[\w/-]{1,200}$/).optional(), versionId: Version.optional(), summaries: z.boolean().optional(), compliance: z.boolean().optional() });
 const PlanBody = z.object({ version: Version.nullable().optional(), repo: z.string().max(201), branch: z.string().max(100) });
 const UnpublishBody = z.object({ target: z.enum(['listener', 'folder', 'github']).optional() });
 const ListenerBody = z.object({ on: z.boolean(), public: z.boolean().optional(), httpsPort: z.number().int().min(1).max(65535).optional() });
@@ -77,6 +83,12 @@ export async function handlePublishRoute(app: BogenServer, req: IncomingMessage,
       if (body.requestId) await app.publisher.dismiss(body.requestId);
       return h.send(res, 201, { ...made, note: made.url ? 'This link is shown once. Copy it now.' : 'The review listener does not know its address yet: is Tailscale up? The link is /r/<token>/ on it.' });
     }
+    // Several client comments as one revision run. Only the owner's click in the editor starts it.
+    if (b === 'inbox' && c === 'run' && !d && method === 'POST') {
+      editor();
+      const body = await h.json(req, z.object({ ids: z.array(z.string().regex(/^[a-f0-9]{12}$/)).min(1).max(20), runner: z.enum(RUNNER_IDS), model: z.string().regex(MODEL_ID).optional(), effort: z.string().regex(EFFORT_ID).optional() }));
+      return h.send(res, 201, await app.clientRuns.start(body));
+    }
     if (b === 'inbox' && c && d === 'accept' && method === 'POST') {
       editor();
       return h.send(res, 200, await app.shares.accept(c));
@@ -102,6 +114,11 @@ export async function handlePublishRoute(app: BogenServer, req: IncomingMessage,
     const body = await h.json(req, Prepare);
     app.requireFile(body.fileId);
     return h.send(res, 201, await app.publisher.prepare({ ...body, by: 'you' }));
+  }
+  if (b === 'check' && !c && method === 'POST') {
+    const body = await h.json(req, CheckBody);
+    if (!body.versionId && !body.fileId) throw new HttpError(400, 'Name a file or a version.');
+    return h.send(res, 200, await runPublishCheck(app, { fileId: body.fileId ?? '', ...(body.pageId ? { pageId: body.pageId } : {}), ...(body.nodeId ? { nodeId: body.nodeId } : {}), ...(body.versionId ? { versionId: body.versionId } : {}), ...(body.summaries !== undefined ? { summaries: body.summaries } : {}), ...(body.compliance ? { compliance: true } : {}) }));
   }
   if (b === 'versions' && c && d === 'files' && method === 'GET') {
     if (!Version.safeParse(c).success) throw new HttpError(404, 'No such version.');

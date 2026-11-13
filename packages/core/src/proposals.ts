@@ -1,6 +1,7 @@
 import { newId, type BogenDoc, type BogenNode } from './doc.ts';
 import { setLayerText } from './text-model.ts';
 import { MAX_DIRECTION_LANES } from './run-limits.ts';
+import { cleanVariation, type Variation } from './variations.ts';
 
 const DECISION_PREFIX = 'proposal-decision:';
 const MAX_DECISIONS = 500;
@@ -48,6 +49,8 @@ export interface ProposalMark {
   base?: Record<string, string>;
   /** The revision this copy belongs to, when it was made as part of one. */
   revision?: string;
+  /** How far it may go from the original, and which aspects it changes while the rest stays. */
+  variation?: Variation;
 }
 
 export interface ProposalRace { id: string; lane: string; color: string }
@@ -76,6 +79,7 @@ export interface ProposalInfo {
   /** False when the layer it would replace is gone. Such a proposal can only be discarded. */
   sourceExists: boolean;
   race?: ProposalRace;
+  variation?: Variation;
 }
 
 /** Where a layer sits in its parent, as opposed to what it looks like. These stay the original's when accepting. */
@@ -91,7 +95,8 @@ export function listProposals(doc: BogenDoc, pageId?: string): ProposalInfo[] {
     const page = doc.pageOf(id);
     if (pageId && page !== pageId) return;
     const race = readRace(mark.race);
-    out.push({ id, of: mark.of, by: mark.by, ...(mark.note ? { note: mark.note } : {}), ...(mark.group ? { group: mark.group } : {}), at: mark.at, name: String(m.get('name') ?? ''), ...(page ? { pageId: page } : {}), sourceExists: doc.nodes.has(mark.of), ...(race ? { race } : {}) });
+    const variation = cleanVariation(mark.variation);
+    out.push({ id, of: mark.of, by: mark.by, ...(mark.note ? { note: mark.note } : {}), ...(mark.group ? { group: mark.group } : {}), at: mark.at, name: String(m.get('name') ?? ''), ...(page ? { pageId: page } : {}), sourceExists: doc.nodes.has(mark.of), ...(race ? { race } : {}), ...(variation ? { variation } : {}) });
   });
   return out.sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1));
 }
@@ -126,6 +131,8 @@ export interface ProposalOptions {
   origin?: unknown;
   /** The revision these copies belong to. */
   revision?: string;
+  /** The range and aspects of these copies, kept on each. */
+  variation?: Variation;
 }
 
 /** Child by child, the layers of `to` that stand for the layers of `from`: copy id to original id. Instances keep their insides. */
@@ -211,7 +218,7 @@ export function createProposals(doc: BogenDoc, sourceId: string, options: Propos
       base[id] = layerFingerprint(doc, id);
       const mark: ProposalMark = {
         of: sourceId, by: lane?.by ?? options.by, at: at + i, placed: { width, ...(height ? { height } : {}) }, ...(note ? { note } : {}), ...(group ? { group } : {}), ...(lane ? { race: lane.race } : {}),
-        map, base, ...(options.revision ? { revision: options.revision } : {}),
+        map, base, ...(options.revision ? { revision: options.revision } : {}), ...(options.variation ? { variation: { range: options.variation.range, vary: [...options.variation.vary] } } : {}),
       };
       doc.nodes.get(id)!.set('proposal', mark);
       ids.push(id);

@@ -14,6 +14,7 @@ those.
 | A design references an image or other resource on a public URL, such as `<img src="https://...">` written by your agent | That address | An ordinary download. Images written that way are stored with the file, so later renders use the copy. |
 | You or your agent copy in a page or site with [Capture](capture-and-import.md), or extract a brand from a URL | The site, and the hosts its pages load from | What a browser sends when it opens the page, plus requests for `robots.txt` and the sitemap for a whole site. |
 | A layer repeats from data at a URL (Repeat, `layer_repeat`) | That address | An ordinary request for the JSON or CSV. |
+| You capture with the [browser extension](#the-browser-extension) | Bogen on this computer, at `127.0.0.1` or `localhost` | The captured layers, the tab's picture and the files the tab could read. The extension connects nowhere else. |
 | You import from Figma | `api.figma.com`, and the image addresses Figma's API returns | Your personal access token, and the file's key. See [Import from Figma](capture-and-import.md#import-from-figma). |
 | Device sync is on | Your paired devices, over Tailscale only | Your files, assets, brands, libraries, change logs, named commits, and who has a file open there. Every request carries the device token. |
 | `bogen peer deploy` | The host you name, over ssh | The build and the integration scripts. |
@@ -29,8 +30,9 @@ those.
 | You choose **Update the other device** in the sync indicator | The ssh host you type, over ssh | The same as `bogen peer deploy`: the build and the integration scripts. |
 
 Addresses that come from designs, captured pages and data go through a guard that refuses private and
-local addresses. Pages on this computer can be captured from the command line only, and pages on your
-private network not at all.
+local addresses. Pages on this computer can be captured from the command line and the browser
+extension only, and pages on your private network only by the extension, which reads what your own
+browser already shows.
 
 ## What stays local
 
@@ -50,6 +52,8 @@ private network not at all.
   | Personal design instructions and their previous versions, on this host only | `design-knowledge/<discipline>/SKILL.md` and `design-knowledge/<discipline>/history/` |
   | Model and effort choices | `run-settings.json` |
   | Linked code projects, per device | `code-projects.json` |
+  | Your reference board, per device | `references.json` |
+  | Paired browser extensions (only a hash of each token) | `extension-pairings.json`, readable by you only |
   | Keys, a saved Figma token, device and pairing settings | `config.json`, readable by you only |
   | The background server's log | `server.log` |
   | Update settings, and what the last check found | `update-settings.json`, `update-check.json` |
@@ -69,6 +73,27 @@ Proposal decisions also leave small receipts inside the design file: proposal/so
   with no network access and an origin of its own.
 - **Nothing in a document starts a process.** Comments, brands and files from other devices, from
   agents or from imports never start an agent run.
+
+## The browser extension
+
+The Bogen capture extension ([how to load and pair it](capture-and-import.md#from-your-browser-the-extension))
+sees a page only when you open it on that tab: it asks for `activeTab`, `scripting` and `storage`, and
+no host permissions. On that tab it reads what the page shows (its elements and their computed styles,
+its style sheets, its text including anything you are signed in to see) and the images and font files
+the tab may load, and takes a picture of the visible window. It changes nothing on the page; an element
+you pick carries a marker attribute until the capture ends.
+
+It sends all of this to Bogen on this computer and to nothing else: the extension's own content
+security policy allows connections only to `127.0.0.1` and `localhost`, and the address you give it
+must be one of those. Bogen stores the result in your data folder like any capture. Images and fonts
+the tab could not read are downloaded from the same public addresses the page used, as with
+`bogen capture`; private addresses are never fetched.
+
+Pairing: the extension asks, the editor shows the same code, and you allow it. Bogen keeps only a hash
+of the extension's token, with its name and origin, in `extension-pairings.json`, readable by you only.
+The token works from that extension's origin, on a server that listens only on this computer, for
+adding captures and nothing else. Revoke it in **Settings**, **Privacy**. The extension keeps the token
+and Bogen's address in its own extension storage in your browser profile.
 
 ## Published sites and review links
 

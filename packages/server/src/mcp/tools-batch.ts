@@ -7,15 +7,15 @@ import { fileIdArg, isToolResult, ToolContext, type Session, type ToolDefiner } 
 
 const BATCHABLE = [
   'artboard_create', 'html_write', 'layer_style', 'layer_text', 'layer_rename', 'layer_move', 'layer_duplicate', 'layer_delete', 'layer_set_flags', 'layer_attrs',
-  'layers_group', 'layers_ungroup', 'layer_wrap', 'layers_align', 'layers_distribute', 'tokens_set', 'tokens_delete', 'keyframes_set', 'variable_set', 'interaction_set', 'page_create', 'page_rename', 'page_reorder', 'layer_repeat', 'layer_bind', 'data_source_set', 'data_source_refresh', 'data_source_delete',
+  'layers_group', 'layers_ungroup', 'layer_wrap', 'layers_align', 'layers_distribute', 'tokens_set', 'tokens_delete', 'tokens_rename', 'keyframes_set', 'variable_set', 'interaction_set', 'page_create', 'page_rename', 'page_reorder', 'layer_repeat', 'layer_bind', 'data_source_set', 'data_source_refresh', 'data_source_delete',
   'component_create', 'component_update', 'instance_create', 'instance_set', 'instance_detach', 'mode_create', 'mode_set', 'text_style_set', 'text_style_apply', 'icon_insert', 'image_crop', 'image_filter', 'layout_grid_set', 'text_replace', 'layers_rename',
 ];
 
 /** The path starts with a letter, so that text such as "$9.99" stays text. */
 const REF = /^\$(\w+)\.([a-zA-Z_]\w*(?:\.\w+)*)$/;
 
-/** A step's context: the same tools, but working on a copy of the file that nobody can see. */
-class ScratchContext extends ToolContext {
+/** A step's context: the same tools, but working on a copy of the file that nobody can see. script_run uses it too. */
+export class ScratchContext extends ToolContext {
   override readonly dryRun: boolean;
 
   constructor(app: BogenServer, session: Session, tool: string, private readonly scratch: Room, dryRun: boolean, signal?: AbortSignal) {
@@ -60,6 +60,17 @@ function resolveRefs(value: unknown, results: Map<string, unknown>): unknown {
   return value;
 }
 
+/**
+ * A private copy of a file to run write tools on. A Yjs transaction cannot be rolled back, so what reaches the file is
+ * the copy's difference from `before`, as one transaction, and only once everything has passed. Destroy `y` after.
+ */
+export function scratchCopy(room: Room): { y: Y.Doc; before: Uint8Array; room: Room } {
+  const y = new Y.Doc({ gc: false });
+  Y.applyUpdate(y, Y.encodeStateAsUpdate(room.doc.y));
+  const before = Y.encodeStateVector(y);
+  return { y, before, room: Object.create(room, { doc: { value: new BogenDoc(y) } }) as Room };
+}
+
 export function registerBatchTool(define: ToolDefiner, app: BogenServer, session: Session): void {
   define('batch', { description: `Run several write tools as one atomic step: all of them or none, and one agent_undo takes back the whole batch. Use it for changes that belong together, such as new tokens and the section using them, or a group and its alignment. If a step fails, nothing is applied and the error names the step. With dry_run true nothing is applied either, and you get what each step would have returned, which is the way to check a risky change first; images are not fetched or generated in a dry run.
 
@@ -78,13 +89,8 @@ Allowed tools: ${BATCHABLE.join(', ')}. For one change, just call the tool. Keep
     for (const [i, step] of steps.entries()) {
       if (!BATCHABLE.includes(step.tool)) throw new Error(`Step ${i}: ${step.tool} cannot be part of a batch. Allowed: ${BATCHABLE.join(', ')}.`);
     }
-    // A Yjs transaction cannot be rolled back, so the steps run on a private copy. What reaches the
-    // file is the copy's difference, as one transaction, and only once every step has passed.
-    const scratchY = new Y.Doc({ gc: false });
-    Y.applyUpdate(scratchY, Y.encodeStateAsUpdate(room.doc.y));
-    const before = Y.encodeStateVector(scratchY);
-    const scratchDoc = new BogenDoc(scratchY);
-    const scratch: Room = Object.create(room, { doc: { value: scratchDoc } });
+    // The steps run on a private copy; the file gets its difference once every step has passed.
+    const { y: scratchY, before, room: scratch } = scratchCopy(room);
     const results = new Map<string, unknown>();
     const report: { step: number; tool: string; result: unknown }[] = [];
     const touched: string[] = [];

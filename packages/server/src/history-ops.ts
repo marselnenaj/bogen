@@ -1,4 +1,4 @@
-import { applyPlan, branchContent, listDesignBranches, BogenDoc, commentsToContent, contentDelta, docFromContent, docToContent, labelChange, planRevert, Y, type RevertPlan } from '@bogen/core';
+import { applyPlan, branchContent, listDesignBranches, previewMergeContent, BogenDoc, commentsToContent, contentDelta, docFromContent, docToContent, labelChange, planRevert, Y, type RevertPlan } from '@bogen/core';
 import { contentAssets, diffFolders, writeFolder, type FolderDiff } from './design-folder.ts';
 import { gitCommit, type GitAuthor } from './git-mirror.ts';
 import type { BogenServer } from './http/server.ts';
@@ -34,6 +34,15 @@ export async function contentAt(app: BogenServer, fileId: string, ref: string): 
   if (ref === 'now') {
     const { doc } = await app.rooms.get(fileId);
     return { ...docToContent(doc), comments: commentsToContent(doc) };
+  }
+  if (ref.startsWith('merge:')) {
+    // What the parent would be after merging this branch: a preview, never written.
+    const room = await app.rooms.get(fileId);
+    try {
+      return { ...previewMergeContent(room.doc, ref.slice('merge:'.length)).after, comments: commentsToContent(room.doc) };
+    } catch (e) {
+      throw new HttpError(404, (e as Error).message);
+    }
   }
   if (ref.startsWith('branch:')) {
     const branchId = ref.slice('branch:'.length);
@@ -98,18 +107,37 @@ export async function diffCommits(app: BogenServer, fileId: string, from: string
   };
 }
 
-/** One page of a version as a picture. An empty page has none. */
-export async function renderVersion(app: BogenServer, fileId: string, ref: string, pageId: string): Promise<Uint8Array | null> {
+/** One page of a version as a picture, or one screen of it. An empty page, or a screen the version lacks, has none. */
+export async function renderVersion(app: BogenServer, fileId: string, ref: string, pageId: string, screen?: string): Promise<Uint8Array | null> {
   const doc = ref === 'now' ? (await app.rooms.get(fileId)).doc : docFromContent(await contentAt(app, fileId, ref));
+  if (screen) {
+    const node = doc.getNode(screen);
+    if (!node || node.hidden) return null;
+    return (await app.renderer.screenshot(doc, { nodeIds: [screen] }, { format: 'png', scale: 1, maxDimension: 2400 })).bytes;
+  }
   if (!doc.pages.has(pageId) || !doc.getChildren(pageId).filter((n) => !n.hidden).length) return null;
   return (await app.renderer.screenshot(doc, { pageId }, { format: 'png', scale: 1, maxDimension: 1600 })).bytes;
 }
 
-/** Before, after and the difference of one page, through the same comparison as `visual_diff`. */
-export async function visualDiff(app: BogenServer, fileId: string, from: string, to: string, pageId: string): Promise<{ before: Uint8Array | null; after: Uint8Array | null; diff: Uint8Array | null; percent: number | null; bounds: unknown }> {
-  const [before, after] = [await renderVersion(app, fileId, from, pageId), await renderVersion(app, fileId, to, pageId)];
+/** Before, after and the difference of one page or screen, through the same comparison as `visual_diff`. */
+export async function visualDiff(app: BogenServer, fileId: string, from: string, to: string, pageId: string, screen?: string): Promise<{ before: Uint8Array | null; after: Uint8Array | null; diff: Uint8Array | null; percent: number | null; bounds: unknown }> {
+  const [before, after] = [await renderVersion(app, fileId, from, pageId, screen), await renderVersion(app, fileId, to, pageId, screen)];
   if (!before || !after) return { before, after, diff: null, percent: null, bounds: null };
-  const out = await app.renderer.compareImages({ bytes: before, mime: 'image/png' }, { bytes: after, mime: 'image/png' }, { threshold: 0.05, fit: false, maxDimension: 1600, maxBytes: 8 * 1024 * 1024 });
+  const out = await app.renderer.compareImages({ bytes: before, mime: 'image/png' }, { bytes: after, mime: 'image/png' }, { threshold: 0.05, fit: false, maxDimension: 2400, maxBytes: 8 * 1024 * 1024 });
+  return { before, after, diff: out.png, percent: out.total ? Math.round((out.different / out.total) * 10000) / 100 : 0, bounds: out.bounds };
+}
+
+/**
+ * Two layers of the live file, such as a proposal or a race lane and the original it would replace: the same pictures
+ * as a version compare, so that the editor shows them in the same view.
+ */
+export async function layerDiff(app: BogenServer, fileId: string, a: string, b: string): Promise<{ before: Uint8Array | null; after: Uint8Array | null; diff: Uint8Array | null; percent: number | null; bounds: unknown }> {
+  const { doc } = await app.rooms.get(fileId);
+  const shot = async (id: string) => (doc.getNode(id) ? (await app.renderer.screenshot(doc, { nodeIds: [id] }, { format: 'png', scale: 1, maxDimension: 2400 })).bytes : null);
+  const before = await shot(a);
+  const after = await shot(b);
+  if (!before || !after) return { before, after, diff: null, percent: null, bounds: null };
+  const out = await app.renderer.compareImages({ bytes: before, mime: 'image/png' }, { bytes: after, mime: 'image/png' }, { threshold: 0.05, fit: false, maxDimension: 2400, maxBytes: 8 * 1024 * 1024 });
   return { before, after, diff: out.png, percent: out.total ? Math.round((out.different / out.total) * 10000) / 100 : 0, bounds: out.bounds };
 }
 

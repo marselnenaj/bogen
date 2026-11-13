@@ -5,7 +5,7 @@
  * - the chat opens docked beside the canvas, is remembered for the file, and takes the selection as a chip that can
  *   be taken out; Shift+Enter is a new line and Enter sends;
  * - a reply arrives as markdown (bold, a list, inline code, no raw HTML), with the layers it changed under it;
- * - a run that hangs shows Stop with its time, and stopping it says so;
+ * - a run that hangs shows Stop with its time, remains attached after a reload, and stopping it says so;
  * - Edit puts the last message back, earlier chats are listed and one opens again, and a reload keeps it all;
  * - the microphone records, the computer writes it out, and the words land in the field to be checked; without a
  *   local model the chat says how to get one and a comment keeps a voice note; a blocked microphone says so;
@@ -159,6 +159,12 @@ try {
   check('a run going shows Stop with its time', await until(async () => (await text(page, '[data-testid="prompt-stop"]')).includes('Stop'), 10_000));
   check('and the steps it takes', await exists(page, '[data-testid="chat-steps"]'));
   await wait(1200);
+  const runningId = server.runs.activeFor(entry.id);
+  await page.reload();
+  await page.waitForSelector('[data-testid="layer-row"]', { timeout: 20_000 });
+  check('reloading a running chat restores Stop and elapsed time', await until(() => exists(page, '[data-testid="prompt-stop"]')) && /\d+:\d{2}/.test(await text(page, '[data-testid="prompt-stop"]')));
+  check('the restored running turn keeps its question and blocks another send', (await text(page, '[data-testid="prompt-messages"]')).includes('Now the footer') && !(await exists(page, '[data-testid="prompt-send"]')));
+  check('restoring attaches to the same run', server.runs.activeFor(entry.id) === runningId);
   await shot(page, '3-running-dark');
   await page.click('[data-testid="prompt-stop"]');
   check('Stop stops it and says so', await until(async () => (await text(page, '[data-testid="chat-note"]')).includes('Stopped')));
@@ -191,6 +197,17 @@ try {
   await page.reload();
   await page.waitForSelector('[data-testid="layer-row"]', { timeout: 20_000 });
   check('after a reload the chat is still open, with that chat', await until(async () => (await text(page, '[data-testid="prompt-messages"]')).includes('Made the hero'), 10_000));
+
+  // Another tab may start work after this tab restored an idle conversation. The server's refusal must explain it.
+  const elsewhere = await server.runs.start({ fileId: entry.id, fileName: entry.name, nodeIds: [], runner: 'codex', prompt: 'Work from another tab FAKE{"hang":true}' });
+  try {
+    await send(page, 'Can I start another run?');
+    check('a conflict explains that the file already has a running agent', await until(async () => (await text(page, '[data-testid="prompt-messages"]')).includes('A run is already going on this file.')));
+    check('the conflict does not expose only a technical HTTP error', !(await text(page, '[data-testid="prompt-messages"]')).includes('POST /api/runs failed with 409'));
+  } finally {
+    server.runs.stop(elsewhere);
+    await until(() => !server.runs.isActive(elsewhere));
+  }
 
   // ---------------------------------------------------------------- the microphone, with a local model
   await page.click('[data-testid="chat-mic"]');

@@ -338,6 +338,13 @@ artboard, layer or page says which mode it shows. Switch it in the inspector or 
 
 On Omarchy, a button in the Tokens panel brings the active Omarchy palette in as tokens.
 
+**Renaming a token** (edit its name in the Tokens panel, or `tokens_rename` from your agent) changes
+every `var(--name)` that refers to it, also one with a fallback such as `var(--name, 4px)`: layer styles,
+pseudo-elements and conditions, attributes, drawings, text ranges, instance overrides, components, text
+styles, other tokens and keyframes. Its values in every mode come along. It is one undo step, and a
+name that is taken is refused rather than merged. When the file publishes a library or is a brand, the
+files that use it get the rename as an update (see [Shared libraries](components.md#shared-libraries)).
+
 Swatches in the inspector show a colour token's value, also through a token that names another one, so a
 fill of `var(--surface)` shows its colour rather than an empty square.
 

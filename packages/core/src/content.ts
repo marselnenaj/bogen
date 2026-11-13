@@ -50,7 +50,7 @@ export interface DesignContent {
  * of a file (design-branches.ts) hold versions of the design itself, so a version never contains them and applying
  * one never touches them.
  */
-const OWN_MAPS = new Set(['nodes', 'pages', 'tokens', 'comments', 'fontFaces', 'interactionStates', 'repeats', 'designBranches']);
+const OWN_MAPS = new Set(['nodes', 'pages', 'tokens', 'comments', 'fontFaces', 'interactionStates', 'repeats', 'designBranches', 'translationMemory']);
 
 /** The comment threads as they were, for a commit's record. Restoring a commit leaves comments alone. */
 export function commentsToContent(doc: BogenDoc): Record<string, unknown> {

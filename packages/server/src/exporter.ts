@@ -5,14 +5,19 @@ import { fontLinkTags, shaderParamsTag, shaderRuntime, type RasterFormat, type R
 import type { Storage } from './storage.ts';
 import { exportVideo } from './video.ts';
 import { makeZip } from './zip.ts';
+import { exportPptx } from './pptx-export.ts';
 
-export type ExportFormat = RasterFormat | 'avif' | 'svg' | 'pdf' | 'html' | 'prototype' | 'mp4' | 'webm';
+export const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
+export type ExportFormat = RasterFormat | 'avif' | 'svg' | 'pdf' | 'html' | 'prototype' | 'mp4' | 'webm' | 'pptx';
 
 /** Anything the person should know about the result, sent along with it. */
 export interface ExportReport {
   /** SVG: layers that stayed HTML in a `foreignObject`, and native elements written. */
   fallbacks?: { id: string; name: string; reason: string }[];
   native?: number;
+  /** PPTX: layers placed as pictures, because PowerPoint has no form for them. */
+  pictures?: { id: string; name: string; reason: string }[];
   /** Video and AVIF: what made it. */
   encoder?: string;
   codec?: string;
@@ -32,6 +37,8 @@ export interface ExportExtras {
   encoder?: 'ffmpeg' | 'webcodecs';
   /** SVG: `foreignObject` keeps exact browser rendering, as one HTML block per layer. */
   svgMode?: 'vector' | 'foreignObject';
+  /** PPTX: the presentation's title. */
+  title?: string;
 }
 
 const TEXT_ENCODER = new TextEncoder();
@@ -90,6 +97,10 @@ export async function exportTarget(doc: BogenDoc, renderer: Renderer, storage: S
   if (format === 'pdf') {
     const targets: Target[] = target.nodeIds?.length ? target.nodeIds.map((id) => ({ nodeIds: [id] })) : [{ pageId: target.pageId }];
     return { bytes: await renderer.pdf(doc, targets), mime: 'application/pdf', ext: 'pdf' };
+  }
+  if (format === 'pptx') {
+    const out = await exportPptx(doc, renderer, storage, target, extras.title ?? 'Slides');
+    return { bytes: out.bytes, mime: PPTX_MIME, ext: 'pptx', report: { native: out.report.native, pictures: out.report.pictures, notes: [`${out.report.slides} slide${out.report.slides === 1 ? '' : 's'}.`, ...out.report.notes] } };
   }
   if (format === 'svg') {
     if (extras.svgMode === 'foreignObject') return { bytes: TEXT_ENCODER.encode(await renderer.svg(doc, target)), mime: 'image/svg+xml', ext: 'svg', report: { notes: ['Everything is HTML in a foreignObject, which vector tools do not show.'] } };
@@ -168,7 +179,8 @@ export async function exportPresets(doc: BogenDoc, renderer: Renderer, storage: 
 export function reportHeader(report: ExportReport | undefined): string | undefined {
   if (!report) return undefined;
   const fallbacks = report.fallbacks ?? [];
+  const pictures = report.pictures ?? [];
   let text = JSON.stringify(report);
-  if (text.length > 6000) text = JSON.stringify({ ...report, fallbacks: fallbacks.slice(0, 30), notes: [...(report.notes ?? []), `${fallbacks.length} layers fell back in all.`] });
+  if (text.length > 6000) text = JSON.stringify({ ...report, fallbacks: fallbacks.slice(0, 30), ...(pictures.length ? { pictures: pictures.slice(0, 30) } : {}), notes: [...(report.notes ?? []), `${fallbacks.length + pictures.length} layers fell back in all.`] });
   return encodeURIComponent(text);
 }

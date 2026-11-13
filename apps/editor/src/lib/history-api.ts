@@ -150,7 +150,9 @@ export const history = {
   content: (fileId: string, id: string) => json<DesignContent>(`/api/files/${fileId}/commits/${id}`),
   plan: (fileId: string, query: { ids?: string[]; run?: string }) => json<RevertPlanAnswer>(`/api/files/${fileId}/changes/plan`, post(query)),
   diff: (fileId: string, from: string, to: string) => json<CommitDiff>(`/api/files/${fileId}/compare?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
-  render: (fileId: string, from: string, to: string, page: string) => json<VisualDiff>(`/api/files/${fileId}/compare/render?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&page=${encodeURIComponent(page)}`),
+  render: (fileId: string, from: string, to: string, page: string, screen?: string) => json<VisualDiff>(`/api/files/${fileId}/compare/render?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&page=${encodeURIComponent(page)}${screen ? `&screen=${encodeURIComponent(screen)}` : ''}`),
+  /** Two layers of the live file, such as a proposal and its original. */
+  layers: (fileId: string, a: string, b: string) => json<VisualDiff>(`/api/files/${fileId}/compare/layers?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   branches: (fileId: string) => json<BranchRow[]>(`/api/files/${fileId}/branches`),
   branch: (fileId: string, name: string) => json<BranchRow>(`/api/files/${fileId}/branches`, post({ name })),
   merge: (fileId: string, branchId: string, author: string) => json<{ delta: { added: number; removed: number; changed: number } }>(`/api/files/${fileId}/branches/${branchId}/merge`, post({ author })),

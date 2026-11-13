@@ -13,7 +13,7 @@ export interface RealServer { base: string; port: number; home: string; pid: num
 export interface SeedFile { id: string; name: string; ydocPath: string }
 
 /** With homeFrom, a copy of that data folder is the server's home, such as one from scripts/gen-perf-fixture.ts. */
-export async function startRealServer(options: { editorDir?: string; seed?: SeedFile[]; thumbnailsDelay?: string; homeFrom?: string } = {}): Promise<RealServer> {
+export async function startRealServer(options: { editorDir?: string; seed?: SeedFile[]; thumbnailsDelay?: string; homeFrom?: string; env?: Record<string, string> } = {}): Promise<RealServer> {
   const home = mkdtempSync(join(process.env.BOGEN_E2E_TMP ?? tmpdir(), 'bogen-e2e-'));
   if (options.homeFrom) cpSync(options.homeFrom, home, { recursive: true });
   mkdirSync(join(home, 'files'), { recursive: true });
@@ -26,7 +26,7 @@ export async function startRealServer(options: { editorDir?: string; seed?: Seed
     writeFileSync(join(home, 'index.json'), JSON.stringify({ files: entries }));
   }
   const port = 29100 + Math.floor(Math.random() * 800);
-  const env = { ...process.env, BOGEN_HOME: home, BOGEN_WELCOME: '0', ...(options.editorDir ? { BOGEN_EDITOR_DIR: options.editorDir } : {}) };
+  const env = { ...process.env, BOGEN_HOME: home, BOGEN_WELCOME: '0', ...(options.editorDir ? { BOGEN_EDITOR_DIR: options.editorDir } : {}), ...options.env };
   const child: ChildProcess = spawn('npx', ['tsx', 'packages/server/src/cli.ts', 'serve', '--port', String(port)], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
   let log = '';
   child.stdout?.on('data', (d: Buffer) => { log += d; });
@@ -54,7 +54,8 @@ export async function startRealServer(options: { editorDir?: string; seed?: Seed
  * `--no-sandbox`; a wrapper that keeps the browser off the network, such as secure-chromium, is given the
  * server's port with `--secure-local-port` and talks over a pipe.
  */
-export async function launch(localPort?: number, options: { fakeMedia?: boolean } = {}): Promise<Browser> {
+/** `ports`: more local ports to share, such as a fixture site's. `extensions`: unpacked extension folders to load. */
+export async function launch(localPort?: number, options: { fakeMedia?: boolean; ports?: number[]; extensions?: string[] } = {}): Promise<Browser> {
   const named = process.env.BOGEN_BROWSER ?? join(homedir(), '.local/bin/secure-chromium');
   // A made-up microphone, allowed without a prompt, for tests of recording. These are media flags, not sandbox flags.
   const media = options.fakeMedia ? ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] : [];
@@ -67,7 +68,10 @@ export async function launch(localPort?: number, options: { fakeMedia?: boolean 
       executablePath: named,
       headless: true,
       pipe: wrapped,
-      args: [...gl, ...(wrapped && localPort ? [`--secure-local-port=${localPort}`] : [])],
+      args: [...gl, ...[localPort, ...(options.ports ?? [])].flatMap((p) => (wrapped && p ? [`--secure-local-port=${p}`] : [])),
+        // The wrapper shares an extension's folder read-only with the browser when it is named this way.
+        ...(options.extensions?.length ? [`--disable-extensions-except=${options.extensions.join(',')}`, `--load-extension=${options.extensions.join(',')}`] : [])],
+      ...(options.extensions?.length ? { enableExtensions: true } : {}),
       defaultViewport: { width: 1500, height: 960 },
     });
   };

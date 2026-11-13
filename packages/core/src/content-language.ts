@@ -203,6 +203,7 @@ export function contentLanguageLines(lang: ContentLanguage | null, options: { br
     out.push(options.branch
       ? `This request adds a ${label} version of the design. It works in the branch "${options.branch.name}" (${options.branch.id}) inside this file, which started as a copy of the design: translate the copy there in place, keeping every page, artboard and layer. The original (main) keeps its language and is not changed. Do not make a new file or page.`
       : `This request adds a ${label} version of the design: translate the copy in place in the version you work in, and make no new file or page.`);
+    out.push(`When the version exists already, start with translation_status language "${lang.tag}": it lists only the text that is new or changed since the last translation. Send your translations with translation_apply, which remembers them and brings the version up to date with the original, so unchanged text is never translated again.`);
   } else {
     out.push(`Write every new or changed piece of visible copy in ${label}: headings, body text, button labels, form placeholders, alt text and aria-labels. Leave existing copy you were not asked to change in its language.`);
   }

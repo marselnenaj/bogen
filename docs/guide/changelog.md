@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.3.0
+
+Agents get more reach: shorter tool lists and plugins, a script tool, browser capture, DESIGN.md, Mermaid, PDF and PowerPoint, a real round trip to pull requests, variations, visual compare, a pre-publish check and translation memory.
+
+### Connecting agents
+
+- Shorter tool lists for agents with a small context, and every tool still there: `bogen mcp --tools compact` lists each tool in one sentence (about 117 KB instead of 270 KB), `--tools grouped` lists 19 area tools that take a tool's name and arguments (about 19 KB). A `schema` tool and `bogen://reference/{tool}` give any tool's whole schema, and a tool can be called by its own name in every mode. Also `BOGEN_MCP_TOOLS`, and `?tools=` or `X-Bogen-Tools` over HTTP. `bogen install` writes the list that suits each client: full for Claude Code and Codex, which load schemas on demand, compact for OpenCode, grouped for the others; `--tools` picks another. [A shorter tool list](agents.md#a-shorter-tool-list).
+- Plugins: a Claude Code plugin and marketplace (`/plugin marketplace add marselnenaj/bogen`), a Codex plugin (`codex plugin marketplace add marselnenaj/bogen`), and a Claude Desktop extension, `bogen-<version>.mcpb`, built and signed with each release. Each starts the `bogen` command the install script writes, on this computer only. [Plugins](agents.md#plugins).
+- **Add to agent** in Settings, Agents: the MCP clients on this computer, whether Bogen is in each, and Connect, which does what `bogen install` does. [Add to agent](agents.md#add-to-agent-in-settings).
+- Layer links: `bogen open "<file>#<layer>"` opens a file with a layer selected and in view, both by id or name, and `selection_set` and `view_focus` answer with a link an agent can give you. A link opened in a tab that has the file already moves the selection without a reload. [Layer links](agents.md#layer-links).
+- A reviewer profile, `bogen mcp --profile reviewer`: the critique's scope for a client of your own, with read-only tools, comments and checks with fixes off. A write is refused with the reason.
+
+### Capture from your browser
+
+- A browser extension for Chromium and Firefox captures the tab you are on, a region you drag over or an element you pick, including apps you are signed in to and pages on `localhost`, and sends it to Bogen on this computer, which turns it into layers through the same capture pipeline. You pair it once in the editor by comparing a code; its token adds captures and nothing else, and you revoke it in Settings, Privacy. It asks for `activeTab`, `scripting` and `storage` only and connects only to `127.0.0.1` and `localhost`. Build it with `node --import tsx integrations/browser-extension/build.ts` and load it unpacked. [From your browser](capture-and-import.md#from-your-browser-the-extension).
+
+### References for agents
+
+- A reference board on this computer: captures from the extension, artboards you keep and images you add, each with tags, its main colours and the type it uses, in Settings, References. Agents search it with `reference_search` before they choose a direction and keep something for you with `reference_add`; results are marked as untrusted design data. [References](capture-and-import.md#references).
+
+### Your agent
+
+- `script_run`: an agent writes a short JavaScript program against the open file (find layers by name, text, kind, style or CSS selector; set styles, text and attributes; rename; create from HTML; move, remove, duplicate; bind properties to tokens; read tokens and components) for edits that would take dozens of calls, such as renaming every button, binding every button colour to a token or building a grid of cards from data. Its changes land as one atomic step that one undo takes back, `dry_run` shows the plan first, and locked layers, revisions and a brand's strict mode hold. The script runs in QuickJS compiled to WebAssembly in a worker of its own, with no network, files, timers or Node, and limits on time, memory, calls, new layers and output; on any error or limit nothing is applied. [Scripts](agents.md#scripts-many-edits-in-one-step) has the threat model.
+- Propose and Directions take a range and aspects: how many copies, how far they go (**Refine**, **Explore**, **Reimagine**) and what they vary (**Layout**, **Colour**, **Type**, **Copy**), holding the rest fixed. Each copy keeps them, and `proposal_list` reports what a copy changed outside its aspects. `proposal_create` takes `count`, `range` and `vary`; races take `range`, `vary` and `split`. [Variations](agents.md#variations-a-range-and-aspects).
+- A race can split the page: each lane takes sections of the selected layer instead of a copy of all of it, and accepting a lane takes its sections in. [Split the page](agents.md#split-the-page).
+- In the chat, **/** lists the design playbooks and your saved skills, and **@** mentions layers, components and tokens, which reach the run with their ids. **Save these decisions as a skill** drafts a section for a skill from a refined artboard and its accepted proposals, for you to review and save. [The chat](agents.md#ask-from-the-canvas-the-chat), [Save these decisions](agents.md#save-these-decisions-as-a-skill).
+- Reloading the editor while an agent works brings the chat back attached to that run, with Stop, its elapsed time and the reply still streaming, and a second message waits until the chat knows whether a run is going. When the server refuses a message, the chat shows its reason in your language ("A run is already going on this file") instead of `POST /api/runs failed with 409`.
+- Every run keeps a trace for bug reports: the prompt, tool calls with their arguments and results cut short, timings and touched layers, with secrets masked and files outside Bogen left out. Download it from the chat, `bogen agents trace <run id>` or `trace_get`. [The trace of a run](agents.md#the-trace-of-a-run).
+
+### Compare, check and translate
+
+- A visual compare of two versions: side by side with scrolling together, an overlay that highlights the changed pixels, a swipe, and the difference alone. **Review and merge** on a branch lists the screens the merge would change, each opening the screen as it is now next to how it would be after the merge, with Previous and Next through the list. Proposals and race lanes compare with the original they would replace in the same view. Agents see it with `design_branch_compare`. [Compare](history.md#compare).
+- A check before publishing, in the Publish dialog and as `publish_check`: title, meta description, language, canonical address, the social picture and its size, icon, broken links and anchors inside the site, heavy images and images without a size, and short accessibility, responsive and brand results. It runs on this computer with no network, calls only real breakage a problem, and lets you publish anyway. `web_page_set` sets the title, description, language, canonical address, social picture and icon, which published pages now carry in their head, and published images get their width and height. [Publish](export-and-code.md#publish).
+- Language versions follow their original with a translation memory per file: only new and changed text goes to your agent, words you list are never translated, and each language is included, untranslated or hidden. New: `translation_status`, `translation_apply`, `translation_rules_set`. [Keeping language versions up to date](agents.md#keeping-language-versions-up-to-date).
+- Renaming a token changes every `var()` reference in the file, also with a fallback and in rules, attributes, text ranges and components, as one undo step; a linked library or brand passes the rename on as an update. New: `tokens_rename`. [Tokens and theme modes](canvas.md#tokens-and-theme-modes).
+
+### Formats in and out
+
+- DESIGN.md, the open format of YAML tokens and prose that many coding agents read: `tokens_export` and `brand_export` write one with `format: "design-md"`, `design_md_import` reads one into the file's tokens and text styles or into the brand as suggestions, with the format's lint mapped onto `brand_check`, and a linked repository's `DESIGN.md` counts as a token source, with a token pull request writing one next to the token file. [DESIGN.md](export-and-code.md#designmd).
+- `diagram_insert` draws a Mermaid flowchart, sequence, state or other diagram as native layers in the file's tokens: frames with text labels for nodes, SVG connectors with arrowheads, groups and lines, laid out by Mermaid and editable afterwards. [Mermaid diagrams](capture-and-import.md#mermaid-diagrams).
+- PDF pages come in as layers: text as text layers, paths as vectors, images as pictures, and only what has no plain form (gradients, masks, Type 3 fonts, annotations) as pictures, with a report of which. Drop a PDF or an SVG on the canvas, or call `pdf_import`. [PDF and SVG](capture-and-import.md#pdf-and-svg).
+- PowerPoint export: slide artboards as a `.pptx` with editable text boxes, native pictures and shapes, and a picture with a reason for everything else, from the Export tab or `export_file` with `format: "pptx"`. [PowerPoint](export-and-code.md#powerpoint).
+- New dependencies, listed in THIRD_PARTY_NOTICES.md: `mermaid` 11.17.2 (MIT), `pdfjs-dist` 6.4.299 (Apache-2.0), `pptxgenjs` 4.0.1 (MIT) and `yaml` 2.9.1 (ISC).
+
+### Code
+
+- One branch and working folder per chat: later design changes of the chat become more commits on the same branch, pushed on top, never with force, and the chat closes when the branch is merged (seen in the repository; on GitHub through `gh` only when you turn it on). A remote that is a folder takes a push without `gh`. [One branch per chat](export-and-code.md#one-branch-per-chat).
+- `repo_canvas_open` opens a repository's page as a canvas on a design branch: a capture of its running dev server and its components. [Open a repository's page](export-and-code.md#open-a-repositorys-page-as-a-canvas).
+- `bogen agents check --repo` runs the round trip once with your real CLI, against a throwaway repository with a local remote. [The repository round trip](agents.md#the-repository-round-trip).
+- A captured page no longer copies each text colour into `-webkit-text-fill-color`, which hid a later colour change.
+
+### Sharing
+
+- In the review inbox, pick several client comments and send them to one revision run in a proposal. Your click starts it, never the client's form, and each thread gets an answer when the run ends. [Several comments to one run](sharing.md#several-comments-to-one-run).
+
 ## 0.2.0
 
 A chat beside the canvas, fonts your agent draws, more kits and frameworks, accessibility and legal checks, and design guidance that gives agents more to work with.

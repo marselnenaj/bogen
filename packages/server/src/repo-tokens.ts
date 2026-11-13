@@ -4,15 +4,17 @@ import type { CodeProject, CodeProjects } from './code-projects.ts';
 import { blankComments } from './code-scan.ts';
 import { inferKind } from './mcp/css-vars.ts';
 import { isRecord, LiteralReader, type JsValue } from './js-literal.ts';
+import { designMdTokens, parseDesignMd, writeDesignMdTokens } from './design-md.ts';
 
 /**
  * A repository's design tokens next to a file's, both ways. Read from CSS variables (`:root` and mode blocks such
- * as `.dark`), a Tailwind 4 `@theme` block, a Tailwind 3 config read as text, or a DTCG `tokens.json`. Written back
- * into CSS in place, keeping everything around the values, or into DTCG. Nothing here runs the repository's code,
+ * as `.dark`), a Tailwind 4 `@theme` block, a Tailwind 3 config read as text, a DTCG `tokens.json`, or the YAML of a
+ * `DESIGN.md`. Written back into CSS in place, keeping everything around the values, into DTCG, or into the YAML of a
+ * DESIGN.md, keeping its prose. Nothing here runs the repository's code,
  * and nothing here writes into the repository itself: a push goes through `PullRequests`, in a folder of its own.
  */
 
-export type RepoTokenFormat = 'css' | 'tailwind' | 'tailwind3' | 'dtcg';
+export type RepoTokenFormat = 'css' | 'tailwind' | 'tailwind3' | 'dtcg' | 'design-md';
 export interface RepoToken { name: string; kind: TokenKind; value: string; modes?: Record<string, string>; file: string; format: RepoTokenFormat; path?: string[] }
 export interface RepoTokenSource { file: string; format: RepoTokenFormat; count: number; writable: boolean }
 export interface RepoTokens { sources: RepoTokenSource[]; tokens: RepoToken[]; unclassified: { file: string; name: string; value: string }[] }
@@ -366,7 +368,13 @@ export function writeDtcg(existing: string | null, tokens: Token[]): string {
 
 const DTCG_FILE = /(^|\/)(tokens|design-tokens|[\w.-]+\.tokens)\.json$|(^|\/)tokens\/[\w.-]+\.json$/i;
 const TAILWIND3_FILE = /(^|\/)tailwind\.config\.(js|cjs|mjs|ts)$/;
-const ORDER: RepoTokenFormat[] = ['dtcg', 'tailwind', 'css', 'tailwind3'];
+export const DESIGN_MD = /(^|\/)DESIGN\.md$/i;
+const ORDER: RepoTokenFormat[] = ['dtcg', 'tailwind', 'css', 'design-md', 'tailwind3'];
+
+/** The tokens in the YAML of a DESIGN.md. */
+export function readDesignMdTokens(text: string, file: string): RepoToken[] {
+  return designMdTokens(parseDesignMd(text)).tokens.map((t) => ({ ...t, file, format: 'design-md' as const }));
+}
 
 /** Every token source in the project, and its tokens. A name found twice keeps the first, DTCG before CSS. */
 export async function readRepoTokens(projects: CodeProjects, project: CodeProject): Promise<RepoTokens> {
@@ -395,6 +403,11 @@ export async function readRepoTokens(projects: CodeProjects, project: CodeProjec
       sources.push({ file: f.rel, format: read.tokens.some((t) => t.format === 'tailwind') ? 'tailwind' : 'css', count: read.tokens.length, writable: true });
       found.push(...read.tokens);
       unclassified.push(...read.unclassified);
+    } else if (DESIGN_MD.test(f.rel) && f.size < 1024 * 1024) {
+      const read = readDesignMdTokens(await readFile(f.abs, 'utf8').catch(() => ''), f.rel);
+      if (!read.length) continue;
+      sources.push({ file: f.rel, format: 'design-md', count: read.length, writable: true });
+      found.push(...read);
     } else if (TAILWIND3_FILE.test(f.rel)) {
       const read = readTailwindConfig(await readFile(f.abs, 'utf8').catch(() => ''), f.rel);
       if (!read.length) continue;
@@ -462,5 +475,6 @@ export function pullTokens(doc: BogenDoc, repo: RepoToken[], names: string[] | u
 export function writeTokenFile(format: RepoTokenFormat, existing: string | null, tokens: Token[]): string {
   if (format === 'dtcg') return writeDtcg(existing, tokens);
   if (format === 'css' || format === 'tailwind') return writeCssTokens(existing ?? '', tokens, format);
+  if (format === 'design-md') return writeDesignMdTokens(existing, tokens);
   throw new Error('A Tailwind 3 config is code, and Bogen does not rewrite code. Push into a CSS file or a tokens.json instead.');
 }

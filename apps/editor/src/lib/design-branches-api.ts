@@ -29,7 +29,14 @@ export interface BranchSummary { current: string; branches: DesignBranchRow[]; d
 export type BranchSide = 'branch' | 'primary';
 export type BranchResolve = BranchSide | Record<string, BranchSide>;
 export interface BranchConflict { key: string; kind: string; label: string; primary: 'changed' | 'removed' | 'added'; branch: 'changed' | 'removed' | 'added' }
-export interface MergePreview { branch: DesignBranchRow; into: DesignBranchRow; conflicts: BranchConflict[]; parent_changed: boolean; branch_changed: boolean }
+export interface ChangedScreen { id: string; name: string; pageId: string; page: string; change: 'added' | 'removed' | 'changed'; layers: number }
+export interface MergePreview {
+  branch: DesignBranchRow; into: DesignBranchRow; conflicts: BranchConflict[]; parent_changed: boolean; branch_changed: boolean;
+  /** Screens the merge would change in the parent, and the refs that compare them (older servers send none). */
+  screens?: ChangedScreen[];
+  tokens?: { added: number; removed: number; changed: number };
+  compare?: { from: string; to: string; branch: string };
+}
 export type MergeAnswer =
   | ({ merged: DesignBranchRow; into: DesignBranchRow; checkpoint: string } & BranchSummary)
   | ({ merged: null; conflicts: BranchConflict[] } & BranchSummary);

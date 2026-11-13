@@ -73,6 +73,19 @@
 .settings-workspace .settings-runner-details { padding-top: 24px; border-top: 1px solid var(--ui-border); }
 .settings-workspace .settings-runner-details summary { cursor: pointer; min-height: 40px; font-weight: 600; }
 .settings-workspace .settings-runner-row { display: flex; flex-direction: column; gap: 4px; padding-block: 16px; border-top: 1px solid var(--ui-border); }
+.settings-workspace .add-to-agent { display: flex; flex-direction: column; gap: 8px; padding-top: 24px; border-top: 1px solid var(--ui-border); }
+.settings-workspace .add-to-agent h2 { font-size: 17px; line-height: 1.4; margin: 0; }
+.settings-workspace .add-to-agent-list { list-style: none; margin: 16px 0 0; padding: 0; border-top: 1px solid var(--ui-border); }
+.settings-workspace .add-to-agent-row { display: flex; align-items: center; gap: 24px; padding-block: 16px; border-bottom: 1px solid var(--ui-border); }
+.settings-workspace .add-to-agent-name { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.settings-workspace .add-to-agent-name strong { font-size: 15px; }
+.settings-workspace .add-to-agent-problem { font-size: 13px; line-height: 1.5; color: var(--ui-danger, #f2361f); overflow-wrap: anywhere; }
+.settings-workspace .add-to-agent-tools { width: 160px; flex: none; }
+.settings-workspace .add-to-agent-row .btn { min-width: 128px; min-height: 36px; justify-content: center; font-size: 14px; }
+@container settings (max-width: 680px) {
+  .settings-workspace .add-to-agent-row { flex-wrap: wrap; gap: 8px 16px; }
+  .settings-workspace .add-to-agent-tools { width: auto; }
+}
 .settings-workspace .settings-version-number { font: 20px/1.5 var(--ui-mono); overflow-wrap: anywhere; }
 .settings-workspace .design-knowledge { margin: 0; }
 .settings-workspace .knowledge-results { max-height: none; overflow: visible; padding: 0; }

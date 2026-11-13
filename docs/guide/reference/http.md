@@ -108,6 +108,8 @@ Asset URLs in documents are `bogen-asset:<name>`. An image with no `src` is a pl
 | Route | What it does |
 | --- | --- |
 | `GET /api/runners` | `[{ id: 'claude'\|'codex', available, version? }]` |
+| `GET /api/clients` | `{ clients: [{ client, label, found, connected, skill, tools }] }`: the MCP clients `bogen setup` finds, and the tool list `bogen install` would write. This machine only |
+| `POST /api/clients/<client>/connect` | Does what `bogen install <client>` does; `{ client, how }`, or an error with the reason. This machine only |
 | `POST /api/runs {fileId, pageId, nodeIds, prompt, runner, model?, effort?, review?, conversationId?}` | `review` is `direct`, `proposal`, `directions` or `critique`, which only reads and comments. `conversationId` makes the run a turn of that chat: it gets the earlier turns ahead of `prompt`. Starts a run: `{ runId }`, progress over `/events`. One run per file; a second gets 409. This machine. |
 | `POST /api/runs/:id/stop` | Stops it, also a run asked of another device. |
 | `POST /api/runs {..., device}` | With `device`, a paired device that allows it runs it: `{ runId, device }`, and its events come over `/events` as if it ran here. The owner only. |

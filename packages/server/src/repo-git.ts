@@ -163,3 +163,18 @@ export function ghAvailable(): Promise<boolean> {
   ghSeen = { at: Date.now(), path: process.env.PATH, ok };
   return ok;
 }
+
+/** Whether GitHub says this pull request was merged, asked with the person's `gh`. Only when they turned that on. */
+export async function ghPrMerged(dir: string, url: string): Promise<boolean> {
+  if (!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/.test(url)) return false;
+  const out = await run('gh', ['pr', 'view', url, '--json', 'state,mergedAt'], dir, {
+    env: { GH_PROMPT_DISABLED: '1', GH_NO_UPDATE_NOTIFIER: '1', NO_COLOR: '1', GIT_TERMINAL_PROMPT: '0' }, timeoutMs: 30_000,
+  }).catch(() => null);
+  if (!out || out.code !== 0) return false;
+  try {
+    const parsed = JSON.parse(out.stdout) as { state?: string; mergedAt?: string | null };
+    return parsed.state === 'MERGED' || Boolean(parsed.mergedAt);
+  } catch {
+    return false;
+  }
+}

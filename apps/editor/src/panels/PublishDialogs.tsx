@@ -9,6 +9,7 @@ import { copyText, IconButton, Segmented } from '../ui/controls.tsx';
 import { formatDate, formatDateTime } from '../i18n/format.ts';
 import { useT } from '../i18n/react.ts';
 import { t } from '../i18n/store.ts';
+import { ClientRunBar } from './ChatExtras.tsx';
 import '../styles/publish.css';
 
 /**
@@ -29,6 +30,16 @@ interface Share { id: string; siteId: string; versionId: string; label: string; 
 interface ClientComment { id: string; shareId: string; siteId: string; versionId: string; page: number; name: string; text: string; x?: number; y?: number; at: number; mentionsRemoved: boolean }
 interface Listener { kind: string; on: boolean; public: boolean; listening: boolean; httpsPort: number; url: string | null; serve: 'ours' | 'free' | 'taken' | 'unknown'; funnel: boolean; funnelAllowed: boolean | null }
 interface Overview { sites: Site[]; requests: Request[]; shares: Share[]; inbox: ClientComment[]; listeners: { site: Listener; review: Listener }; funnelPolicy: string[] }
+interface CheckFinding { level: 'error' | 'warning' | 'note'; check: string; page?: string; path?: string; message: string; fix?: string }
+type Skipped = { skipped: string };
+interface PublishCheck {
+  ok: boolean; counts: { errors: number; warnings: number; notes: number }; findings: CheckFinding[];
+  summaries: {
+    a11y?: { issues: number; errors: number; top: string[] } | Skipped;
+    responsive?: { ok: boolean; widths: { width: number; overflow: number; clipped_text: number }[] } | Skipped;
+    brand?: { brand: string; score: number; hard: number; soft: number } | Skipped;
+  };
+}
 interface Plan { exists: boolean; upload: { path: string; bytes: number }[]; unchanged: string[]; remove: string[]; foreign: string[]; blocked: string[]; fingerprint: string; pagesUrl: string }
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -199,6 +210,8 @@ function PublishDialog({ fileId }: { fileId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<{ path: string; bytes: number }[] | null>(null);
   const [taking, setTaking] = useState(false);
+  const check = usePublishCheck(fileId, target.pageId, nodeId, version?.id ?? null);
+  const flagged = check.result ? check.result.counts.errors + check.result.counts.warnings : 0;
   const folderPath = folder ?? site?.live.folder?.path ?? `~/Sites/${(site?.name ?? target.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'site'}`;
   const repoName = repo ?? site?.live.github?.repo ?? '';
   const branchName = branch ?? site?.live.github?.branch ?? 'gh-pages';
@@ -256,7 +269,7 @@ function PublishDialog({ fileId }: { fileId: string }) {
             : <button type="button" className="btn btn-quiet publish-danger-text" onClick={() => setTaking(true)} data-testid="publish-unpublish">{t('Unpublish')}</button>) : null}
           <span className="publish-grow" />
           <button type="button" className="btn" onClick={close}>{t('Cancel')}</button>
-          <button type="button" className="btn btn-primary" disabled={!ready} onClick={publish} data-testid="publish-run">{version ? (liveHere === version.id ? t('Publish v{version} again', { version: version.n }) : t('Publish v{version}', { version: version.n })) : t('Publish')}</button>
+          <button type="button" className="btn btn-primary" disabled={!ready} onClick={publish} data-testid="publish-run">{version ? (flagged ? t('Publish v{version} anyway', { version: version.n }) : liveHere === version.id ? t('Publish v{version} again', { version: version.n }) : t('Publish v{version}', { version: version.n })) : t('Publish')}</button>
         </>
       )}
     >
@@ -305,6 +318,9 @@ function PublishDialog({ fileId }: { fileId: string }) {
           </div>
         ) : <span className="hint">{t('No version yet. A version is a frozen copy of the design as it is now.')}</span>}
       </Field>
+      <Field label={t('Check')}>
+        <CheckView state={check} artboard={nodeId ? target.artboard?.name ?? null : null} page={target.name} />
+      </Field>
       <Field label={t('Versions')}>
         <div className="publish-list" data-testid="publish-versions">
           <div className="publish-item"><span className="hint">{t('The design as it is now')}</span><span className="publish-grow" /><button type="button" className="run-link" disabled={busy || !target.pageId} onClick={prepare} data-testid="publish-prepare">{t('Make a version')}</button></div>
@@ -331,6 +347,67 @@ function PublishDialog({ fileId }: { fileId: string }) {
       ) : null}
       {error ? <div className="error publish-row-indent" data-testid="publish-error">{error}</div> : null}
     </Dialog>
+  );
+}
+
+/**
+ * The check before publishing, on this computer: the version's files when there is one, else the design as it is now.
+ * It only warns; the person publishes anyway when they want to.
+ */
+function usePublishCheck(fileId: string, pageId: string | null, nodeId: string | null, versionId: string | null): { result: PublishCheck | null; busy: boolean; error: string | null } {
+  const [state, setState] = useState<{ key: string; result: PublishCheck | null; error: string | null }>({ key: '', result: null, error: null });
+  const key = `${fileId}/${pageId}/${nodeId}/${versionId}`;
+  useEffect(() => {
+    if (!pageId) return;
+    let live = true;
+    const body = versionId ? { versionId } : { fileId, pageId, ...(nodeId ? { nodeId } : {}) };
+    void call<PublishCheck>('POST', '/api/publish/check', body).then(
+      (result) => { if (live) setState({ key, result, error: null }); },
+      (e: Error) => { if (live) setState({ key, result: null, error: e.message }); },
+    );
+    return () => { live = false; };
+  }, [key]);
+  const current = state.key === key;
+  return { result: current ? state.result : null, busy: !current, error: current ? state.error : null };
+}
+
+function CheckView({ state, artboard, page }: { state: ReturnType<typeof usePublishCheck>; artboard: string | null; page: string }) {
+  const t = useT();
+  const [all, setAll] = useState(false);
+  if (state.error) return <span className="hint" data-testid="publish-check-error">{state.error}</span>;
+  if (!state.result) return <span className="hint" data-testid="publish-check-busy">{t('Checking on this computer')}</span>;
+  const { counts, findings, summaries } = state.result;
+  const shown = findings.filter((f) => f.level !== 'note');
+  const list = all ? shown : shown.slice(0, 6);
+  const word = (level: CheckFinding['level']) => (level === 'error' ? t('Problem') : level === 'warning' ? t('Warning') : t('Note'));
+  const a11y = summaries.a11y && 'issues' in summaries.a11y ? summaries.a11y : null;
+  const responsive = summaries.responsive && 'widths' in summaries.responsive ? summaries.responsive : null;
+  const brand = summaries.brand && 'score' in summaries.brand ? summaries.brand : null;
+  const broken = responsive?.widths.filter((w) => w.overflow || w.clipped_text).map((w) => `${w.width}`) ?? [];
+  const also = [
+    a11y ? t.n(a11y.issues, 'Accessibility: {count} issue', 'Accessibility: {count} issues') : '',
+    responsive ? (broken.length ? t('Responsive: breaks at {widths} px', { widths: broken.join(', ') }) : t('Responsive: fine')) : '',
+    brand ? t('Brand: {score} of 100', { score: brand.score }) : '',
+  ].filter(Boolean);
+  const prompt = artboard ? t('Run publish_check on the artboard {name} and fix what it finds.', { name: artboard }) : t('Run publish_check on the page {name} and fix what it finds.', { name: page });
+  return (
+    <div className="publish-checks" data-testid="publish-check" data-errors={counts.errors} data-warnings={counts.warnings}>
+      <span className="publish-check-head" data-testid="publish-check-summary">
+        {counts.errors || counts.warnings
+          ? [counts.errors ? t.n(counts.errors, '{count} problem', '{count} problems') : '', counts.warnings ? t.n(counts.warnings, '{count} warning', '{count} warnings') : ''].filter(Boolean).join(', ')
+          : t('Nothing to fix before publishing.')}
+        {' '}<span className="hint">{t('Checked on this computer. Nothing was sent anywhere.')}</span>
+      </span>
+      {list.map((f, i) => (
+        <div key={`${f.check}-${f.page ?? ''}-${f.path ?? ''}-${i}`} className={`publish-finding is-${f.level}`} data-testid="publish-check-finding" data-level={f.level} data-check={f.check}>
+          <span className="publish-finding-level">{word(f.level)}</span>
+          <span className="publish-finding-text" dir="auto">{f.page && f.page !== 'index.html' ? `${f.page}: ` : ''}{f.message}</span>
+        </div>
+      ))}
+      {shown.length > list.length ? <button type="button" className="run-link publish-finding-more" onClick={() => setAll(true)}>{t.n(shown.length - list.length, 'and {count} more', 'and {count} more')}</button> : null}
+      {also.length ? <div className="hint" data-testid="publish-check-also">{also.join(' · ')}</div> : null}
+      {counts.errors || counts.warnings ? <button type="button" className="run-link publish-finding-more" onClick={() => void copyText(prompt).then(() => editor().showToast(t('Copied. Paste it to your agent.')))} data-testid="publish-check-copy">{t('Copy for your agent')}</button> : null}
+    </div>
   );
 }
 
@@ -377,6 +454,8 @@ function ShareDialog({ fileId }: { fileId: string }) {
   const [made, setMade] = useState<{ url: string | null; label: string; note: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Client comments picked to go to one revision run together.
+  const [picked, setPicked] = useState<string[]>([]);
   const sites = useMemo(() => new Map((data?.sites ?? []).map((s) => [s.id, s])), [data]);
   const vn = (siteId: string, versionId: string) => sites.get(siteId)?.versions.find((v) => v.id === versionId)?.n;
   const shareLabel = (id: string) => data?.shares.find((s) => s.id === id)?.label ?? t('a link');
@@ -460,7 +539,7 @@ function ShareDialog({ fileId }: { fileId: string }) {
         <div className="publish-list" data-testid="client-inbox">
           {data.inbox.map((c) => (
             <div key={c.id} className="publish-comment" data-testid="client-comment">
-              <div className="publish-line"><span className="publish-tag">{t('from a client')}</span><b dir="auto">{c.name}</b><span className="hint" dir="auto">{[shareLabel(c.shareId), c.x !== undefined ? t('at {x}, {y}', { x: c.x, y: c.y ?? '' }) : t('no position'), ago(c.at)].join(', ')}</span></div>
+              <div className="publish-line"><input type="checkbox" className="client-pick" checked={picked.includes(c.id)} onChange={(e) => setPicked((list) => (e.target.checked ? [...list, c.id] : list.filter((id) => id !== c.id)))} aria-label={t('Pick this comment for one run')} data-testid="client-comment-pick" /><span className="publish-tag">{t('from a client')}</span><b dir="auto">{c.name}</b><span className="hint" dir="auto">{[shareLabel(c.shareId), c.x !== undefined ? t('at {x}, {y}', { x: c.x, y: c.y ?? '' }) : t('no position'), ago(c.at)].join(', ')}</span></div>
               <div className="publish-text" dir="auto">{c.text}</div>
               <div className="publish-line">
                 {c.mentionsRemoved ? <span className="hint">{t('The @ of a mention was taken out. Nothing starts an agent.')}</span> : null}
@@ -470,6 +549,7 @@ function ShareDialog({ fileId }: { fileId: string }) {
               </div>
             </div>
           ))}
+          <ClientRunBar picked={picked.filter((id) => data.inbox.some((c) => c.id === id))} onSent={(ids) => { setPicked((list) => list.filter((id) => !ids.includes(id))); reload(); }} />
         </div>
       ) : null}
     </Dialog>

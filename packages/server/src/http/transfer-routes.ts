@@ -9,7 +9,7 @@ import { atomicWrite, errorMessage, HttpError } from '../util.ts';
 import type { BogenServer } from './server.ts';
 import { fromThisDevice, jsonBody, readBody, sendJson } from './server.ts';
 import type { GuardOptions } from './security.ts';
-import { createCommit, diffCommits, discardBranch, historyList, listBranches, mergeBranch, mirrorToGit, pickChanges, visualDiff } from '../history-ops.ts';
+import { createCommit, diffCommits, discardBranch, historyList, listBranches, mergeBranch, mirrorToGit, layerDiff, pickChanges, visualDiff } from '../history-ops.ts';
 import { readFolder } from '../design-folder.ts';
 import { folderBrand, importFolderBrand } from '../bogen-transfer.ts';
 import { startBranch } from '../design-branches.ts';
@@ -282,9 +282,12 @@ export async function handleTransfer(app: BogenServer, req: IncomingMessage, res
     app.requireFile(b);
     const from = url.searchParams.get('from') ?? '';
     const to = url.searchParams.get('to') ?? 'now';
-    if (d === 'render') {
+    if (d === 'render' || d === 'layers') {
       const page = url.searchParams.get('page') ?? '';
-      const out = await visualDiff(app, b, from, to, page);
+      const screen = url.searchParams.get('screen') ?? undefined;
+      const out = d === 'layers'
+        ? await layerDiff(app, b, url.searchParams.get('a') ?? '', url.searchParams.get('b') ?? '')
+        : await visualDiff(app, b, from, to, page, screen);
       sendJson(res, 200, {
         percent: out.percent, bounds: out.bounds,
         before: out.before && Buffer.from(out.before).toString('base64'),

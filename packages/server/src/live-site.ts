@@ -13,6 +13,7 @@ import { newId } from '@bogen/core';
 import type { RunnerId, Runs } from './agents.ts';
 import { pickerScript } from './live-picker.ts';
 import { FileRoot, registerLiveFileTools } from './live-files.ts';
+import type { RunTraces } from './run-trace.ts';
 import { HttpError, atomicWrite, errorMessage } from './util.ts';
 import { VERSION } from './version.ts';
 import { keepToOwnUser } from './local-user.ts';
@@ -228,7 +229,7 @@ export function injectPicker(html: string): string {
   return doctype ? `${html.slice(0, doctype.index + doctype[0].length)}${tag}${html.slice(doctype.index + doctype[0].length)}` : `${tag}${html}`;
 }
 
-interface FileRun { token: string; root: FileRoot; transports: Map<string, StreamableHTTPServerTransport>; servers: Set<McpServer> }
+interface FileRun { token: string; root: FileRoot; transports: Map<string, StreamableHTTPServerTransport>; servers: Set<McpServer>; runId?: string }
 
 export function liveInstructions(site: { dir: string; target: string }): string {
   return [
@@ -252,7 +253,7 @@ export class LiveSites {
   private recent: { url: string; dir: string; at: number }[] = [];
   private tokenOfRun = new Map<string, string>();
 
-  constructor(private readonly deps: { home: string; runs: Runs; localUrl: () => string; recordFiles: (runId: string, files: string[]) => void }) {}
+  constructor(private readonly deps: { home: string; runs: Runs; localUrl: () => string; recordFiles: (runId: string, files: string[]) => void; traces?: RunTraces }) {}
 
   private get recentPath(): string {
     return join(this.deps.home, 'live-sites.json');
@@ -342,6 +343,7 @@ export class LiveSites {
       throw new HttpError(409, errorMessage(e));
     }
     this.tokenOfRun.set(runId, token);
+    fileRun.runId = runId;
     return { runId };
   }
 
@@ -379,7 +381,7 @@ export class LiveSites {
       if (known) return known.handleRequest(req, res, parsed);
       if (!isInitializeRequest(parsed)) throw new HttpError(400, 'Send initialize first.');
       const server = new McpServer({ name: 'bogen-project-files', version: VERSION }, { instructions: 'Read and edit the files of one project. There is nothing else here.' });
-      registerLiveFileTools(server, fileRun.root);
+      registerLiveFileTools(server, fileRun.root, undefined, (call) => { if (fileRun.runId) this.deps.traces?.call(fileRun.runId, { server: 'files', ...call }); });
       fileRun.servers.add(server);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => newId(24), enableJsonResponse: true,

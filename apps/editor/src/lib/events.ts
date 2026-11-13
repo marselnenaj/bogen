@@ -7,6 +7,8 @@ export type ServerEvent =
   | { t: 'theme'; theme: Theme | null }
   | { t: 'peers' }
   | { t: 'phone' }
+  | { t: 'extension' }
+  | { t: 'references' }
   | { t: 'publish' }
   | { t: 'run-history'; fileId: string }
   | { t: 'history'; fileId: string }
@@ -19,7 +21,8 @@ export type ServerEvent =
   | { t: 'agents-check'; id: string; status: string }
   | { t: 'race'; fileId: string; raceId: string }
   | { t: 'memory'; fileId: string; brandId?: string }
-  | { t: 'pull'; id: string; fileId: string; status: string };
+  | { t: 'pull'; id: string; fileId: string; status: string }
+  | { t: 'conversation'; fileId: string; conversationId: string; closed?: boolean };
 
 type Listener = (e: ServerEvent) => void;
 

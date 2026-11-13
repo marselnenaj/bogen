@@ -63,6 +63,9 @@ describe('a pull request from a design change', () => {
       'src/Hero.tsx': 'export function Hero() {\n  return <h1 style={{ color: \'#111111\' }}>Hello</h1>;\n}\n',
       'README.md': '# App\n',
     });
+    // GitHub as the remote people see, where gh opens the pull request; pushes still go to the bare folder.
+    fx.git(['remote', 'set-url', 'origin', 'https://github.com/acme/app.git']);
+    fx.git(['remote', 'set-url', '--push', 'origin', fx.remote]);
     process.env.PATH = `${fx.bin}:${savedPath}`;
     h = await startServer();
     agent = await connectAgent(h.base, 'claude');
@@ -140,8 +143,8 @@ describe('a pull request from a design change', () => {
   it('writes a description with the pictures and a link back to the Bogen version', async () => {
     expect(first.body).toContain('Changed the colour of the hero title in src/Hero.tsx.');
     expect(first.body).toContain('| Before | After |');
-    expect(first.body).toContain('![Before](docs/shots/red-hero-title/before.png)');
-    expect(first.body).toContain('![After](docs/shots/red-hero-title/after.png)');
+    expect(first.body).toContain('![Before](https://github.com/acme/app/blob/bogen/red-hero-title/docs/shots/red-hero-title/before.png?raw=true)');
+    expect(first.body).toContain('![After](https://github.com/acme/app/blob/bogen/red-hero-title/docs/shots/red-hero-title/after.png?raw=true)');
     expect(first.body).toContain(`/#/file/${fileId}?version=${first.version.id}`);
     expect(first.version.id).toMatch(/^[0-9a-z]+-[0-9a-f]{8}$/);
     const commits = await call(agent, 'commit_list', { file_id: fileId });
@@ -238,4 +241,81 @@ describe('a pull request from a design change', () => {
     // The working folder goes once it is open; the branch stays, as it is on the remote.
     expect(fx.git(['worktree', 'list']).trim().split('\n')).toHaveLength(1);
   }, 90_000);
+
+  it('keeps one branch and working folder per chat, pushes later commits on top, and closes the chat on merge', async () => {
+    const chat = 'chat-branch-1';
+    const { doc } = await h.server.rooms.get(fileId);
+    const title = doc.getChildren(board).find((n) => n.type === 'text')!.id;
+    const v1 = (await call(agent, 'commit_create', { message: 'Before green' })).id as string;
+    await call(agent, 'layer_style', { node_ids: [title], style: { color: '#16a34a' } });
+    const v2 = (await call(agent, 'commit_create', { message: 'Green title' })).id as string;
+    const res = await fetch(`${h.base}/api/code/pulls`, post({ fileId, source: { kind: 'versions', from: v1, to: v2 }, runner: 'claude', title: 'Chat title colour', pictures: false, conversationId: chat }));
+    expect(res.status, await res.clone().text()).toBe(201);
+    const one = await settled((await res.json() as PullDraft).id);
+    expect(one.status, one.error).toBe('ready');
+    expect(one.commits).toBe(1);
+    const ghBefore = fx.ghCalls().length;
+    const opened = await (await fetch(`${h.base}/api/code/pulls/${one.id}/open`, post({ digest: one.digest }))).json() as PullDraft;
+    expect(opened.status).toBe('opened');
+    expect(fx.ghCalls().length).toBe(ghBefore + 1);
+    // The chat keeps its working folder for the next change.
+    expect(fx.git(['worktree', 'list']).trim().split('\n')).toHaveLength(2);
+
+    // The next change in the same chat: the same draft, branch and folder, one more commit, a new digest.
+    await call(agent, 'layer_style', { node_ids: [title], style: { color: '#7c3aed' } });
+    const v3 = (await call(agent, 'commit_create', { message: 'Violet title' })).id as string;
+    const again = await fetch(`${h.base}/api/code/pulls`, post({ fileId, source: { kind: 'versions', from: v2, to: v3 }, runner: 'claude', pictures: false, conversationId: chat }));
+    expect(again.status, await again.clone().text()).toBe(201);
+    const two = await settled((await again.json() as PullDraft).id);
+    expect(two.id).toBe(one.id);
+    expect(two.branch).toBe(one.branch);
+    expect(two.status, two.error).toBe('ready');
+    expect(two.commits).toBe(2);
+    expect(two.commit).not.toBe(one.commit);
+    expect(two.digest).not.toBe(opened.digest);
+    expect(fx.agentCalls().at(-1)!.stdin).toContain('already has 1 commit from earlier changes in the same chat');
+    // The old confirmation does not push the new commit.
+    expect((await fetch(`${h.base}/api/code/pulls/${two.id}/open`, post({ digest: opened.digest }))).status).toBe(409);
+    const pushed = await (await fetch(`${h.base}/api/code/pulls/${two.id}/open`, post({ digest: two.digest }))).json() as PullDraft;
+    expect(pushed.status).toBe('opened');
+    expect(pushed.url).toBe(opened.url);
+    // The pull request is there already: the push updated it, gh was not asked again, and nothing was forced.
+    expect(fx.ghCalls().length).toBe(ghBefore + 1);
+    expect(fx.git(['ls-remote', '--heads', fx.remote])).toContain(`${two.commit}\trefs/heads/${two.branch}`);
+    expect(fx.git(['rev-list', '--count', `${one.commit}..${two.commit}`]).trim()).toBe('1');
+
+    // Not merged yet: nothing changes.
+    expect(await (await fetch(`${h.base}/api/code/pulls/check`, post({}))).json()).toEqual({ merged: [] });
+    // Merged into main in the repository, as after a pull: the chat closes.
+    fx.git(['merge', '--quiet', '--no-ff', '-m', 'Merge the chat branch', two.branch]);
+    expect(await (await fetch(`${h.base}/api/code/pulls/check`, post({}))).json()).toEqual({ merged: [two.id] });
+    const merged = await draft(two.id);
+    expect(merged.status).toBe('merged');
+    expect(merged.merged).toMatchObject({ via: 'local', into: 'main' });
+    expect(fx.git(['worktree', 'list']).trim().split('\n')).toHaveLength(1);
+    const conversation = await (await fetch(`${h.base}/api/runs/conversations/${chat}?fileId=${fileId}`)).json() as { closed?: { reason: string; branch: string } };
+    expect(conversation.closed).toMatchObject({ reason: 'merged', branch: two.branch, into: 'main', url: opened.url });
+    // A new message in that chat starts a new branch: the merged one is done.
+    expect(h.server.pulls.ofConversation(fileId, chat)).toBeUndefined();
+  }, 120_000);
+
+  it('opens the repository as a canvas on a design branch, without starting anything of it', async () => {
+    const out = await call(agent, 'repo_canvas_open', { file_id: fileId, components: 0 });
+    expect(out.branch.name).toBe('acme-app on main');
+    expect(out.git).toMatchObject({ branch: 'main' });
+    expect(out.capture).toBeUndefined();
+    const { doc } = await h.server.rooms.get(fileId);
+    expect(doc.getPages().some((p) => p.id === out.page_id || p.id === out.pageId)).toBe(true);
+    const branches = await call(agent, 'design_branch_list', { file_id: fileId });
+    expect(JSON.stringify(branches)).toContain('acme-app on main');
+    const bad = await fetch(`${h.base}/api/code/canvas`, post({ fileId, url: 'javascript:alert(1)' }));
+    expect(bad.status).toBe(400);
+  });
+
+  it('asks gh about merges on GitHub only when the person turned it on', async () => {
+    expect(await (await fetch(`${h.base}/api/code/pulls/settings`)).json()).toEqual({ githubMerges: false });
+    const patched = await (await fetch(`${h.base}/api/code/pulls/settings`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ githubMerges: true }) })).json();
+    expect(patched).toEqual({ githubMerges: true });
+    await fetch(`${h.base}/api/code/pulls/settings`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ githubMerges: false }) });
+  });
 });

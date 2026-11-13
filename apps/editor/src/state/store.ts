@@ -55,6 +55,8 @@ export interface PromptState {
   open: boolean;
   runId: string | null;
   running: boolean;
+  /** The server's chat snapshot is being recovered; another send must wait for its run status. */
+  restoring?: boolean;
   messages: PromptMessage[];
   nodeIds: string[];
   /** When the run going now started, for the time it has taken. */

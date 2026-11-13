@@ -75,7 +75,9 @@ Limits:
 - Change library components in the library's own file. Neither you nor an agent edits the copies.
 - A duplicated library file publishes under the same name as the original.
 - Code components inside a library component are dropped.
-- Token changes in a library are not offered as updates.
+- Token values changed in a library are not offered as updates: a file keeps its own values. A token the
+  library renamed is: the banner lists it, and **Accept** renames it in your file too, with every
+  layer that uses it. A [brand](brand.md) does the same when it is applied to its files.
 
 Agents use `library_publish`, `library_link`, `library_updates` and `library_accept`.
 

@@ -39,6 +39,7 @@ import { installViews } from './state/view.ts';
 import { CommandPalette } from './panels/CommandPalette.tsx';
 import { Lightbox } from './ui/Lightbox.tsx';
 import { SettingsDialog } from './panels/SettingsDialog.tsx';
+import { ExtensionApproval } from './panels/BrowserExtension.tsx';
 import { BulkRenameDialog } from './panels/BulkRename.tsx';
 import { PublishDialogs } from './panels/PublishDialogs.tsx';
 import { RestyleDialog } from './panels/RestyleDialog.tsx';
@@ -73,11 +74,33 @@ function showLinkedVersion(fileId: string): void {
 function showLinkedSelection(s: Session): void {
   const linkedPage = /[?&]page=([\w-]{1,80})/.exec(location.hash)?.[1];
   if (linkedPage && s.snap.pages.some(p => p.id === linkedPage)) editor().set({ pageId: linkedPage, selection: [] });
-  const ids = /[?&]select=([\w,-]{1,800})/.exec(location.hash)?.[1]?.split(',').filter((id) => s.doc.getNode(id));
-  if (!ids?.length) return;
+  const ids = /[?&]select=([\w,-]{1,800})/.exec(location.hash)?.[1]?.split(',').filter((id) => s.doc.getNode(id)) ?? [];
+  const layer = linkedLayer(s, /[?&]layer=([^&]{1,400})/.exec(location.hash)?.[1]);
+  if (layer) ids.unshift(layer);
+  if (!ids.length) return;
   const pageId = s.doc.pageOf(ids[0]!);
   editor().set({ ...(pageId ? { pageId } : {}), selection: ids.filter((id) => s.doc.pageOf(id) === pageId) });
   window.setTimeout(() => fitSelection(), 200);
+}
+
+/**
+ * The layer a link such as `#/file/<id>?layer=<id or name>` means, from `bogen open <file>#<layer>` or a link an agent
+ * printed: the layer with that id, else the first with that name (any case), on the page in view before the others.
+ */
+function linkedLayer(s: Session, raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  let wanted: string;
+  try { wanted = decodeURIComponent(raw).trim(); } catch { return undefined; }
+  if (!wanted) return undefined;
+  if (s.doc.getNode(wanted) && s.doc.pageOf(wanted)) return wanted;
+  const name = wanted.toLowerCase();
+  const current = editor().pageId;
+  const pages = [...s.snap.pages].sort((a, b) => Number(b.id === current) - Number(a.id === current));
+  for (const page of pages) {
+    const hit = s.doc.descendants(page.id).find((n) => n.name.trim().toLowerCase() === name);
+    if (hit) return hit.id;
+  }
+  return undefined;
 }
 
 function pageKey(fileId: string): string {
@@ -271,6 +294,15 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       }
     });
 
+    // A layer link opened while its file is already open selects and shows the layer too, without a reload.
+    let lastHash = location.hash;
+    const onHash = () => {
+      if (location.hash === lastHash) return;
+      lastHash = location.hash;
+      if (fitted && /^#\/file\/([\w-]+)/.exec(location.hash)?.[1] === fileId) showLinkedSelection(s);
+    };
+    window.addEventListener('hashchange', onHash);
+
     for (const n of s.snap.nodes.values()) ensureFont(n.style.fontFamily);
 
     // A narrow door for performance measurements in tests. Nothing in the app uses it.
@@ -294,6 +326,7 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       offKeys();
       offSel();
       offPage();
+      window.removeEventListener('hashchange', onHash);
       s.provider.off('sync', onSync);
       s.provider.off('status', onStatus);
       // React runs this before the cleanups of the panels inside, which still read the session as they let go of it,
@@ -372,6 +405,7 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       <CommandPalette />
       <Lightbox />
       <SettingsDialog />
+      <ExtensionApproval />
       <BulkRenameDialog />
       <PullRequestDialog />
       <RepoTokensDialog />

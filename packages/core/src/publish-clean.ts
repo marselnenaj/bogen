@@ -42,6 +42,54 @@ export interface CleanOptions {
   csp?: string | null;
   /** Ids that must not be in the result: every layer, page and file id of the document. */
   forbidden?: Iterable<string>;
+  /** What a search engine and a link preview read: the page's language, description, address, picture and icon. */
+  head?: PublishHead;
+}
+
+/**
+ * The head of a published page beyond its title. `ogImage` and `favicon` are site paths (or, for the picture, a full
+ * https address); `canonical` is the page's own full address, which also makes the picture's address absolute.
+ */
+export interface PublishHead {
+  lang?: string;
+  dir?: 'ltr' | 'rtl';
+  description?: string;
+  canonical?: string;
+  ogImage?: string;
+  favicon?: string;
+}
+
+const LANG = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3}$/;
+
+/** A full http(s) address, or undefined. */
+export function absoluteUrl(raw: string | undefined, base?: string): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const url = base ? new URL(raw, base) : new URL(raw);
+    return /^https?:$/.test(url.protocol) && !url.username && !url.password ? url.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function headTags(head: PublishHead, title: string): string {
+  const out: string[] = [];
+  const description = head.description?.replace(/\s+/g, ' ').trim().slice(0, 500);
+  if (description) out.push(`<meta name="description" content="${attrValue(description)}">`);
+  const canonical = absoluteUrl(head.canonical);
+  if (canonical) out.push(`<link rel="canonical" href="${attrValue(canonical)}">`);
+  if (head.favicon && !/^[a-z]+:/i.test(head.favicon)) out.push(`<link rel="icon" href="${attrValue(head.favicon)}">`);
+  if (description || head.ogImage || canonical) {
+    out.push('<meta property="og:type" content="website">', `<meta property="og:title" content="${attrValue(title)}">`);
+    if (description) out.push(`<meta property="og:description" content="${attrValue(description)}">`);
+    if (canonical) out.push(`<meta property="og:url" content="${attrValue(canonical)}">`);
+  }
+  if (head.ogImage) {
+    // Link previews need a full address. Without the page's own address the path is the best there is, and the check says so.
+    const image = absoluteUrl(head.ogImage, canonical) ?? (/^[a-z]+:/i.test(head.ogImage) ? undefined : head.ogImage);
+    if (image) out.push(`<meta property="og:image" content="${attrValue(image)}">`, '<meta name="twitter:card" content="summary_large_image">');
+  }
+  return out.join('');
 }
 
 export interface CleanedPage {
@@ -292,7 +340,10 @@ export function cleanPublishedPage(source: string, options: CleanOptions): Clean
   css = [css.trim(), page, ...own].filter(Boolean).join('\n');
 
   const meta = options.csp ? `<meta http-equiv="Content-Security-Policy" content="${attrValue(options.csp)}">` : '';
-  const out = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${meta}<meta name="referrer" content="no-referrer"><title>${escapeHtml(options.title)}</title><link rel="stylesheet" href="${attrValue(options.stylesheet)}"></head><body>${render(body.children, { encodeEntities: 'utf8' })}</body></html>`;
+  const pageHead = options.head ?? {};
+  const lang = pageHead.lang && LANG.test(pageHead.lang) ? ` lang="${attrValue(pageHead.lang)}"` : '';
+  const dir = pageHead.dir === 'rtl' || pageHead.dir === 'ltr' ? ` dir="${pageHead.dir}"` : '';
+  const out = `<!doctype html><html${lang}${dir}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${meta}<meta name="referrer" content="no-referrer"><title>${escapeHtml(options.title)}</title>${headTags(pageHead, options.title)}<link rel="stylesheet" href="${attrValue(options.stylesheet)}"></head><body>${render(body.children, { encodeEntities: 'utf8' })}</body></html>`;
   assertClean(out, css, options.forbidden);
   return { html: out, css, notes: [...notes] };
 }

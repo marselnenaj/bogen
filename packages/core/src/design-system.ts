@@ -269,34 +269,6 @@ export function applyTextStyle(doc: BogenDoc, id: string, key: string | null, or
   }, origin);
 }
 
-/**
- * A token under a new name: its values in all modes come along, and whatever refers to it follows,
- * in layers, overrides on instances, text styles and other tokens.
- */
-export function renameToken(doc: BogenDoc, from: string, to: string, origin?: unknown): void {
-  const token = doc.getTokens().find((t) => t.name === from);
-  if (!token) throw new Error(`There is no token "${from}".`);
-  const before = `var(--${from})`;
-  const after = `var(--${to})`;
-  const swap = (map: Y.Map<unknown>) => {
-    for (const [key, value] of [...map.entries()] as [string, unknown][]) {
-      if (typeof value === 'string' && value.includes(before)) map.set(key, value.split(before).join(after));
-    }
-  };
-  doc.transact(() => {
-    doc.setToken(to, token.kind, token.value);
-    for (const [mode, value] of Object.entries(token.modes ?? {})) doc.tokens.get(to)!.set(`mode:${mode}`, value);
-    doc.deleteToken(from);
-    doc.nodes.forEach((m) => {
-      const style = m.get('style');
-      if (style instanceof Y.Map) swap(style);
-      const overrides = m.get('overrides');
-      if (overrides instanceof Y.Map) swap(overrides);
-    });
-    doc.textStyles.forEach((m) => { if (m instanceof Y.Map) swap(m); });
-    doc.tokens.forEach((m) => swap(m));
-  }, origin);
-}
 
 /** Font families a layer's overrides ask for. */
 export function overrideFamilies(n: BogenNode): string[] {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { runPublishCheck } from '../publish-check.ts';
 import { fileIdArg, pageIdArg, type ToolContext, type ToolDefiner } from './kit.ts';
 
 /**
@@ -44,6 +45,20 @@ export function registerPublishTools(define: ToolDefiner): void {
     const { site, version } = await ctx.app.publisher.prepare({ fileId: room.id, pageId, ...(node_id ? { nodeId: node_id } : {}), ...(title ? { title } : {}), ...(fit ? { fit } : {}), by: ctx.agent });
     await ctx.app.publisher.request({ kind: 'publish', siteId: site.id, versionId: version.id, by: ctx.agent, ...(target ? { target } : {}), ...(note ? { note } : {}) });
     return { site_id: site.id, version: version.n, version_id: version.id, files: version.files, bytes: version.bytes, pages: version.pages.map((p) => p.file), ...(version.notes.length ? { notes: version.notes } : {}), status: CONFIRM };
+  });
+
+  define('publish_check', { description: 'Check an artboard or page before it is published, on this machine only (no SEO service, no network): title, meta description, language, canonical address, social picture (og:image) and its size, icon, links and #anchors that lead nowhere inside the site, images that are missing, heavy or have no width and height, then short summaries of a11y_audit, responsive_check and brand_check (and compliance_check with compliance true). Errors are only what is broken on the published site: a missing language and broken links or files. The rest are warnings and notes. Fix with web_page_set, layer_attrs and asset_upload, then check again. The Publish dialog shows the same check; the person may publish anyway. version_id checks a prepared version\'s files as they would be sent.', readOnly: true }, {
+    node_id: z.string().optional().describe('An artboard. Leave out for the whole page.'),
+    page_id: pageIdArg,
+    version_id: z.string().regex(/^[a-f0-9]{32}$/).optional().describe('A version from publish_prepare or publish_list, instead of the design as it is now.'),
+    summaries: z.boolean().default(true).describe('The a11y, responsive and brand summaries. They render, which takes a few seconds.'),
+    compliance: z.boolean().default(false).describe('Also the EN 301 549 accessibility profile check, the slowest part.'),
+    file_id: fileIdArg,
+  }, async ({ node_id, page_id, version_id, summaries, compliance, file_id }, ctx) => {
+    if (version_id) return runPublishCheck(ctx.app, { fileId: '', versionId: version_id, summaries, compliance });
+    const { room, pageId } = await siteOf(ctx, { node_id, page_id, file_id });
+    if (node_id) ctx.touch([node_id]);
+    return runPublishCheck(ctx.app, { fileId: room.id, pageId, ...(node_id ? { nodeId: node_id } : {}), summaries, compliance });
   });
 
   define('share_prepare', { description: `Ask the owner to make a review link for a client: one artboard or page, read-only and frozen at a version, that opens in any browser. Uses the newest version, or makes one when there is none or fresh is true. The owner makes the link in the editor; you never see it. Clients' comments, if the owner allows them, go to a quarantine inbox in the owner's editor and never to you or into the file on their own.` }, {

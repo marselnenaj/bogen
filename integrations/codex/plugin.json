@@ -1,0 +1,38 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "bogen",
+  "version": "0.3.0",
+  "description": "An open source design canvas where every layer is real HTML and CSS, drawn by your own coding agent over MCP. Needs Bogen installed: curl -fsSL https://bogen.dev/install.sh | bash",
+  "author": {
+    "name": "Marsel Nenaj",
+    "url": "https://github.com/marselnenaj/bogen"
+  },
+  "homepage": "https://bogen.dev",
+  "repository": "https://github.com/marselnenaj/bogen",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "design",
+    "canvas",
+    "html",
+    "css",
+    "mcp",
+    "local-first"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Bogen",
+        "shortDescription": "Design on a local HTML and CSS canvas",
+        "longDescription": "Bogen is a design canvas on your own computer where every layer is real HTML and CSS. Your agent draws, checks and comments through its MCP tools while you watch and edit in the browser.",
+        "developerName": "Marsel Nenaj",
+        "category": "Design",
+        "websiteURL": "https://bogen.dev",
+        "defaultPrompt": [
+          "Open Bogen and design a landing page for this project"
+        ],
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png"
+      }
+    }
+  }
+}

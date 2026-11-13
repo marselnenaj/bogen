@@ -6,10 +6,11 @@ Open Settings from the Home screen or press **Ctrl+,** in an open file. Search f
 | --- | --- |
 | Appearance | Interface size from 90 to 200 percent, System/Light/Dark, interface language and reduced motion. |
 | Canvas | Arrow and Shift-arrow movement, wheel behaviour, zoom direction and layout grids. |
-| Agents | Installed runners and their model/effort defaults. Each run still uses the runner and model you choose. |
+| Agents | Installed runners and their model/effort defaults. Each run still uses the runner and model you choose. **Add to agent** lists the MCP clients on this computer and connects one with a click, as `bogen install` does ([Agents](agents.md#add-to-agent-in-settings)). |
 | Design knowledge | Design playbooks, decisions, composition briefs and your editable personal SKILL.md. |
+| References | Pages and pictures you collected, which agents search before a direction. See [References](capture-and-import.md#references). |
 | Devices | Existing sync peers and phone pairing. Opening this category does not enable either. |
-| Privacy | Whether the browser offers Bogen's WebMCP tools. |
+| Privacy | Whether the browser offers Bogen's WebMCP tools, and the paired [browser extensions](capture-and-import.md#from-your-browser-the-extension), each with Revoke. |
 | About | The running server version and any update it knows about. |
 
 Back to defaults resets the current Appearance, Canvas or Privacy category, rather than unrelated preferences. An Appearance reset resumes automatic interface scaling; it does not reset the separately stored language choice.

@@ -6,7 +6,7 @@
 // only through the editor's routes, never as agent tools.
 
 import {
-  BranchConflictError, branchContent, checkoutSeenBy, createDesignBranch, currentBranchId, describeBranch, discardDesignBranch, divertStaleEdits, docFromContent, docToContent, getDesignBranch, listDesignBranches,
+  BranchConflictError, branchContent, changedScreens, checkoutSeenBy, findLanguageVersion, previewMergeContent, syncLanguageVersion, type SyncResult, createDesignBranch, currentBranchId, describeBranch, discardDesignBranch, divertStaleEdits, docFromContent, docToContent, getDesignBranch, listDesignBranches,
   heldTarget, lostRemoteSets, MAIN_BRANCH, MAX_HELD, markBranchArchived, mergeDesignBranch, previewMerge, renameDesignBranch, restoreDesignBranch, switchDesignBranch, undoMerge, Y, type BranchResolution, type DesignBranch, type HeldUpdate,
 } from '@bogen/core';
 import { createHash } from 'node:crypto';
@@ -112,6 +112,26 @@ export function switchBranch(app: BogenServer, room: Room, id: string, by: strin
   return out;
 }
 
+/**
+ * Brings a language version up to date with its original and fills in what the translation memory knows
+ * (translation-memory.ts). A commit is taken first, as before any step that replaces a branch's content.
+ */
+export async function syncLanguage(app: BogenServer, room: Room, ref: string, by: string, kind: BranchActorKind): Promise<SyncResult> {
+  const live = currentBranchId(room.doc);
+  const version = findLanguageVersion(room.doc, ref);
+  await checkpoint(app, room, `Before bringing "${version.branch.name}" up to date`, by, kind);
+  let out: SyncResult;
+  try {
+    out = syncLanguageVersion(room.doc, version.branch.id, by, branchOrigin(by));
+  } catch (e) {
+    throw new HttpError(409, errorMessage(e));
+  }
+  // Replacing the checked-out content invalidates undo, as a switch does.
+  if (live === version.branch.id) changed(app, room);
+  else app.hub.broadcast({ t: 'history', fileId: room.id });
+  return out;
+}
+
 export function renameBranch(app: BogenServer, room: Room, id: string, name: string, by: string): DesignBranch {
   try {
     const out = renameDesignBranch(room.doc, id, name, branchOrigin(by));
@@ -125,7 +145,17 @@ export function renameBranch(app: BogenServer, room: Room, id: string, name: str
 export function mergePreview(room: Room, id: string) {
   try {
     const p = previewMerge(room.doc, id);
-    return { branch: describeBranch(room.doc, p.branch), into: describeBranch(room.doc, p.into), conflicts: p.conflicts, parent_changed: p.parentChanged, branch_changed: p.branchChanged };
+    // The screens a merge would change, compared against the parent as it is now: what the person reviews before merging.
+    const { before, after } = previewMergeContent(room.doc, id);
+    const screens = changedScreens(before, after);
+    const tokenNames = (c: typeof before) => new Map(c.tokens.map((t) => [t.name, JSON.stringify(t)]));
+    const ta = tokenNames(before);
+    const tb = tokenNames(after);
+    const tokens = { added: [...tb.keys()].filter((k) => !ta.has(k)).length, removed: [...ta.keys()].filter((k) => !tb.has(k)).length, changed: [...tb.keys()].filter((k) => ta.has(k) && ta.get(k) !== tb.get(k)).length };
+    return {
+      branch: describeBranch(room.doc, p.branch), into: describeBranch(room.doc, p.into), conflicts: p.conflicts, parent_changed: p.parentChanged, branch_changed: p.branchChanged,
+      screens, tokens, compare: { from: `branch:${p.into.id}`, to: `merge:${id}`, branch: `branch:${id}` },
+    };
   } catch (e) {
     throw new HttpError(409, errorMessage(e));
   }

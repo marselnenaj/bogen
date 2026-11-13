@@ -6,6 +6,8 @@ import { errorMessage } from '../util.ts';
 export interface RelayOptions {
   url: string;
   token?: string;
+  /** Sent with every request, such as the tool list's mode and profile. */
+  headers?: Record<string, string>;
   /** Starts the server if it has gone away. */
   ensureServer: () => Promise<void>;
 }
@@ -64,7 +66,7 @@ export async function runRelay(options: RelayOptions): Promise<void> {
 
   const connect = async (): Promise<StreamableHTTPClientTransport> => {
     const transport = new StreamableHTTPClientTransport(new URL(options.url), {
-      requestInit: options.token ? { headers: { Authorization: `Bearer ${options.token}` } } : undefined,
+      requestInit: options.token || options.headers ? { headers: { ...options.headers, ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}) } } : undefined,
     });
     transport.onmessage = (message) => {
       const m = message as WithId;

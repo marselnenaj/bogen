@@ -1,4 +1,4 @@
-import { currentBranchId, describeLayoutGrid, getDesignBranch, isLibraryParent, Y, type BogenDoc, type BogenNode, type RunIntent } from '@bogen/core';
+import { BogenDoc, currentBranchId, describeLayoutGrid, getDesignBranch, isLibraryParent, Y, type BogenNode, type RunIntent } from '@bogen/core';
 import { draftFor, listRevisions, revisionCopyOf, revisionScope, type Revision } from '../revisions.ts';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -8,6 +8,7 @@ import { agentOrigin, type Room } from '../sync.ts';
 import { errorMessage } from '../util.ts';
 import { brandAfterWrite, brandGuard } from './brand-enforce.ts';
 import { OUTPUT_SCHEMAS } from './outputs.ts';
+import { resultText } from '../run-trace.ts';
 
 export interface Session {
   fileId?: string;
@@ -15,7 +16,7 @@ export interface Session {
   agent: () => string;
   /** The run this session belongs to, when Bogen started the CLI itself. */
   runId?: string;
-  /** A critique run reads and comments, and gets no other tool. */
+  /** A critique run, or a session with the reviewer profile, reads and comments, and gets no other tool. */
   scope?: 'critique';
   /** The revision this session works in: writes outside its copies are refused. */
   revision?: { fileId: string; id: string };
@@ -65,8 +66,10 @@ const CRITIQUE_WRITES = new Set(['comment_add', 'comment_reply']);
  * Their `openWorldHint` says so, and an agent in the browser (WebMCP) asks the person before each call of one.
  */
 export const OPEN_WORLD_TOOLS = new Set([
-  'asset_upload', 'brand_export', 'brand_extract', 'code_project_link', 'data_source_refresh', 'data_source_set', 'drift_check', 'export_file', 'file_export', 'file_import',
-  'figma_import', 'layer_repeat', 'omarchy_theme_export', 'omarchy_theme_install', 'page_capture', 'publish_prepare', 'replay_export',
+  'asset_upload', 'brand_export', 'brand_extract', 'code_project_link', 'data_source_refresh', 'data_source_set',
+  'design_md_import', 'drift_check', 'export_file', 'figma_import', 'file_export', 'file_import', 'layer_repeat',
+  'omarchy_theme_export', 'omarchy_theme_install', 'page_capture', 'pdf_import', 'publish_prepare', 'replay_export',
+  'repo_canvas_open', 'trace_get',
   'share_prepare', 'site_capture', 'site_restyle', 'storybook_import', 'tokens_repo_diff', 'tokens_repo_pull', 'tomacco_compare', 'tomacco_import', 'tomacco_status',
 ]);
 
@@ -111,6 +114,19 @@ export function touchedShared(doc: BogenDoc, tr: Y.Transaction): string[] {
     }
   }
   return [...out];
+}
+
+/** Why a write inside a revision may not stand, from what it touched; `doc` is the file after the write. Null when it may. */
+function revisionRefusal(doc: BogenDoc, rev: Revision, allowed: Set<string>, touched: Set<string>, shared: Set<string>): string | null {
+  // Tokens, text styles, modes, variables and keyframes belong to the whole file: changing them would change the
+  // original and every other artboard too. Inside a revision a colour or size changes on the copy itself, for
+  // instance as a custom property on its root (--accent: …), which reaches only the copy and goes with it on accept.
+  if (shared.size) return `This run works in the revision "${rev.name}" (${rev.id}), and ${[...shared].join(', ')} ${shared.size === 1 ? 'is' : 'are'} shared by the whole file, so changing ${shared.size === 1 ? 'it' : 'them'} would change the original too. Nothing was changed. Set the value on the copy instead: layer_style on its root with a custom property such as {"--accent":"#b4410c"}, or on the layers themselves. Token changes can follow once the revision is accepted.`;
+  const outside = [...touched].filter((id) => !allowed.has(id) && !(doc.nodes.has(id) && doc.ancestors(id).some((a) => allowed.has(a))));
+  if (!outside.length) return null;
+  const copyOf = revisionCopyOf(doc, rev);
+  const hints = outside.slice(0, 4).map((id) => (copyOf.get(id) ? `${id} is the original; its copy in this revision is ${copyOf.get(id)}` : `${id} is outside the revision`));
+  return `This run works in the revision "${rev.name}" (${rev.id}) and changes only its copies: ${hints.join('; ')}. Nothing was changed. Use the copy ids (revision_list shows them), or the person accepts or discards the revision first.`;
 }
 
 /** Whether a session of this scope gets the tool at all. */
@@ -252,7 +268,7 @@ export class ToolContext {
 
   /** Runs edits as one undoable step attributed to this agent. */
   write<T>(room: Room, fn: () => T): T {
-    if (this.session.scope === 'critique' && !CRITIQUE_WRITES.has(this.tool)) throw new Error('This run is a critique: it reads and comments, and changes nothing. Leave a comment with your suggestion instead.');
+    if (this.session.scope === 'critique' && !CRITIQUE_WRITES.has(this.tool)) throw new Error(`This ${this.session.runId ? 'run is a critique' : 'session is a reviewer'}: it reads and comments, and changes nothing. Leave a comment with your suggestion instead.`);
     this.assertOnBranch(room);
     let activity = branchActivity.get(room);
     if (!activity) branchActivity.set(room, (activity = new Map()));
@@ -279,22 +295,42 @@ export class ToolContext {
     } finally {
       room.doc.y.off('afterTransaction', watch);
     }
-    // Tokens, text styles, modes, variables and keyframes belong to the whole file: changing them would change the
-    // original and every other artboard too. Inside a revision a colour or size changes on the copy itself, for
-    // instance as a custom property on its root (--accent: …), which reaches only the copy and goes with it on accept.
-    if (shared.size) {
-      if (manager.canUndo()) manager.undo();
-      throw new Error(`This run works in the revision "${rev.name}" (${rev.id}), and ${[...shared].join(', ')} ${shared.size === 1 ? 'is' : 'are'} shared by the whole file, so changing ${shared.size === 1 ? 'it' : 'them'} would change the original too. Nothing was changed. Set the value on the copy instead: layer_style on its root with a custom property such as {"--accent":"#b4410c"}, or on the layers themselves. Token changes can follow once the revision is accepted.`);
-    }
-    const outside = [...touched].filter((id) => !allowed.has(id) && !(room.doc.nodes.has(id) && room.doc.ancestors(id).some((a) => allowed.has(a))));
-    if (outside.length) {
+    const refused = revisionRefusal(room.doc, rev, allowed, touched, shared);
+    if (refused) {
       // Taken back as the one step it was (captureTimeout 0), before anyone else sees a half-applied change.
       if (manager.canUndo()) manager.undo();
-      const copyOf = revisionCopyOf(room.doc, rev);
-      const hints = outside.slice(0, 4).map((id) => (copyOf.get(id) ? `${id} is the original; its copy in this revision is ${copyOf.get(id)}` : `${id} is outside the revision`));
-      throw new Error(`This run works in the revision "${rev.name}" (${rev.id}) and changes only its copies: ${hints.join('; ')}. Nothing was changed. Use the copy ids (revision_list shows them), or the person accepts or discards the revision first.`);
+      throw new Error(refused);
     }
     return out!;
+  }
+
+  /**
+   * What `write` would refuse if it applied `update` (a Yjs update made against this file) now: a critique, a branch
+   * switched away, or layers or shared state outside an open revision. For a dry run that must not promise what
+   * the real write refuses. Throws the same errors; the file itself is never touched.
+   */
+  preflight(room: Room, update: Uint8Array): void {
+    if (this.session.scope === 'critique' && !CRITIQUE_WRITES.has(this.tool)) throw new Error('This run is a critique: it reads and comments, and changes nothing. Leave a comment with your suggestion instead.');
+    this.assertOnBranch(room);
+    const rev = REVISION_TOOLS.has(this.tool) ? undefined : this.revision(room);
+    if (!rev || rev.intent === 'new_page') return;
+    const allowed = revisionScope(room.doc, rev);
+    const y = new Y.Doc({ gc: false });
+    try {
+      Y.applyUpdate(y, Y.encodeStateAsUpdate(room.doc.y));
+      const doc = new BogenDoc(y);
+      const touched = new Set<string>();
+      const shared = new Set<string>();
+      y.on('afterTransaction', (tr: Y.Transaction) => {
+        for (const id of touchedLayers(doc, tr)) touched.add(id);
+        for (const s of touchedShared(doc, tr)) shared.add(s);
+      });
+      Y.applyUpdate(y, update, agentOrigin(this.agent));
+      const refused = revisionRefusal(doc, rev, allowed, touched, shared);
+      if (refused) throw new Error(refused);
+    } finally {
+      y.destroy();
+    }
   }
 
   touch(ids: string[]): void {
@@ -324,21 +360,42 @@ export interface ToolDefiner {
     shape: S,
     handler: (args: z.infer<z.ZodObject<S>>, ctx: ToolContext) => Promise<ToolOutput> | ToolOutput,
   ): void;
-  /** What has been defined so far, so that `batch` can run a tool as a step. */
-  tools: Map<string, { shape: z.ZodRawShape; handler: ToolHandler }>;
+  /**
+   * What has been defined so far, so that `batch` can run a tool as a step and a grouped tool can call one: its
+   * arguments, its handler, the whole call as tools/call makes it, and the area it is listed under.
+   */
+  tools: Map<string, { shape: z.ZodRawShape; handler: ToolHandler; call: (args: unknown, extra?: { signal?: AbortSignal }) => Promise<CallToolResult>; area?: string }>;
+  /** The area the next tools are listed under in the grouped tool list. */
+  area?: string;
+  /** Tools this session's scope leaves out, so that a call of one can say why it is not there. */
+  outOfScope: Set<string>;
 }
 
 /** Registers tools with uniform errors, presence and activity reporting. */
 export function toolDefiner(server: McpServer, app: BogenServer, session: Session): ToolDefiner {
   const define = ((name, meta, shape, handler) => {
     // Not even listed: a critique cannot call what it never sees, and a batch of them is not there either.
-    if (!inScope(session.scope, name, meta.readOnly)) return;
-    define.tools.set(name, { shape, handler: handler as never });
+    if (!inScope(session.scope, name, meta.readOnly)) {
+      define.outOfScope.add(name);
+      return;
+    }
     const output = OUTPUT_SCHEMAS[name];
     const callback = async (args: unknown, extra?: { signal?: AbortSignal }): Promise<CallToolResult> => {
       const ctx = new ToolContext(app, session, name, extra?.signal);
+      const startedAt = Date.now();
+      let result: CallToolResult | undefined;
       try {
-        if (session.scope === 'critique' && (args as { fix?: unknown }).fix === true) throw new Error('This run is a critique and fixes nothing. Leave a comment with the fix as its suggestion.');
+        result = await run(ctx, args);
+        return result;
+      } finally {
+        ctx.finish();
+        // A run's own calls go into its trace, with what they touched; other sessions are not traced.
+        if (session.runId) app.traces?.call(session.runId, { server: 'bogen', tool: name, args, startedAt, result: resultText(result), ...(result?.isError || !result ? { error: true } : {}), ...(ctx.wrote && ctx.nodeIds?.length ? { layers: ctx.nodeIds } : {}) });
+      }
+    };
+    const run = async (ctx: ToolContext, args: unknown): Promise<CallToolResult> => {
+      try {
+        if (session.scope === 'critique' && (args as { fix?: unknown }).fix === true) throw new Error(`This ${session.runId ? 'run is a critique' : 'session is a reviewer'} and fixes nothing. Leave a comment with the fix as its suggestion.`);
         const guard = meta.readOnly ? null : await brandGuard(ctx, name, args as { file_id?: string });
         const out = meta.readOnly ? await handler(args as never, ctx) : await brandAfterWrite(ctx, name, guard, await handler(args as never, ctx));
         if (isToolResult(out)) return out;
@@ -348,10 +405,9 @@ export function toolDefiner(server: McpServer, app: BogenServer, session: Sessio
         return { content: [{ type: 'text', text }] };
       } catch (e) {
         return { isError: true, content: [{ type: 'text', text: errorMessage(e) }] };
-      } finally {
-        ctx.finish();
       }
     };
+    define.tools.set(name, { shape, handler: handler as never, call: callback, ...(define.area ? { area: define.area } : {}) });
     server.registerTool(name, {
       description: meta.description,
       inputSchema: shape,
@@ -360,6 +416,7 @@ export function toolDefiner(server: McpServer, app: BogenServer, session: Sessio
     }, callback as never);
   }) as ToolDefiner;
   define.tools = new Map();
+  define.outOfScope = new Set();
   return define;
 }
 

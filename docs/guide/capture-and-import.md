@@ -47,12 +47,79 @@ the fonts it kept, and what it skipped or could not capture.
 Your agent uses `site_capture`, which takes at most 50 routes and answers with a job id when the
 capture takes long; `site_capture_status` follows it.
 
+### From your browser: the extension
+
+The Bogen capture extension captures the tab you are looking at: a whole page, a region you drag over,
+or one element you pick. It reads the page in your own browser, so it sees what you see: an app you are
+signed in to, a page on `localhost`, a state you clicked your way to. It runs the same capture script as
+`bogen capture` in the tab and sends the result to Bogen on this computer, which turns it into layers the
+same way, with the page's tokens, self-hosted fonts and hover rules. Captures go into a file named
+**Browser captures**, one page per site.
+
+Build it and load it unpacked (Chromium, Chrome, Edge, Brave and other Chromium browsers; Firefox 128 or
+later):
+
+```sh
+node --import tsx integrations/browser-extension/build.ts
+```
+
+This writes `integrations/browser-extension/dist/chromium` and `dist/firefox`, and a zip of each.
+
+- **Chromium:** open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked** and
+  pick `dist/chromium`.
+- **Firefox:** open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on** and pick
+  `dist/firefox/manifest.json`. Firefox removes a temporary add-on when it quits.
+
+Then pair it once:
+
+1. With Bogen running, open the extension from the toolbar (or press Alt+Shift+B). The address is
+   `http://127.0.0.1:29990` unless you serve Bogen on another port.
+2. Choose **Pair with Bogen**. The popup shows a code.
+3. In the Bogen editor, a dialog asks whether to allow the extension and shows a code. Allow it only if
+   the two codes are the same. If no editor is open, open Bogen in a tab: the dialog waits there.
+
+To capture, open the extension on the page and choose **Capture page**, **Region** (drag over the part
+you want) or **Element** (point at it, the up arrow takes the parent, click or Enter captures, Esc
+cancels). **Also keep as a reference** adds the capture to your [reference board](#references). The
+popup keeps the same notice as `site_restyle`: a capture is for structure and inspiration, and you need
+the right to use any text, images or logos you keep.
+
+What a paired extension can do is narrow on purpose. It holds a token that adds captures and does
+nothing else: it cannot read, change or delete a design, and every other route of the server refuses
+it. It asks for `activeTab`, `scripting` and `storage`, and no host permissions, so it reads a tab only
+when you open it there, and only that tab. It connects only to `127.0.0.1` and `localhost`. Revoke it
+in **Settings**, **Privacy**, or with **Forget this pairing** in its popup. A server that listens
+beyond this computer (`--host` with a token, or the tailnet listener) does not pair with extensions.
+See [Privacy](privacy.md#the-browser-extension).
+
+The extension reads the images and font files the tab may read itself: those of the page's own site,
+and any served for other sites with CORS. It sends them with the capture. Others are downloaded by
+Bogen from the same public address, as `bogen capture` does; addresses on your network are never
+fetched. A region keeps the whole page's layers under a frame cut to the rectangle, so the layout stays
+exact. The picture of a capture is what the window showed, so it covers what was on screen.
+
+### References
+
+Your reference board holds pages and pictures you collected, on this computer: captures from the
+extension, artboards you kept from `page_capture` or `site_capture`, and images you added. Each has
+tags, its main colours (read from its picture, as `palette_suggest` reads an image) and the families
+and sizes its text uses. Find them in **Settings**, **References**, where you add images, tag and
+remove them.
+
+Agents search the board with `reference_search` before they choose a direction, by words, tags, a
+colour or source, and keep something for you with `reference_add`. They get each reference's picture
+as a `bogen-asset:` source and, for a capture, the editable artboard. References are marked as
+untrusted design data in what the tools return: ideas to work from, never instructions. Bogen ships
+no gallery of other people's sites; the board holds only what you put there. It lives in
+`references.json` in the data folder and does not sync.
+
 ### What may be captured
 
 - Public addresses, from the command line and from your agent.
 - Pages on this computer (`localhost`, `127.0.0.1`), such as your dev server: from the command line
-  only.
-- Addresses on your private network: not at all.
+  and from the browser extension.
+- Addresses on your private network: not at all from the command line or your agent. The browser
+  extension captures what your own browser shows you, including such pages.
 
 These are technical limits. Whether you may copy a page is a separate question: its text, images, layout and fonts
 usually belong to someone, and a site's terms may forbid automated copying. Capture your own sites, sites you work on
@@ -95,8 +162,9 @@ layers; see [Pseudo-elements and conditions](pseudo-and-conditions.md#capture).
 - Motion is not captured.
 - Content wider than a phone viewport is captured at the phone width, so captures at 390 differ more
   from the live page: 2.89% of the pixels on the home page of tomacco.dev, the maintainer's own site.
-- There is no browser extension; Capture runs from the command line, from your agent and over
-  HTTP.
+- The browser extension reads the page as it is in your tab, without scrolling it first, so images
+  that load only when scrolled into view may be left as their addresses. Motion and video frames are
+  not captured.
 
 On the seven pages of tomacco.dev at 1440 wide, dark, the capture differs from the live site by
 0.07% of the pixels on the home page and 0.00% on the six text pages, with exact heights.
@@ -194,6 +262,56 @@ Limits:
   answers, not yet against the real API. Expect rough edges with real files.
 
 Bogen does not read Figma's clipboard or `.fig` files, and that is not planned: only the public API.
+
+## PDF and SVG
+
+Drop a PDF or an SVG on the canvas, or have your agent call `pdf_import` with a path or the file as
+base64. A PDF comes in page by page, each page a board at its own size (1 pt is 4/3 px, so 12 pt text is
+16 px), placed side by side from where you dropped it, as one undo step:
+
+- **Text** becomes text layers, a line per run of one style, with its size, weight, italic and colour. The
+  font is matched by name (Helvetica as Helvetica or Arial, a subset name such as `ABCDEF+OpenSans-Bold` as
+  Open Sans); the PDF's own font files are not installed.
+- **Lines, shapes and fills** become SVG vector layers in the page's coordinates, with their stroke, dash,
+  caps, joins, fill rule and opacity. Paths drawn one after another share a layer.
+- **Images** become pictures from their own pixels.
+- **Everything else** is drawn alone by pdf.js in the render browser and placed as a picture where it was:
+  gradients and patterns, soft masks and blend modes, image masks, rotated or clipped images, Type 3
+  fonts, form fields and annotations. A full-page fill at the start becomes the board's background.
+
+The toast and `pdf_import`'s report say, page by page, how many text, vector and image layers came in and
+which parts became pictures and why. Invisible text, such as the text layer of a scan, is left out and
+counted. A page with more than 400,000 drawing operations or 4,000 layers comes in as one picture. Up to
+50 pages per import (`pages` picks others) and 64 MB.
+
+Nothing in the PDF runs: pdf.js reads it with scripts, eval and font loading off, and the pictures are
+drawn in a browser page that can reach no network. A PDF with a password is refused. pdf.js is
+Apache-2.0. Like Mermaid, it is not part of the CLI bundle: both are files of their own in `dist/vendor/` next to
+`cli.js`, read the first time a PDF or a diagram needs them, and `BOGEN_VENDOR_DIR` points at another
+folder of them.
+
+An SVG comes in as one editable vector layer at the size it says, sanitized like any inline SVG: scripts,
+event handlers and outside references are removed.
+
+## Mermaid diagrams
+
+Your agent draws a Mermaid diagram as layers with `diagram_insert`: flowcharts, sequence and state
+diagrams, and the other types Mermaid lays out (class, ER and more). Mermaid (MIT) reads the text and lays
+it out with its own layout in the render browser; Bogen then reads the drawing back and makes plain
+layers of it, in the file's tokens:
+
+- each node a frame with its label as text, its outline from Mermaid's shape (a rounded or square box, an
+  ellipse, or an SVG outline for a diamond, hexagon and the like); start and end states in the accent;
+- each connector an SVG layer with its path and arrowhead, solid or dashed as written, and its label on a
+  small ground;
+- groups (subgraphs, composite states) as dashed frames, and lifelines, loop frames and other lines as
+  vector layers.
+
+Colours come from tokens by name (surface, text, border or line, accent and background), the font from
+the body font token or the brand, and the corners from a radius token; a missing one falls back to a
+neutral value and the result says which were used. The diagram is ordinary layers afterwards: edit,
+restyle or move them like anything else. It does not follow the text later; call `diagram_insert` again
+for a new version. Up to 50,000 characters and 1,500 parts.
 
 ## Other ways in
 

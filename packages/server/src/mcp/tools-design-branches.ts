@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { currentBranchId, describeBranch, getDesignBranch, MAIN_BRANCH } from '@bogen/core';
-import { branchSummary, startBranch, switchBranch } from '../design-branches.ts';
+import { branchSummary, mergePreview, startBranch, switchBranch } from '../design-branches.ts';
+import { visualDiff } from '../history-ops.ts';
 import { busyOnBranch, fileIdArg, type ToolContext, type ToolDefiner } from './kit.ts';
 import type { Room } from '../sync.ts';
 
@@ -43,6 +44,32 @@ export function registerDesignBranchTools(define: ToolDefiner): void {
   }, async ({ file_id }, ctx) => {
     const room = await ctx.room(file_id);
     return { file_id: room.id, ...branchSummary(room), yours: ctx.branchOf(room), note: branchNext(room) };
+  });
+
+  define('design_branch_compare', { description: 'What merging a branch would do, before the person decides: the screens that would change in the version it merges into (added, removed or changed, with how many layers), token changes, and conflicts where both sides changed the same thing. With screen_id, also how many pixels of that screen differ and a picture with the differences in red, rendered from the parent as it is now and as it would be after the merge. Use it to tell the person what to look at in their review, and to check that a branch changed only what it should. It changes nothing; only the person merges, in the editor, where the same comparison shows side by side, as an overlay and as a swipe.', readOnly: true }, {
+    branch_id: z.string().min(1).max(40).describe('A branch id from design_branch_list.'),
+    screen_id: z.string().max(200).optional().describe('One screen from the list, for its pixel difference and picture.'),
+    file_id: fileIdArg,
+  }, async ({ branch_id, screen_id, file_id }, ctx) => {
+    const room = await ctx.room(file_id);
+    const preview = mergePreview(room, branch_id);
+    const out = {
+      branch: preview.branch.name, into: preview.into.name, branch_changed: preview.branch_changed, parent_changed: preview.parent_changed,
+      screens: preview.screens, tokens: preview.tokens, conflicts: preview.conflicts.map((c) => ({ key: c.key, label: c.label, branch: c.branch, into: c.primary })),
+      ...(preview.screens.length ? {} : { note: 'No screen changes when this branch merges.' }),
+    };
+    if (!screen_id) return out;
+    const screen = preview.screens.find((s) => s.id === screen_id);
+    if (!screen) throw new Error(`${screen_id} is not a screen this merge changes. Changing: ${preview.screens.map((s) => `${s.name} (${s.id})`).join(', ') || 'none'}.`);
+    const diff = await visualDiff(ctx.app, room.id, preview.compare.from, preview.compare.to, screen.pageId, screen.id);
+    const text = { ...out, screen: { ...screen, different_percent: diff.percent, bounds: diff.bounds, picture: diff.diff ? 'differences in red' : screen.change === 'added' ? 'new in this merge, nothing before' : 'gone after the merge' } };
+    const picture = diff.diff ?? diff.after ?? diff.before;
+    return {
+      content: [
+        { type: 'text' as const, text: JSON.stringify(text, null, 1) },
+        ...(picture ? [{ type: 'image' as const, data: Buffer.from(picture).toString('base64'), mimeType: 'image/png' }] : []),
+      ],
+    };
   });
 
   define('design_branch_create', { description: 'Start a branch of this file for an alternative or a redo the person asked for ("another direction", "try a warmer version", "make it again"): a named version of the whole design inside the same file, with its own tokens, theme record, components and layers, checked out so that your next edits go into it and main stays as it is. No new file, no new page. Asking again for a branch of the same name returns it (reused: true) instead of making another. Small edits the person asked for go on the branch that is checked out; they need no branch. Only the person merges or discards a branch, in the editor.' }, {

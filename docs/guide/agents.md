@@ -72,6 +72,14 @@ Oh My Pi are tested against stand-in CLIs in a temporary home only.
 Registering a client is about using Bogen from that client. Which CLIs Bogen starts itself, from the
 canvas, is a separate list: see [Which agents Bogen runs](#which-agents-bogen-runs).
 
+### Add to agent, in Settings
+
+Settings (Ctrl+,) → **Agents** → **Add to agent** lists the clients `bogen setup` finds on this computer,
+whether Bogen is in each, and the tool list each would get. **Connect** does what `bogen install
+<client>` does, and the row says why when it could not; **Connect again** writes the entry and the
+skill anew, as after an update. The clients that are not here are named below the list. It works only
+from this computer: the server refuses these requests from a phone, a paired device or another site.
+
 To take Bogen out again:
 
 ```sh
@@ -80,6 +88,34 @@ bogen uninstall claude-code
 
 The client starts `bogen mcp`, which talks to the local server and starts it when it is not running.
 If `bogen` is not on your `PATH`, the entry names Node and the exact script instead.
+
+### Plugins
+
+Instead of `bogen install`, Claude Code, Codex and Claude Desktop can take Bogen as a plugin. Each one
+brings the MCP server entry and, for the two coding agents, the Bogen skill. None bundles Bogen itself:
+install it first with the script above, and use either the plugin or `bogen install` for a client,
+not both (`bogen uninstall <client>` takes the other out).
+
+- **Claude Code.** `/plugin marketplace add marselnenaj/bogen`, then `/plugin install bogen@bogen`. The
+  repository's `.claude-plugin/marketplace.json` lists the plugin in `integrations/claude-code`: its
+  `.mcp.json` starts `bogen mcp` with the full tool list, and its skill is the one `bogen install`
+  writes.
+- **Codex.** `codex plugin marketplace add marselnenaj/bogen`, then `codex plugin add bogen@bogen`. The
+  marketplace is `.agents/plugins/marketplace.json`, and the plugin in `integrations/codex` uses the
+  portable Agent Plugins layout (`plugin.json`, `mcp.json`, `skills/`).
+- **Claude Desktop.** Each release from this version on has `bogen-<version>.mcpb`, with a `.sha256`
+  and a `.sig` like the other assets (`bogen verify` checks them). Open it with Claude Desktop. It
+  starts `~/.local/bin/bogen mcp`, the command the install script writes, and its settings have a
+  **Tool list** field for `full`, `compact` or `grouped`. `node scripts/build-mcpb.mjs` packs it from
+  `integrations/claude-desktop`.
+
+Every plugin starts the stdio command, which talks to the server on this computer only. The files are
+written by `npx tsx scripts/gen-plugins.ts` from the server's own skill text and version. They pass
+`claude plugin validate` (Claude Code 2.1.319), `mcpb validate` and `mcpb info` (`@anthropic-ai/mcpb`
+2.1.2), and Codex 0.166 adds the marketplace, installs the plugin and lists its `bogen` server, in a
+temporary `CODEX_HOME`. A real session through a plugin, and Claude Desktop opening the extension,
+have not been tried yet. The extension is not signed with an MCPB certificate, so Claude Desktop
+shows it as unsigned; the release's own signature covers it.
 
 ### Other clients
 
@@ -93,6 +129,49 @@ the environment of `bogen mcp`. `BOGEN_URL` points `bogen mcp` at a server elsew
 
 An agent shows up in Bogen under the name of its MCP client. A client can set its own with the
 `X-Bogen-Agent` header.
+
+### A shorter tool list
+
+The full tool list is every tool with its whole schema. A client that sends every schema with each
+request pays for that on every turn, and some stop at a number of tools. Pick a shorter list with
+`bogen mcp --tools <mode>`, `BOGEN_MCP_TOOLS` in the server entry's environment, or, over HTTP,
+`http://127.0.0.1:29990/mcp?tools=<mode>` or the `X-Bogen-Tools` header:
+
+| Mode | Tools | `tools/list` response |
+| --- | --- | --- |
+| `full` (the default) | One per tool, 208, with every description. | about 270 KB |
+| `compact` | One per tool, each description its first sentence, arguments without descriptions, and annotations equal to MCP's defaults left out. | about 117 KB |
+| `grouped` | 19 area tools, such as `edit`, `brand` or `checks`. Each takes `operation`, a tool's name, and `arguments`, that tool's own arguments. Its description lists the area's tools with their required arguments, split into read-only, writes and destructive. | about 19 KB |
+
+Sizes are of this version, measured by `packages/server/test/tool-modes.test.ts`. Nothing is taken
+away: in `compact` and `grouped` there is also a `schema` tool that answers any tool's whole schema,
+as does the resource `bogen://reference/{tool}`; calling a tool by its own name works in every mode;
+`batch` steps and the guides use the same names. A grouped tool's annotations are its area's
+strictest: `destructiveHint` when any of its tools deletes something, so a client that asks before
+destructive tools asks for the whole area. An unknown value is the full list, with a warning on
+standard error.
+
+`bogen install` writes the list that suits each client:
+
+| Client | Default | Why |
+| --- | --- | --- |
+| `claude-code` | `full` | Claude Code defers MCP tools and finds them with its tool search, so only the names cost context ([docs](https://code.claude.com/docs/en/mcp)). |
+| `codex` | `full` | Codex uses tool search for MCP tools by default since 0.142.2, on the models that support it ([release](https://github.com/openai/codex/releases/tag/rust-v0.142.2)). On an older model or another provider, use `--tools compact`. |
+| `opencode` | `compact` | OpenCode sends MCP tools to the model, by default through Code Mode, where the agent calls them by name from code; its docs warn that tools use context ([docs](https://opencode.ai/docs/mcp-servers/)). Every name stays, with short schemas. |
+| `cursor` | `grouped` | Cursor keeps tool names in the prompt and reads descriptions on demand, but a limit on MCP tools is still shared between its CLI and editor ([blog](https://cursor.com/blog/dynamic-context-discovery)). |
+| `vscode` | `grouped` | A chat request has at most 128 tools ([docs](https://code.visualstudio.com/docs/agents/run/tools)); 208 would set off its experimental virtual tools. |
+| `gemini` | `grouped` | Gemini CLI registers every tool it finds ([docs](https://geminicli.com/docs/tools/mcp-server/)), and Gemini's function calling takes at most 128 declarations per request. |
+| `zed`, `grok`, `hermes`, `omp` | `grouped` | Their docs describe registering every tool, and none describes loading schemas on demand. |
+
+`bogen install <client> --tools <mode>` writes another one. These defaults follow each client's
+documentation; only Claude Code and Codex have been run against Bogen.
+
+**Reviewer profile.** `bogen mcp --profile reviewer` (or `BOGEN_MCP_PROFILE=reviewer`,
+`?profile=reviewer`, `X-Bogen-Profile: reviewer`) gives a session the scope of a
+[critique](#critique): the read-only tools, `comment_add` and `comment_reply`, and `design_lint`,
+`brand_check` and `file_open` with fixes off, about 92 KB in full. A tool that changes the design is
+not listed, and a call to one is refused with the reason, also through a grouped tool. It combines
+with every mode, for a second agent that only reviews.
 
 ### Agents in the browser (WebMCP)
 
@@ -167,6 +246,62 @@ correctly, but have not been run as slash commands in a real client yet.
 Agents leave locked layers alone. Unlocking needs a tool call the instructions tell them to make
 only when you ask.
 
+## Scripts: many edits in one step
+
+For work that would take an agent dozens of calls, such as renaming every button, binding every
+button colour to a token or building a grid of cards from a list, the agent can write a short
+JavaScript program and hand it to `script_run`. The script finds layers by name, text, kind, tag,
+style or CSS selector, reads tokens and components, and changes styles, text, attributes and names,
+creates layers from HTML, moves, removes and duplicates them.
+
+```js
+// Every button: a clear name, and its colours from the file's tokens.
+bogen.find({ tag: "button" }).forEach((b, i) => bogen.rename(b, "Button / " + (i + 1)));
+bogen.bind(bogen.find({ selector: "button" }), { backgroundColor: "accent", color: "on-accent" });
+```
+
+What it changes lands as one step, the way a `batch` does: all of it or nothing, and one undo (in the
+Agents tab, or `agent_undo`) takes the whole script back. With `dry_run` the agent sees the planned
+changes and the script's result first, and nothing is applied. If the script throws an error or hits a
+limit, nothing is applied and the result names the error, with its line, or the limit.
+
+### What a script can and cannot do
+
+A script is untrusted code, whoever wrote it: an agent may have been steered by text in a captured
+page or a comment. So it runs in a sandbox, and the sandbox is the whole of what it gets.
+
+- **An engine of its own.** The script runs in QuickJS, a small JavaScript engine, compiled to
+  WebAssembly, in a worker thread started for that one run and stopped after it. It has plain
+  JavaScript (objects, strings, `JSON`, `Math`, `Date`) and nothing of Node or a browser: no `require`,
+  `process`, `import`, `fetch`, timers, files or network. `Function` and `eval` exist, but only make
+  more code inside the same engine. Nothing survives from one run to the next.
+- **One way out.** The `bogen` object is the only thing that reaches the server. Each call crosses as
+  JSON text and is answered as JSON text, so no function, object or prototype of the server ever
+  reaches the script, and keys such as `__proto__` are dropped from what it sends. The server checks
+  every call as it checks a tool call.
+- **One file.** The script sees the file it was run on, as a private copy, and nothing else: no other
+  file, no comments or conversations, no other agent's session, no data folder paths, no device-local
+  settings such as linked code projects, and no stored assets beyond the names the file's layers
+  already use. HTML it creates goes through the same sanitizer as `html_write`, so scripts, event
+  handlers and script URLs are removed or refused, and images in that HTML are not fetched.
+- **The same rules as any tool.** Locked layers are refused (renaming too), an open revision admits
+  only its copies, a brand in strict mode refuses changes that break a hard rule (in a dry run as well),
+  and a critique run, which only reads and comments, does not have `script_run` at all.
+- **Limits.** 10 seconds of time by default (up to 30), 64 MB of memory, a nesting depth, 5,000
+  `bogen` calls, 10,000 new layers, 4 MB of written data and 256 KB of return value per run. Time,
+  calls and changes are counted by the server, and when one runs out the script is stopped where it
+  is; catching the error does not let it go on. Memory and stack are watched from outside the engine
+  too (a refused allocation, and a guard zone below the stack limit), so a script that catches its own
+  out of memory or stack overflow error still fails with that limit. A worker that does not stop in
+  time is ended.
+- **A dry run promises only what applies.** It is refused for the same reasons the real run is: a
+  limit, the brand, an open revision's scope, or the file switched to another branch since the agent
+  started on it.
+
+What a script can do is what the agent could already do with single tool calls on that file, faster
+and in one undoable step. Its reach does not grow: it cannot run other tools, publish, export, capture
+pages, upload files or start agents.
+
 ## Ask from the canvas: the chat
 
 Each file has a chat with your agent, docked between the canvas and the inspector. Press **Ctrl+K**
@@ -194,7 +329,22 @@ your plan, with no API key. The run sees your file, page and selection.
   (`claude --help`, `codex debug models`). Your choice is remembered.
 - Pick where the work lands: **Change it** works on the layers, **Propose** works on a copy for
   you to accept, **3 directions** races several runs side by side (see [A race of agents](#a-race-of-agents)),
-  and **Critique** only leaves comments (see [Critique](#critique)).
+  and **Critique** only leaves comments (see [Critique](#critique)). With **Propose** and
+  **Directions**, a row above the field sets how many copies, how far they go and what they vary (see
+  [Variations: a range and aspects](#variations-a-range-and-aspects)).
+- Type **/** for the design playbooks and your own saved skills: the one you pick goes with every
+  message of the chat as a chip (**Skill: Websites**), and the run gets that skill instead of the one
+  Bogen would pick from the words. The last entry, with an artboard selected, is **Save these decisions
+  as a skill** (see [Save these decisions as a skill](#save-these-decisions-as-a-skill)).
+- Type **@** for the layers on the page, the file's components and its tokens. The one you pick goes
+  into the message as `@Hero` or `@--accent`, and the run gets its id with it, so it does not have to
+  search for what you meant. A mention you delete from the text goes with it.
+- Under a finished answer, the download button saves the run's trace (see
+  [The trace of a run](#the-trace-of-a-run)).
+- When the chat has a branch in a linked repository, a line above the field says where it is (ready to
+  push, pushed and waiting for the merge) with **Review and push**; once the branch is merged the chat
+  says it is closed and offers **New chat** (see
+  [A pull request from a design change](export-and-code.md#a-pull-request-from-a-design-change)).
 - The CLI gets the Bogen tools and nothing else: no shell, no file access, none of your own MCP
   servers. With Codex, your user config and rules are left out too. Codex keeps its built-in image
   generation and can hand the file it saved to `asset_upload` by path. Checked once with the same
@@ -334,6 +484,35 @@ lanes with **+ Runner**. The bar says how many runs it starts, each on your own 
 Tested with stand-in CLIs, in the server tests and in the editor in a real browser. Never with two
 real CLIs at once.
 
+### Split the page
+
+Tick **Split the page: each run takes sections** under **Directions** to have the lanes work on one
+page together instead of a copy each of all of it. The selected layer's visible children are its
+sections, shared out in order (four sections over three runs: two, one and one), and the line under
+the toggle says which run takes which. Each lane gets a copy of each of its sections and is told
+which sections the others have, so it keeps to the page's tokens and spacing. **Accept** on a lane
+takes its sections in and leaves the other lanes' copies where they are; the race is decided once
+every lane is accepted or discarded. A layer with fewer sections than runs is refused before anything
+is made.
+
+## Variations: a range and aspects
+
+**Propose** and **Directions** take three more choices, in the row above the field:
+
+- **Copies** (Propose only): one to six copies from one run, side by side. Accepting one discards the
+  others.
+- **Range:** how far the copies go. **Refine** keeps the structure and the idea and makes it better;
+  **Explore** asks for clearly different takes, each a real option; **Reimagine** starts over in what
+  varies.
+- **Vary:** **Layout**, **Colour**, **Type** and **Copy** (the words). Pick some and the rest is held:
+  the run is told to keep those values exactly as the original has them. Pick none to let anything
+  change.
+
+The run gets the range and the aspects as a brief, and each copy keeps them, so `proposal_list` reports
+under `held` what a copy changed in an aspect it was to hold, with the layer and the values, for the
+agent to put back before it finishes. Agents can ask for the same thing themselves: `proposal_create`
+takes `count`, `range` and `vary`, and a race takes `range`, `vary` and `split`.
+
 ## Critique
 
 **Critique** in the chat asks an agent to review the selection or the page, and change nothing.
@@ -346,6 +525,7 @@ Type what to look at, or just press Enter.
 - Its session only gets tools that read and comment. Tools that change a layer are not listed at
   all, the checks run with their fixes off, and the server refuses a write from it even if a client
   tried one. This is decided on the server by the run, not by what the CLI was told.
+- The same scope is there for a client of your own: the [reviewer profile](#a-shorter-tool-list).
 - **Fix it** under a note hands its suggestion to a fix run: a reply that asks the agent that wrote it,
   which then works like any [comment run](#ask-in-a-comment-claude-and-codex) and leaves the thread open for you.
 
@@ -500,6 +680,26 @@ effort: all six cases passed, in 82 s. It also showed that the guard took the qu
 ändere nichts" read as an order to change) and nudged both runners once for nothing; with that fixed, a second
 real run passed all six with no nudge, in 73 s.
 
+### The repository round trip
+
+`bogen agents check --repo [--runner claude|codex] [--model <m>] [--keep]` runs the design-to-pull-request
+round trip once, for real, with nothing reaching the network or your data: a throwaway Git repository
+with a bare repository next to it as its remote, a small page served on `127.0.0.1` as its dev server,
+and a throwaway Bogen server with its own data folder on a spare port. Your own CLI makes the change,
+logged in as it is, with only the file tools of the working folder (`--mcp-config` with
+`--strict-mcp-config`, no built-in tools). The eight steps: link the repository, open its page as a
+canvas on a design branch (the capture and its components), accept a proposal that turns the title red,
+make the pull request in the chat's working folder, push with the confirmed digest (to the bare
+repository: no `gh`), merge it there as a reviewer would, and see the chat close. It prints the path of
+the run's trace, kept as the transcript; `--keep` keeps the folder.
+
+Run for real on 13 November 2026 with `claude` 2.1.319 on `haiku`: all eight steps passed in 10 s, the
+run 7 s. The agent searched for the title, read `src/Hero.tsx` and `index.html` and changed the colour in
+both. Two things were fixed before that run, found by the same check with a stand-in CLI: a captured
+page kept `-webkit-text-fill-color` as a copy of every text colour, so changing a colour on the canvas
+did not show and the code the agent got still said the old one; and a remote that is a folder made
+Bogen call `gh pr create` after the push, which fails there.
+
 ## Copy that does not sound generated
 
 The design guide and the Bogen skill tell agents how to write: plain, specific, short sentences from the
@@ -574,6 +774,17 @@ German and English with the fields a person fills in marked.
 It is a technical aid, not legal advice or a certification. What the laws and standards ask, with
 sources, and the map of every criterion: [Accessibility and other legal requirements](compliance-law.md).
 
+## Save these decisions as a skill
+
+Once an artboard is where you want it, select it, type **/** in the chat and pick **Save these
+decisions as a skill**. Bogen drafts a section for one playbook's personal `SKILL.md`: what the
+artboard settled on, read from its layers (type families and sizes, weights, the colours and spacing it
+uses most, corner radius, layout, the tokens it relies on), the proposals you accepted on it with what
+each asked for, and the requests that shaped it. The skill is the one you chose with **/**, or the one
+Bogen would pick for the artboard, and you can choose another. **Review and edit** opens the skill
+editor with the section appended; nothing is saved until you save it there, and the previous version is
+kept in the skill's history as with any edit. See [Design playbooks](design-knowledge.md).
+
 ## Proposals: review before it counts
 
 When your agent changes something you care about, it can work in a proposal: a marked copy next to
@@ -636,6 +847,32 @@ language; switch between them in the branch menu next to the file name and keep 
 same language again continues that branch. A failed or stopped run that changed nothing but the
 language withdraws the branch again. Proposals, races, critiques, image rebuilds and live site runs
 cannot hold such a branch, so they refuse it with a reason instead of translating the original.
+
+### Keeping language versions up to date
+
+A language version follows its original. The file keeps a **translation memory**: each text of the
+original and its translation, per language, shared by every branch of the file and synced with it.
+When the original changes, the agent is asked only for the text that is new or changed; Bogen brings
+the version up to date and fills in everything it already knows. What a version was translated into
+before, by an agent or by hand, is learned from it. Bogen translates nothing itself and calls no
+translation service: your own agent does the translating.
+
+Under **Language versions** in the language popover:
+
+- each version says how many texts it still needs, or that it is up to date;
+- **Included** (translated and kept up to date), **Untranslated** (it shows the original's words and
+  asks for nothing) or **Hidden** (left out of translation work; the
+  [check before publishing](export-and-code.md#publish) warns before it goes out);
+- **Translate what changed** puts an instruction into your message for the agent;
+- **Never translate** lists brand and product names that stay as they are in every language. Code,
+  addresses, numbers, layers inside `code` or `pre`, and layers with `translate="no"` stay as they are
+  anyway.
+
+Bringing a version up to date takes the original's new and changed screens and layers into it, keeps
+the version's own fixes (a font size for a longer German word, say), and is one change with a commit
+before it. Where a layer changed in both, the original's side comes in and its text is filled from the
+memory or translated again. Text ranges with their own style are not carried over into a translation.
+Agents use `translation_status`, `translation_apply` and `translation_rules_set`.
 
 Every run gets the language: the chat, comments (the file default), the phone, races, runs on a
 paired device and reruns. The agent is told to translate visible copy, button labels, placeholders, alt
@@ -715,6 +952,21 @@ kept in `run-shots/<fileId>/` in the data folder; the names stay in the run hist
 An agent can select layers in your editor or bring them into view, to point at what it means. It
 waits while you drag or type. Turn **Let agents show me things** off in the Agents tab to stop it.
 
+### Layer links
+
+`selection_set` and `view_focus` also answer with `link`, an address that opens the editor with those
+layers selected and in view, such as
+`http://127.0.0.1:29990/#/file/<file>?page=<page>&select=<layer>,<layer>`. An agent prints it when
+nobody has the file open, or in a report. From a terminal:
+
+```sh
+bogen open "Landing page#Hero"
+```
+
+opens the file, by id or name, with the layer selected and in view, by its id or its name (any case,
+on the page in view first). That is `#/file/<file>?layer=<id or name>`. A link opened while the file
+is already open in the tab moves the selection and the view without a reload.
+
 ## Run settings and run history
 
 The Agents tab keeps:
@@ -726,6 +978,21 @@ The Agents tab keeps:
   that was asked once more to make the change says so.
 - **Run reports:** when the file has a brand, a run ends with its brand score and what is still
   open. See [Brands](brand.md).
+
+### The trace of a run
+
+Every run Bogen starts keeps a trace, for a bug report: the request, the conversation before it and the
+instructions the CLI got; every tool call with its arguments and result (cut at a few thousand
+characters), when it started in milliseconds from the start of the run and how long it took; what the
+CLI said; and the layers and repository files it touched. Secrets are masked by pattern (tokens, keys,
+cookies, bearer headers), your home folder shows as `~`, and the contents of files outside Bogen are
+left out with their size: what a run on a repository read or wrote, and what `code_get` read from your
+project. Read it before you share it.
+
+Download it with the button under an answer in the chat, with `bogen agents trace <run id> [--output
+<file>]`, or have an agent read it with `trace_get` (without a run id it lists the file's latest runs;
+`save` writes it into the export folder). The latest 200 traces are kept in `traces/` in the data
+folder. Runs of an MCP client you started yourself have none.
 
 ## The queue
 

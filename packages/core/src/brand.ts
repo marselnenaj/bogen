@@ -936,6 +936,24 @@ export function brandTokens(data: BrandData): Token[] {
   return [...out.values()].sort((a, b) => (a.name < b.name ? -1 : 1));
 }
 
+/**
+ * Tokens a brand renamed between two of its versions: an item (a colour, family, type step, spacing or radius) that
+ * kept its id and got another token name. Old name to new name, so that linked files follow (token-rename.ts).
+ */
+export function brandTokenRenames(from: BrandData, to: BrandData): Map<string, string> {
+  const out = new Map<string, string>();
+  const sections = ['colors', 'families', 'typeScale', 'spacing', 'radius'] as const;
+  for (const section of sections) {
+    const before = new Map((from[section] as { id: string; token: string; suggested?: boolean }[]).map((i) => [i.id, i]));
+    for (const item of to[section] as { id: string; token: string; suggested?: boolean }[]) {
+      const was = before.get(item.id);
+      if (!was || was.suggested || item.suggested || was.token === item.token) continue;
+      if (TOKEN_NAME.test(was.token) && TOKEN_NAME.test(item.token)) out.set(was.token, item.token);
+    }
+  }
+  return out;
+}
+
 /** A type step as a text style of the design system: one name for family, size, weight, line height and tracking. */
 export function stepTextStyle(data: BrandData, step: BrandTypeStep): Record<string, string> {
   const family = data.families.find((f) => f.id === step.family || f.family === step.family);
