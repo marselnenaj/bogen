@@ -11,7 +11,8 @@ import { assertUnlocked, fileIdArg, pageIdArg, type ToolDefiner } from './kit.ts
 
 /** Web craft: fluid type and space, grids and containers that adapt, and the checks a designer runs before shipping. */
 
-const pair = z.tuple([z.number().min(1).max(400), z.number().min(1).max(400)]);
+// Pairs are arrays of length 2, not tuples: a tuple is draft-07 `items: [...]`, which draft 2020-12 rejects.
+const pair = z.array(z.number().min(1).max(400)).length(2);
 const REDUCED = '@media (prefers-reduced-motion: reduce)';
 
 /** Motion presets with the timing that reads as deliberate: short, ease-out, with a still alternative. */
@@ -119,14 +120,15 @@ export function registerWebTools(define: ToolDefiner): void {
 
   define('type_scale_set', { description: 'Give a website one fluid type and spacing scale instead of per-breakpoint sizes: font-size tokens --type-display, --type-h1 … --type-small and --space-3xs … --space-3xl as clamp() in rem, growing from the small to the large viewport, plus line-height and tracking tokens and text styles (Display, H1, H2, H3, Lead, Body, Small) that use them. Every breakpoint and every component follows a token change, and the export writes the same clamp(). Apply the styles with text_style_apply, and use var(--space-…) for padding and gaps. Returns the px each role has at the small and large viewport.' }, {
     body: pair.optional().describe('Body size at the small and large viewport, px. Default [16, 18].'),
-    ratio: z.tuple([z.number().min(1.05).max(1.8), z.number().min(1.05).max(1.8)]).optional().describe('Step ratio at the small and large viewport. Default [1.2, 1.25]; editorial pages often want [1.2, 1.333].'),
-    viewport: z.tuple([z.number().int().min(240).max(1200), z.number().int().min(600).max(2560)]).optional().describe('Viewport range in px. Default [360, 1280].'),
+    ratio: z.array(z.number().min(1.05).max(1.8)).length(2).optional().describe('Step ratio at the small and large viewport. Default [1.2, 1.25]; editorial pages often want [1.2, 1.333].'),
+    viewport: z.array(z.number().int().min(240).max(2560)).length(2).refine((v) => v[0]! <= 1200 && v[1]! >= 600, 'The small viewport is 240 to 1200 px, the large 600 to 2560.').optional().describe('Viewport range in px. Default [360, 1280].'),
     space: pair.optional().describe('Spacing base at the small and large viewport, px. Default [16, 20].'),
     text_styles: z.boolean().default(true).describe('Also create or update the text styles.'),
     file_id: fileIdArg,
   }, async ({ body, ratio, viewport, space, text_styles, file_id }, ctx) => {
     const room = await ctx.room(file_id);
-    const scale = fluidScale({ ...(body ? { body } : {}), ...(ratio ? { ratio } : {}), ...(viewport ? { viewport } : {}), ...(space ? { space } : {}) });
+    const two = (v: number[] | undefined) => v as [number, number] | undefined;
+    const scale = fluidScale({ ...(body ? { body: two(body) } : {}), ...(ratio ? { ratio: two(ratio) } : {}), ...(viewport ? { viewport: two(viewport) } : {}), ...(space ? { space: two(space) } : {}) });
     const styles: string[] = [];
     ctx.write(room, () => {
       for (const t of scale.tokens) room.doc.setToken(t.name, t.kind, t.value);

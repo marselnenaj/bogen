@@ -818,13 +818,13 @@ Place a design onto an object as a mockup: an artboard (or any frame) shown on a
 | `scene` | string |  | A scene id from mockup_list. |
 | `photo` | string |  | Instead of a scene: an image layer id or a bogen-asset src of a photo. Needs corners or mesh in its px. |
 | `corners` | object |  | Where the print's corners go, in px of the photo (or of the scene at its own size): top left, top right, bottom right, bottom left. |
-| `corners.tl` | array of any | yes | (at most 2 items) |
-| `corners.tr` | array of any | yes | (at most 2 items) |
-| `corners.br` | array of any | yes | (at most 2 items) |
-| `corners.bl` | array of any | yes | (at most 2 items) |
+| `corners.tl` | array of number | yes | (at most 2 items) |
+| `corners.tr` | array of number | yes | (at most 2 items) |
+| `corners.br` | array of number | yes | (at most 2 items) |
+| `corners.bl` | array of number | yes | (at most 2 items) |
 | `mesh` | object |  | For a bent surface: points along the top and the bottom edge of the print, left to right, as many on each (one strip between neighbours), in the same px. |
-| `mesh.top` | array of array of any | yes | (at most 33 items) |
-| `mesh.bottom` | array of array of any | yes | (at most 33 items) |
+| `mesh.top` | array of array of number | yes | (at most 33 items) |
+| `mesh.bottom` | array of array of number | yes | (at most 33 items) |
 | `width` | number |  | Width of the mockup in px; its height follows the scene or photo. Default 800. (100 to 8000) |
 | `blend` | "normal" or "multiply" or "darken" or "screen" or "overlay" |  | How the print meets the surface: multiply for ink on paper or cloth (default for prints), normal for screens. |
 | `shading` | number |  | How much of the surface's light and shadow shows on the print. (0 to 1) |
@@ -2664,10 +2664,10 @@ Give a website one fluid type and spacing scale instead of per-breakpoint sizes:
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `body` | array of any |  | Body size at the small and large viewport, px. Default [16, 18]. (at most 2 items) |
-| `ratio` | array of any |  | Step ratio at the small and large viewport. Default [1.2, 1.25]; editorial pages often want [1.2, 1.333]. (at most 2 items) |
-| `viewport` | array of any |  | Viewport range in px. Default [360, 1280]. (at most 2 items) |
-| `space` | array of any |  | Spacing base at the small and large viewport, px. Default [16, 20]. (at most 2 items) |
+| `body` | array of number |  | Body size at the small and large viewport, px. Default [16, 18]. (at most 2 items) |
+| `ratio` | array of number |  | Step ratio at the small and large viewport. Default [1.2, 1.25]; editorial pages often want [1.2, 1.333]. (at most 2 items) |
+| `viewport` | array of integer |  | Viewport range in px. Default [360, 1280]. (at most 2 items) |
+| `space` | array of number |  | Spacing base at the small and large viewport, px. Default [16, 20]. (at most 2 items) |
 | `text_styles` | boolean |  | Also create or update the text styles. (default true) |
 | `file_id` | string |  | The file. Defaults to the file last opened in this session, then the file the person has open. |
 

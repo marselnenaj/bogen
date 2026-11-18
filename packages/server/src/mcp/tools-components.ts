@@ -381,8 +381,8 @@ Expose what varies as props, such as the label of a button. Mark frames as slots
   });
 
   define('design_system_css', { description: 'The file\'s design system as one stylesheet for a repository: tokens with one block per theme mode, and text styles as classes. The same blocks as tokens_export with format css, and it also answers for a file that has text styles but no tokens. For Tailwind 4 or Tailwind 3 output use tokens_export.', readOnly: true }, {
-    selector: z.string().regex(/^[\w\s.:#\-[\]="']{1,80}$/).default(':root'),
-    mode_selector: z.string().regex(/^[\w\s.:#\-[\]="'{}]{1,80}$/).optional().describe('Where a mode\'s values go, with {mode} for its name, such as .{mode}. Default [data-mode="{mode}"].'),
+    selector: z.string().regex(/^[\w\s.:#\-\[\]="']{1,80}$/).default(':root'),
+    mode_selector: z.string().regex(/^[\w\s.:#\-\[\]="'{}]{1,80}$/).optional().describe('Where a mode\'s values go, with {mode} for its name, such as .{mode}. Default [data-mode="{mode}"].'),
     file_id: fileIdArg,
   }, async ({ selector, mode_selector, file_id }, ctx) => {
     const { doc } = await ctx.room(file_id);

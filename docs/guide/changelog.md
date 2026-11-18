@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+A fix for agents that load Bogen's full tool list.
+
+- **Claude runs work again with every client.** The Claude API checks each tool's input schema against JSON Schema draft 2020-12 and refuses the whole request when one fails. Two selector patterns in `design_system_css` and `tokens_export` had an unescaped `[`, and the number pairs of `type_scale_set`, the web tools and mockup points were written as draft-07 tuples, so any Claude run that loaded the full list stopped with "input_schema: JSON schema is invalid". The patterns are escaped, the pairs are arrays of two numbers with the same limits, and a test now checks every tool schema in every list mode. Thanks to acr-sed for the precise report.
+
 ## 0.4.0
 
 I made Bogen something you can talk to: call your agent and it answers in a sentence or two while it works on your file. Files open as tabs, a brand opens on a real brand book, and pictures come from your own Codex CLI.

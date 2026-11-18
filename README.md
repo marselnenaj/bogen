@@ -2,7 +2,7 @@
 
 **Give your agent a canvas.**
 
-<a href="https://github.com/marselnenaj/bogen/releases/latest"><img src="https://img.shields.io/badge/version-0.4.0-2b3df2" alt="Version 0.4.0"></a>
+<a href="https://github.com/marselnenaj/bogen/releases/latest"><img src="https://img.shields.io/badge/version-0.4.1-2b3df2" alt="Version 0.4.1"></a>
 
 Bogen is an open-source design tool where you and your coding agent edit the same canvas. Every layer is real
 HTML and CSS. Connect Claude Code, Codex or another MCP client, then work on a website, an app interface or an

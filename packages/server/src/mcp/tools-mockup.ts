@@ -8,7 +8,8 @@ import { assertUnlocked, fileIdArg, pageIdArg, type ToolContext, type ToolDefine
 
 /** Mockups: a design on a photo or a drawn object, by corners or a mesh, as a live instance of its artboard. */
 
-const pointArg = z.tuple([z.number(), z.number()]);
+// Two numbers as an array of length 2, not a tuple: a tuple is draft-07 `items: [...]`, which draft 2020-12 rejects.
+const pointArg = z.array(z.number()).length(2);
 const cornersArg = z.object({ tl: pointArg, tr: pointArg, br: pointArg, bl: pointArg }).describe('Where the print\'s corners go, in px of the photo (or of the scene at its own size): top left, top right, bottom right, bottom left.');
 const meshArg = z.object({ top: z.array(pointArg).min(2).max(33), bottom: z.array(pointArg).min(2).max(33) }).describe('For a bent surface: points along the top and the bottom edge of the print, left to right, as many on each (one strip between neighbours), in the same px.');
 
