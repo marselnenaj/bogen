@@ -1084,7 +1084,6 @@
   "many": "Deisigh na {count} locht ar fad",
   "other": "Deisigh na {count} locht ar fad"
  },
- "Fix anyway": "Deisigh mar sin féin",
  "Fix it": "Ceartaigh é",
  "Fix started": "Deisiú tosaithe",
  "Fix {count} defects": {
@@ -3305,8 +3304,6 @@
  "This file is open in another window": "Tá an comhad seo oscailte i bhfuinneog eile",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Nascann an comhad seo le branda nach bhfuil ar an ngléas seo. D’fhéadfadh sé a bheith á shioncrónú fós, nó scriosadh é.",
  "This file's score each time it was checked as a whole": "Scór an chomhaid seo gach uair a seiceáladh ina iomláine é",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "D'fhéadfadh an deisiú seo {layers} sraith ar {pages} leathanach a athrú. Is féidir athruithe an ghníomhaire a chealú in aon chéim amháin ón gcomhrá.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "D'fhéadfadh an deisiú seo {layers} sraith a athrú. Is féidir athruithe an ghníomhaire a chealú in aon chéim amháin ón gcomhrá.",
  "This folder is empty": "Tá an fillteán seo folamh",
  "This framework does not say which file it came from, so your agent will search.": "Ní deir an creatlach seo cén comhad as ar tháinig sé, mar sin cuardóidh do ghníomhaire.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Níl aon script imscartha sa suiteáil seo. I dteirminéal, ó sheiceáil amach de Bogen, rith {command}.",

@@ -1044,7 +1044,6 @@
   "many": "Corregeix els {count} defectes",
   "other": "Corregeix els {count} defectes"
  },
- "Fix anyway": "Corregeix igualment",
  "Fix it": "Arregla-ho",
  "Fix started": "Correcció iniciada",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Aquest fitxer està obert en una altra finestra",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Aquest fitxer enllaça a una marca que no és en aquest dispositiu. Potser encara s'està sincronitzant, o s'ha suprimit.",
  "This file's score each time it was checked as a whole": "La puntuació d'aquest fitxer cada vegada que s'ha comprovat sencer",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Aquesta correcció pot afectar {layers} capes en {pages} pàgines. Els canvis de l'agent es poden desfer d'un sol cop des del xat.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Aquesta correcció pot afectar {layers} capes. Els canvis de l'agent es poden desfer d'un sol cop des del xat.",
  "This folder is empty": "Aquesta carpeta és buida",
  "This framework does not say which file it came from, so your agent will search.": "Aquest framework no indica de quin fitxer ve, així que el teu agent el buscarà.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Aquesta instal·lació no té cap script de desplegament. En un terminal, des d'una còpia de Bogen, executa {command}.",

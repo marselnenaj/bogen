@@ -1024,7 +1024,6 @@
   "one": "Rett feilen",
   "other": "Rett alle {count} feil"
  },
- "Fix anyway": "Rett likevel",
  "Fix it": "Rett det",
  "Fix started": "Retting startet",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Denne filen er åpen i et annet vindu",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Denne filen er koblet til en merkevare som ikke finnes på denne enheten. Den synkroniseres kanskje fortsatt, eller den er slettet.",
  "This file's score each time it was checked as a whole": "Poengsummen til denne filen hver gang den ble sjekket som helhet",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Denne rettingen kan berøre {layers} lag på {pages} sider. Agentens endringer kan angres i ett trinn fra chatten.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Denne rettingen kan berøre {layers} lag. Agentens endringer kan angres i ett trinn fra chatten.",
  "This folder is empty": "Denne mappen er tom",
  "This framework does not say which file it came from, so your agent will search.": "Dette rammeverket oppgir ikke hvilken fil det kom fra, så agenten din vil søke.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Denne installasjonen har ikke noe utrullingsskript. Kjør {command} i en terminal fra en utsjekking av Bogen.",

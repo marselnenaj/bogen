@@ -1024,7 +1024,6 @@
   "one": "Lagfæra {count} galla",
   "other": "Lagfæra alla {count} galla"
  },
- "Fix anyway": "Lagfæra samt",
  "Fix it": "Laga það",
  "Fix started": "Lagfæring hafin",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Þessi skrá er opin í öðrum glugga",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Þessi skrá tengist vörumerki sem er ekki á þessu tæki. Það gæti enn verið að samstillast, eða því var eytt.",
  "This file's score each time it was checked as a whole": "Einkunn þessarar skráar í hvert sinn sem hún var athuguð í heild",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Þessi lagfæring gæti snert {layers} lög á {pages} síðum. Hægt er að afturkalla breytingar fulltrúans í einu skrefi úr spjallinu.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Þessi lagfæring gæti snert {layers} lög. Hægt er að afturkalla breytingar fulltrúans í einu skrefi úr spjallinu.",
  "This folder is empty": "Þessi mappa er tóm",
  "This framework does not say which file it came from, so your agent will search.": "Þetta rammaverk segir ekki úr hvaða skrá það kom, svo fulltrúinn þinn mun leita.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Þessi uppsetning hefur ekkert dreifingarskrifta. Í útstöð, úr afriti af Bogen, keyrðu {command}.",

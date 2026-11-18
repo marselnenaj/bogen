@@ -1024,7 +1024,6 @@
   "one": "Διόρθωση του ελαττώματος",
   "other": "Διόρθωση και των {count} ελαττωμάτων"
  },
- "Fix anyway": "Διόρθωση παρ' όλα αυτά",
  "Fix it": "Διόρθωση",
  "Fix started": "Η διόρθωση ξεκίνησε",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Αυτό το αρχείο είναι ανοιχτό σε άλλο παράθυρο",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Αυτό το αρχείο συνδέεται με μάρκα που δεν υπάρχει σε αυτήν τη συσκευή. Μπορεί να συγχρονίζεται ακόμη ή να έχει διαγραφεί.",
  "This file's score each time it was checked as a whole": "Η βαθμολογία αυτού του αρχείου κάθε φορά που ελέγχθηκε ολόκληρο",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Αυτή η διόρθωση μπορεί να αγγίξει {layers} επίπεδα σε {pages} σελίδες. Οι αλλαγές του πράκτορα αναιρούνται με ένα βήμα από τη συνομιλία.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Αυτή η διόρθωση μπορεί να αγγίξει {layers} επίπεδα. Οι αλλαγές του πράκτορα αναιρούνται με ένα βήμα από τη συνομιλία.",
  "This folder is empty": "Αυτός ο φάκελος είναι κενός",
  "This framework does not say which file it came from, so your agent will search.": "Αυτό το framework δεν λέει από ποιο αρχείο προήλθε, οπότε ο πράκτοράς σας θα ψάξει.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Αυτή η εγκατάσταση δεν έχει script ανάπτυξης. Σε τερματικό, από ένα checkout του Bogen, εκτελέστε {command}.",

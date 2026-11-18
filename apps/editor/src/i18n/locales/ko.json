@@ -1004,7 +1004,6 @@
  "Fix all {count} defects": {
   "other": "결함 {count}개 모두 수정"
  },
- "Fix anyway": "그래도 수정",
  "Fix it": "수정",
  "Fix started": "수정 시작됨",
  "Fix {count} defects": {
@@ -3065,8 +3064,6 @@
  "This file is open in another window": "이 파일은 다른 창에서 열려 있습니다",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "이 파일은 이 기기에 없는 브랜드에 연결되어 있습니다. 아직 동기화 중이거나 삭제되었을 수 있습니다.",
  "This file's score each time it was checked as a whole": "파일 전체를 검사할 때마다 기록된 이 파일의 점수",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "이 수정은 {pages}개 페이지의 레이어 {layers}개에 영향을 줄 수 있습니다. 에이전트의 변경은 채팅에서 한 번에 되돌릴 수 있습니다.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "이 수정은 레이어 {layers}개에 영향을 줄 수 있습니다. 에이전트의 변경은 채팅에서 한 번에 되돌릴 수 있습니다.",
  "This folder is empty": "이 폴더는 비어 있습니다",
  "This framework does not say which file it came from, so your agent will search.": "이 프레임워크는 어느 파일에서 왔는지 알려 주지 않으므로 에이전트가 찾아볼 것입니다.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "이 설치에는 배포 스크립트가 없습니다. 터미널에서 Bogen 체크아웃 위치로 가서 {command}을(를) 실행하세요.",

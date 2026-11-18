@@ -1024,7 +1024,6 @@
   "one": "Korjaa virhe",
   "other": "Korjaa kaikki {count} virhettä"
  },
- "Fix anyway": "Korjaa silti",
  "Fix it": "Korjaa se",
  "Fix started": "Korjaus aloitettu",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Tämä tiedosto on auki toisessa ikkunassa",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Tämä tiedosto linkittyy brändiin, joka ei ole tällä laitteella. Se saattaa yhä synkronoitua, tai se on poistettu.",
  "This file's score each time it was checked as a whole": "Tämän tiedoston pisteet aina, kun se tarkistettiin kokonaisuutena",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Tämä korjaus voi koskea {layers} tasoa {pages} sivulla. Agentin muutokset voi kumota yhdellä kertaa chatista.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Tämä korjaus voi koskea {layers} tasoa. Agentin muutokset voi kumota yhdellä kertaa chatista.",
  "This folder is empty": "Tämä kansio on tyhjä",
  "This framework does not say which file it came from, so your agent will search.": "Tämä sovelluskehys ei kerro, mistä tiedostosta se tuli, joten agenttisi etsii.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Tässä asennuksessa ei ole käyttöönottoskriptiä. Suorita päätteessä Bogenin työkopiosta {command}.",

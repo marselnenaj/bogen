@@ -1024,7 +1024,6 @@
   "one": "Поправи дефекта",
   "other": "Поправи всички {count} дефекта"
  },
- "Fix anyway": "Поправи въпреки това",
  "Fix it": "Поправи го",
  "Fix started": "Поправката започна",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Този файл е отворен в друг прозорец",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Този файл е свързан с марка, която не е на това устройство. Може още да се синхронизира или да е изтрита.",
  "This file's score each time it was checked as a whole": "Оценката на този файл при всяка проверка като цяло",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Тази поправка може да засегне {layers} слоя на {pages} страници. Промените на агента могат да се отменят с една стъпка от чата.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Тази поправка може да засегне {layers} слоя. Промените на агента могат да се отменят с една стъпка от чата.",
  "This folder is empty": "Тази папка е празна",
  "This framework does not say which file it came from, so your agent will search.": "Тази рамка за разработка не казва от кой файл идва, затова агентът ви ще търси.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Тази инсталация няма скрипт за внедряване. В терминал, от копие на Bogen, изпълнете {command}.",

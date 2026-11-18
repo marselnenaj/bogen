@@ -1024,7 +1024,6 @@
   "one": "குறைபாட்டைச் சரிசெய்",
   "other": "{count} குறைபாடுகளையும் சரிசெய்"
  },
- "Fix anyway": "இருந்தாலும் சரிசெய்",
  "Fix it": "சரிசெய்",
  "Fix started": "திருத்தம் தொடங்கியது",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "இந்தக் கோப்பு வேறொரு சாளரத்தில் திறந்துள்ளது",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "இந்தக் கோப்பு இந்தச் சாதனத்தில் இல்லாத ஒரு வர்த்தகநாமத்துடன் இணைக்கிறது. அது இன்னும் ஒத்திசைந்துகொண்டிருக்கலாம், அல்லது நீக்கப்பட்டிருக்கலாம்.",
  "This file's score each time it was checked as a whole": "முழுமையாகச் சோதிக்கப்பட்ட ஒவ்வொரு முறையும் இந்தக் கோப்பின் மதிப்பெண்",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "இந்தத் திருத்தம் {pages} பக்கங்களில் {layers} அடுக்குகளைத் தொடலாம். முகவரின் மாற்றங்களை அரட்டையிலிருந்து ஒரே படியில் செயல்தவிர்க்கலாம்.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "இந்தத் திருத்தம் {layers} அடுக்குகளைத் தொடலாம். முகவரின் மாற்றங்களை அரட்டையிலிருந்து ஒரே படியில் செயல்தவிர்க்கலாம்.",
  "This folder is empty": "இந்தக் கோப்புறை வெறுமையாக உள்ளது",
  "This framework does not say which file it came from, so your agent will search.": "இந்த framework அது எந்தக் கோப்பிலிருந்து வந்தது என்று சொல்லாது, எனவே உங்கள் முகவர் தேடும்.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "இந்த நிறுவலில் deploy script இல்லை. ஒரு terminal இல், Bogen இன் checkout இலிருந்து {command} ஐ இயக்கவும்.",

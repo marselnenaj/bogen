@@ -1044,7 +1044,6 @@
   "few": "Исправить все {count} дефекта",
   "many": "Исправить все {count} дефектов"
  },
- "Fix anyway": "Всё равно исправить",
  "Fix it": "Исправить",
  "Fix started": "Исправление запущено",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Этот файл открыт в другом окне",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Этот файл привязан к бренду, которого нет на этом устройстве. Возможно, он ещё синхронизируется или был удалён.",
  "This file's score each time it was checked as a whole": "Оценка этого файла при каждой его полной проверке",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Это исправление может затронуть слоёв: {layers}, страниц: {pages}. Изменения агента можно отменить одним шагом из чата.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Это исправление может затронуть слоёв: {layers}. Изменения агента можно отменить одним шагом из чата.",
  "This folder is empty": "Эта папка пуста",
  "This framework does not say which file it came from, so your agent will search.": "Этот фреймворк не сообщает, из какого файла получен элемент, поэтому агенту придётся искать.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "В этой установке нет скрипта развёртывания. В терминале, из рабочей копии Bogen, выполните {command}.",

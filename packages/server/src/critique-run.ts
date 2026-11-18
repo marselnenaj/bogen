@@ -50,6 +50,7 @@ export interface CritiqueOptions {
   maxRounds?: number;
   series?: string;
   purpose?: string;
+  replyLanguage?: string;
 }
 
 /** The artboards a review covers: the ones named, or every artboard on the page in canvas order. */
@@ -117,7 +118,7 @@ export class CritiqueJobs {
         reviewer: opts.reviewer ?? 'auto', ...(opts.makerModel ? { makerModel: opts.makerModel } : {}),
         ...(opts.until !== undefined ? { until: opts.until } : {}), maxRounds: opts.maxRounds ?? 1,
         ...(opts.series ? { series: opts.series } : {}), ...(purpose ? { purpose } : {}),
-        language, brand: brand?.data ?? null,
+        language, brand: brand?.data ?? null, ...(opts.replyLanguage ? { replyLanguage: opts.replyLanguage } : {}),
         onStep: (step, detail) => {
           if (job.step !== step) job.stepAt = { ...job.stepAt, [step]: Date.now() };
           job.step = step;

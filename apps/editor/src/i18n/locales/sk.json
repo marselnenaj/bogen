@@ -1044,7 +1044,6 @@
   "few": "Opraviť všetky {count} chyby",
   "other": "Opraviť všetkých {count} chýb"
  },
- "Fix anyway": "Aj tak opraviť",
  "Fix it": "Opraviť",
  "Fix started": "Oprava spustená",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Tento súbor je otvorený v inom okne",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Tento súbor odkazuje na značku, ktorá nie je v tomto zariadení. Možno sa ešte synchronizuje, alebo bola odstránená.",
  "This file's score each time it was checked as a whole": "Skóre tohto súboru pri každej kontrole ako celku",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Táto oprava môže zasiahnuť vrstvy ({layers}) na stránkach ({pages}). Zmeny agenta sa dajú vrátiť jedným krokom z chatu.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Táto oprava môže zasiahnuť vrstvy ({layers}). Zmeny agenta sa dajú vrátiť jedným krokom z chatu.",
  "This folder is empty": "Tento priečinok je prázdny",
  "This framework does not say which file it came from, so your agent will search.": "Tento framework neuvádza, z ktorého súboru pochádza, preto bude agent hľadať.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Táto inštalácia nemá skript na nasadenie. V termináli spustite z checkoutu Bogenu {command}.",

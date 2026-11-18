@@ -15,6 +15,8 @@ const Start = z.object({
   maxRounds: z.number().int().min(1).max(MAX_ROUNDS).default(1),
   series: z.string().regex(/^[0-9a-f]{12}$/).optional(),
   purpose: z.string().max(600).optional(),
+  /** The language the person reads Bogen in; the reviewer writes its findings in it. */
+  replyLanguage: z.string().regex(/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})?$/).optional(),
 });
 const JobId = z.string().regex(/^[0-9a-f]{16}$/);
 const FileId = z.string().regex(/^[a-z0-9]{10}$/);
@@ -64,6 +66,7 @@ export async function handleCritiqueRoute(
         ...(body.flow !== undefined ? { flow: body.flow } : {}), reviewer: body.reviewer,
         ...(body.until !== undefined ? { until: body.until } : {}), maxRounds: body.maxRounds,
         ...(body.series ? { series: body.series } : {}), ...(body.purpose ? { purpose: body.purpose } : {}),
+        ...(body.replyLanguage ? { replyLanguage: body.replyLanguage } : {}),
       });
       return send(res, 202, { job });
     } catch (e) {

@@ -1024,7 +1024,6 @@
   "one": "Ayusin ang depekto",
   "other": "Ayusin ang lahat ng {count} depekto"
  },
- "Fix anyway": "Ayusin pa rin",
  "Fix it": "Ayusin ito",
  "Fix started": "Nagsimula ang pag-aayos",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Bukas ang file na ito sa ibang window",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Naka-link ang file na ito sa brand na wala sa device na ito. Baka nagsi-sync pa ito, o binura na ito.",
  "This file's score each time it was checked as a whole": "Ang score ng file na ito tuwing nasuri ito nang buo",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Maaaring magalaw ng ayos na ito ang {layers} layer sa {pages} page. Maa-undo ang mga pagbabago ng agent sa isang hakbang mula sa chat.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Maaaring magalaw ng ayos na ito ang {layers} layer. Maa-undo ang mga pagbabago ng agent sa isang hakbang mula sa chat.",
  "This folder is empty": "Walang laman ang folder na ito",
  "This framework does not say which file it came from, so your agent will search.": "Hindi sinasabi ng framework na ito kung saang file ito galing, kaya maghahanap ang iyong agent.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Walang deploy script ang install na ito. Sa terminal, mula sa checkout ng Bogen, patakbuhin ang {command}.",

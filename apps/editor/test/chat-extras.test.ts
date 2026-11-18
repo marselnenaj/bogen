@@ -29,7 +29,7 @@ describe('the range and aspects', () => {
   });
 
   it('says what is held, and which sections each run takes', () => {
-    expect(heldLine(['layout'])).toBe('Varies: Layout. Holds: Colour, Type, and Copy.');
+    expect(heldLine(['layout'])).toBe('Varies: Layout. Holds: Colour, Type, and Text.');
     expect(heldLine([])).toMatch(/^Varies anything/);
     expect(splitHint(['Hero', 'Features', 'Pricing', 'Footer'], 3)).toBe('Run 1: Hero, Features. Run 2: Pricing. Run 3: Footer.');
     expect(splitHint(['Hero'], 2)).toMatch(/at least 2 sections/);

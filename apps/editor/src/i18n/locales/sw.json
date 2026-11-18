@@ -1024,7 +1024,6 @@
   "one": "Rekebisha kasoro",
   "other": "Rekebisha kasoro zote {count}"
  },
- "Fix anyway": "Rekebisha hata hivyo",
  "Fix it": "Irekebishe",
  "Fix started": "Marekebisho yameanza",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Faili hili limefunguliwa katika dirisha jingine",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Faili hii imeunganishwa na chapa ambayo haipo kwenye kifaa hiki. Huenda bado inasawazishwa, au ilifutwa.",
  "This file's score each time it was checked as a whole": "Alama ya faili hii kila ilipokaguliwa kwa ujumla",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Marekebisho haya yanaweza kugusa tabaka {layers} kwenye kurasa {pages}. Mabadiliko ya wakala yanaweza kutenduliwa kwa hatua moja kutoka kwenye gumzo.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Marekebisho haya yanaweza kugusa tabaka {layers}. Mabadiliko ya wakala yanaweza kutenduliwa kwa hatua moja kutoka kwenye gumzo.",
  "This folder is empty": "Folda hii ni tupu",
  "This framework does not say which file it came from, so your agent will search.": "Mfumo huu hausemi ilitoka kwenye faili gani, kwa hivyo wakala wako atatafuta.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Usakinishaji huu hauna hati ya kusambaza. Kwenye terminal, kutoka kwenye nakala ya Bogen, endesha {command}.",

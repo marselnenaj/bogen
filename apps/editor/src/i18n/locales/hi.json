@@ -1024,7 +1024,6 @@
   "one": "दोष सुधारें",
   "other": "सभी {count} दोष सुधारें"
  },
- "Fix anyway": "फिर भी सुधारें",
  "Fix it": "इसे ठीक करें",
  "Fix started": "सुधार शुरू हुआ",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "यह फ़ाइल किसी दूसरी विंडो में खुली है",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "यह फ़ाइल ऐसे ब्रैंड से लिंक है जो इस डिवाइस पर नहीं है। हो सकता है वह अभी सिंक हो रहा हो, या मिटा दिया गया हो।",
  "This file's score each time it was checked as a whole": "हर बार पूरी जांच होने पर इस फ़ाइल का स्कोर",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "यह सुधार {pages} पेजों पर {layers} लेयर बदल सकता है। एजेंट के बदलाव चैट से एक कदम में वापस लिए जा सकते हैं।",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "यह सुधार {layers} लेयर बदल सकता है। एजेंट के बदलाव चैट से एक कदम में वापस लिए जा सकते हैं।",
  "This folder is empty": "यह फ़ोल्डर खाली है",
  "This framework does not say which file it came from, so your agent will search.": "यह फ़्रेमवर्क नहीं बताता कि यह किस फ़ाइल से आया, इसलिए आपका एजेंट खोजेगा।",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "इस इंस्टॉल में कोई डिप्लॉय स्क्रिप्ट नहीं है। टर्मिनल में, Bogen की चेकआउट से, {command} चलाएं।",

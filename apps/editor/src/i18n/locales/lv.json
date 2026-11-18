@@ -1044,7 +1044,6 @@
   "one": "Labot {count} defektu",
   "other": "Labot visus {count} defektus"
  },
- "Fix anyway": "Tomēr labot",
  "Fix it": "Labot",
  "Fix started": "Labošana sākta",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Šis fails ir atvērts citā logā",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Šis fails ir saistīts ar zīmolu, kura šajā ierīcē nav. Tas, iespējams, vēl sinhronizējas vai ir izdzēsts.",
  "This file's score each time it was checked as a whole": "Šī faila novērtējums katru reizi, kad tas tika pārbaudīts kopumā",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Šis labojums var skart slāņus ({layers}) lapās ({pages}). Aģenta izmaiņas var atsaukt vienā solī no tērzēšanas.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Šis labojums var skart slāņus ({layers}). Aģenta izmaiņas var atsaukt vienā solī no tērzēšanas.",
  "This folder is empty": "Šī mape ir tukša",
  "This framework does not say which file it came from, so your agent will search.": "Šis ietvars nenorāda, no kura faila tas nāk, tāpēc jūsu aģents meklēs.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Šai instalācijai nav izvietošanas skripta. Terminālī no Bogen kopijas palaidiet {command}.",

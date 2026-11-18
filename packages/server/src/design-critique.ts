@@ -65,11 +65,18 @@ export function pickReviewer(choice: ReviewerChoice, makerModel?: string): { id:
 
 export interface CritiqueScreen { id: string; name: string; width: number; height: number; layoutMap?: string }
 
+/** The name of a language tag in English, for the brief ("de" is German); English when unknown. */
+export function replyLanguageName(tag?: string): string {
+  if (!tag) return 'English';
+  try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(tag) ?? 'English'; } catch { return 'English'; }
+}
+
 /** The studio brief. Everything the reviewer knows is in here and in the pictures. */
 export function critiqueBrief(input: {
   screens: CritiqueScreen[];
   flow: boolean;
   language: string;
+  replyLanguage?: string;
   brand?: BrandData | null;
   ruleFindings: string[];
   purpose?: string;
@@ -115,7 +122,8 @@ export function critiqueBrief(input: {
     '',
     'Every defect needs evidence visible in a picture: quote words, name a colour or count items. Unprovable preferences belong in taste. Score honestly: 10 studio-ready, 7 good with problems, 5 competent template work.',
     '',
-    'Answer with one JSON object and nothing else, in English, in this shape:',
+    `Write all text in ${replyLanguageName(input.replyLanguage)}, plainly for a non-designer: the problem, why it matters to users, the change. Quote screen text as is.`,
+    'Answer with one JSON object and nothing else, in this shape:',
     '{"score": <0 to 10, one decimal>, "dimensions": {"state": 0-10, "consistency": 0-10, "hierarchy": 0-10, "copy": 0-10, "layout": 0-10, "brand": 0-10}, "verdict": "two sentences", "defects": [{"screens": [1, 3], "kind": "state|consistency|copy|colour|brand|layout|hierarchy|naming|generated|craft", "title": "short claim", "evidence": "what in the picture shows it", "quote": "the exact visible text of the element, if it has any", "fix": "the concrete change"}], "taste": [{"title": "...", "detail": "...", "screens": [2]}], "keep": ["what must stay"]}',
     'List every objective defect you find, most severe first; up to 8 taste notes; up to 6 keep notes. Leave out a dimension that does not apply (brand without a brand).',
     ...(addressed.length ? ['Add "rechecked": [{"title": "the finding as listed above", "fixed": true or false}] with one entry for each finding the maker says it fixed.'] : []),
@@ -240,6 +248,8 @@ export interface CritiqueRequest {
   series?: string;
   purpose?: string;
   language: string;
+  /** The language the person reads Bogen in, as a BCP 47 tag; findings are written in it. Default English. */
+  replyLanguage?: string;
   brand?: BrandData | null;
   onStep?: (step: CritiqueStepName, detail?: string) => void;
   /** Each screen's picture as it is rendered, the same one the reviewer gets. */
@@ -291,7 +301,7 @@ export async function critique(req: CritiqueRequest, deps: CritiqueDeps, signal?
   }
   const pick = pickReviewer(req.reviewer, req.makerModel);
   req.onStep?.('reviewer', pick.label);
-  const brief = critiqueBrief({ screens, flow: req.flow, language: req.language, brand: req.brand, ruleFindings, ...(req.purpose ? { purpose: req.purpose } : {}), ...(addressed.length ? { addressed } : {}) });
+  const brief = critiqueBrief({ screens, flow: req.flow, language: req.language, ...(req.replyLanguage ? { replyLanguage: req.replyLanguage } : {}), brand: req.brand, ruleFindings, ...(req.purpose ? { purpose: req.purpose } : {}), ...(addressed.length ? { addressed } : {}) });
   const ask = async (model: string) => {
     let written = '';
     const onStream = req.onStep || req.onWritten ? (e: ReviewerStream) => {

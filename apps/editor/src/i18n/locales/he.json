@@ -1044,7 +1044,6 @@
   "two": "תיקון כל {count} הפגמים",
   "other": "תיקון כל {count} הפגמים"
  },
- "Fix anyway": "לתקן בכל זאת",
  "Fix it": "תיקון",
  "Fix started": "התיקון התחיל",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "הקובץ הזה פתוח בחלון אחר",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "הקובץ הזה מקושר למותג שלא נמצא במכשיר הזה. ייתכן שהוא עדיין מסתנכרן, או שהוא נמחק.",
  "This file's score each time it was checked as a whole": "הציון של הקובץ הזה בכל פעם שהוא נבדק כמכלול",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "התיקון הזה עשוי לשנות {layers} שכבות ב-{pages} דפים. אפשר לבטל את שינויי הסוכן בצעד אחד מהצ'אט.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "התיקון הזה עשוי לשנות {layers} שכבות. אפשר לבטל את שינויי הסוכן בצעד אחד מהצ'אט.",
  "This folder is empty": "התיקייה הזו ריקה",
  "This framework does not say which file it came from, so your agent will search.": "המסגרת (framework) הזו לא מציינת מאיזה קובץ היא הגיעה, ולכן הסוכן שלך יחפש.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "בהתקנה הזו אין סקריפט פריסה. בטרמינל, מתוך עותק של Bogen, יש להריץ {command}.",

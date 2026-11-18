@@ -1044,7 +1044,6 @@
   "many": "Corregir los {count} defectos",
   "other": "Corregir los {count} defectos"
  },
- "Fix anyway": "Corregir de todos modos",
  "Fix it": "Corregirlo",
  "Fix started": "Corrección iniciada",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Este archivo está abierto en otra ventana",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Este archivo está vinculado a una marca que no está en este dispositivo. Puede que todavía se esté sincronizando o que se haya eliminado.",
  "This file's score each time it was checked as a whole": "La puntuación de este archivo cada vez que se revisó completo",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Esta corrección puede tocar {layers} capas en {pages} páginas. Los cambios del agente se pueden deshacer en un paso desde el chat.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Esta corrección puede tocar {layers} capas. Los cambios del agente se pueden deshacer en un paso desde el chat.",
  "This folder is empty": "Esta carpeta está vacía",
  "This framework does not say which file it came from, so your agent will search.": "Este framework no indica de qué archivo vino, así que tu agente lo buscará.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Esta instalación no tiene script de despliegue. En una terminal, desde una copia de Bogen, ejecuta {command}.",

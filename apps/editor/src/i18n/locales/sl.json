@@ -1064,7 +1064,6 @@
   "few": "Popravi vse {count} napake",
   "other": "Popravi vseh {count} napak"
  },
- "Fix anyway": "Vseeno popravi",
  "Fix it": "Popravi",
  "Fix started": "Popravek se je začel",
  "Fix {count} defects": {
@@ -3245,8 +3244,6 @@
  "This file is open in another window": "Ta datoteka je odprta v drugem oknu",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Ta datoteka je povezana z znamko, ki je ni na tej napravi. Morda se še sinhronizira ali pa je bila izbrisana.",
  "This file's score each time it was checked as a whole": "Rezultat te datoteke ob vsakem preverjanju celote",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Ta popravek lahko spremeni plasti ({layers}) na straneh ({pages}). Agentove spremembe lahko v klepetu razveljavite v enem koraku.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Ta popravek lahko spremeni plasti ({layers}). Agentove spremembe lahko v klepetu razveljavite v enem koraku.",
  "This folder is empty": "Ta mapa je prazna",
  "This framework does not say which file it came from, so your agent will search.": "To ogrodje ne pove, iz katere datoteke izhaja, zato bo vaš agent iskal.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Ta namestitev nima skripta za uvajanje. V terminalu iz izvlečene kopije Bogen zaženite {command}.",

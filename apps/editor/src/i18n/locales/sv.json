@@ -1024,7 +1024,6 @@
   "one": "Åtgärda felet",
   "other": "Åtgärda alla {count} fel"
  },
- "Fix anyway": "Åtgärda ändå",
  "Fix it": "Åtgärda det",
  "Fix started": "Åtgärd startad",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Den här filen är öppen i ett annat fönster",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Den här filen länkar till ett varumärke som inte finns på den här enheten. Det kanske fortfarande synkas, eller så har det tagits bort.",
  "This file's score each time it was checked as a whole": "Den här filens poäng varje gång den kontrollerades som helhet",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Den här åtgärden kan påverka {layers} lager på {pages} sidor. Agentens ändringar kan ångras i ett steg från chatten.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Den här åtgärden kan påverka {layers} lager. Agentens ändringar kan ångras i ett steg från chatten.",
  "This folder is empty": "Den här mappen är tom",
  "This framework does not say which file it came from, so your agent will search.": "Det här ramverket anger inte vilken fil det kom från, så din agent kommer att söka.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Den här installationen har inget distributionsskript. Kör {command} i en terminal, från en utcheckning av Bogen.",

@@ -10,7 +10,7 @@ const VARIATION_KEY = 'bogen-prompt-variation';
 const DEFAULT_VARIATION: VariationChoice = { count: 1, range: 'explore', vary: [], split: false };
 export const RANGE_WORDS: Record<VariationRange, string> = { refine: msg('Refine'), explore: msg('Explore'), reimagine: msg('Reimagine') };
 export const RANGE_TITLES: Record<VariationRange, string> = { refine: msg('Small changes to the same design'), explore: msg('Clearly different takes, each a real option'), reimagine: msg('Start over in what varies') };
-export const ASPECT_WORDS: Record<VariationAspect, string> = { layout: msg('Layout'), colour: msg('Colour'), type: msg('Type'), copy: msg('Copy') };
+export const ASPECT_WORDS: Record<VariationAspect, string> = { layout: msg('Layout'), colour: msg('Colour'), type: msg('Type'), copy: msg('Text') };
 
 export function loadVariation(): VariationChoice {
   try {

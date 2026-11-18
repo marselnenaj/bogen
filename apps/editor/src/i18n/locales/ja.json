@@ -1004,7 +1004,6 @@
  "Fix all {count} defects": {
   "other": "{count}件の欠陥をすべて修正"
  },
- "Fix anyway": "それでも修正",
  "Fix it": "修正する",
  "Fix started": "修正を開始しました",
  "Fix {count} defects": {
@@ -3065,8 +3064,6 @@
  "This file is open in another window": "このファイルは別のウィンドウで開いています",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "このファイルは、このデバイスにないブランドにリンクしています。まだ同期中か、削除された可能性があります。",
  "This file's score each time it was checked as a whole": "ファイル全体をチェックするたびに記録された、このファイルのスコア",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "この修正は{pages}ページ上の{layers}個のレイヤーに影響する可能性があります。エージェントの変更はチャットから1回で元に戻せます。",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "この修正は{layers}個のレイヤーに影響する可能性があります。エージェントの変更はチャットから1回で元に戻せます。",
  "This folder is empty": "このフォルダは空です",
  "This framework does not say which file it came from, so your agent will search.": "このフレームワークは元のファイルを示さないため、エージェントが検索します。",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "このインストールにはデプロイスクリプトがありません。ターミナルで、Bogen のチェックアウトから {command} を実行してください。",

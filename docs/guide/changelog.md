@@ -1,10 +1,19 @@
 # Changelog
 
+## 0.4.2
+
+The design review speaks your language and acts on one click.
+
+- **A review in your language, in plain words.** "Review like a designer" now writes its verdict and every finding in the language you use Bogen in, for someone who may not be a designer: the problem in a short sentence, why it matters to the people using the screen, and what will change. Text on your screens is quoted as it is, in its own language.
+- **Fix means fix.** Fixing the chosen findings starts the agent at once; a confirm for large fixes used to appear below the list, out of view, so the click seemed to do nothing. The fix shows at the top of the review while it runs, and one step in the chat takes it back.
+- **Text, not "Copy".** The review's score for the words on a screen, and the matching choice for directions in the chat, were labelled with the same word as the copy button, so translations read "Kopieren". They are labelled Text now.
+
 ## 0.4.1
 
 A fix for agents that load Bogen's full tool list.
 
 - **Claude runs work again with every client.** The Claude API checks each tool's input schema against JSON Schema draft 2020-12 and refuses the whole request when one fails. Two selector patterns in `design_system_css` and `tokens_export` had an unescaped `[`, and the number pairs of `type_scale_set`, the web tools and mockup points were written as draft-07 tuples, so any Claude run that loaded the full list stopped with "input_schema: JSON schema is invalid". The patterns are escaped, the pairs are arrays of two numbers with the same limits, and a test now checks every tool schema in every list mode. Thanks to acr-sed for the precise report.
+- **Tooltips sit at their element at every interface size.** At 125%, a tooltip used to land about 90 px beside the button it named.
 
 ## 0.4.0
 

@@ -1004,7 +1004,6 @@
  "Fix all {count} defects": {
   "other": "แก้ไขข้อบกพร่องทั้ง {count} รายการ"
  },
- "Fix anyway": "แก้ไขเลย",
  "Fix it": "แก้ไขให้",
  "Fix started": "เริ่มการแก้ไขแล้ว",
  "Fix {count} defects": {
@@ -3065,8 +3064,6 @@
  "This file is open in another window": "ไฟล์นี้เปิดอยู่ในหน้าต่างอื่น",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "ไฟล์นี้ลิงก์กับแบรนด์ที่ไม่อยู่บนอุปกรณ์นี้ อาจยังซิงค์อยู่ หรือถูกลบไปแล้ว",
  "This file's score each time it was checked as a whole": "คะแนนของไฟล์นี้ทุกครั้งที่ตรวจทั้งไฟล์",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "การแก้ไขนี้อาจกระทบ {layers} เลเยอร์ใน {pages} หน้า ย้อนการเปลี่ยนแปลงของเอเจนต์ได้ในขั้นตอนเดียวจากแชต",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "การแก้ไขนี้อาจกระทบ {layers} เลเยอร์ ย้อนการเปลี่ยนแปลงของเอเจนต์ได้ในขั้นตอนเดียวจากแชต",
  "This folder is empty": "โฟลเดอร์นี้ว่างเปล่า",
  "This framework does not say which file it came from, so your agent will search.": "เฟรมเวิร์กนี้ไม่ได้บอกว่ามาจากไฟล์ใด เอเจนต์จึงจะค้นหาเอง",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "การติดตั้งนี้ไม่มีสคริปต์ deploy ในเทอร์มินัล จาก checkout ของ Bogen ให้รัน {command}",

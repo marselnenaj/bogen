@@ -1044,7 +1044,6 @@
   "few": "Corectează toate cele {count} defecte",
   "other": "Corectează toate cele {count} de defecte"
  },
- "Fix anyway": "Corectează oricum",
  "Fix it": "Repară",
  "Fix started": "Corectare pornită",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Acest fișier este deschis în altă fereastră",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Acest fișier este legat de un brand care nu este pe acest dispozitiv. Poate încă se sincronizează sau a fost șters.",
  "This file's score each time it was checked as a whole": "Scorul acestui fișier de fiecare dată când a fost verificat în întregime",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Această corectare poate atinge straturi ({layers}) pe pagini ({pages}). Modificările agentului pot fi anulate dintr-un singur pas din chat.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Această corectare poate atinge straturi ({layers}). Modificările agentului pot fi anulate dintr-un singur pas din chat.",
  "This folder is empty": "Acest dosar este gol",
  "This framework does not say which file it came from, so your agent will search.": "Acest framework nu spune din ce fișier provine, așa că agentul tău va căuta.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Această instalare nu are un script de implementare. Într-un terminal, dintr-o copie a codului Bogen, rulează {command}.",

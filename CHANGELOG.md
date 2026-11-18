@@ -5,6 +5,10 @@ and the website builds its "What's new" page from it, so this file only points t
 
 Add a line there for anything a user or an agent notices.
 
+## 0.4.2
+
+The design review writes in your language and in plain words, and Fix starts at once. [What is in it](docs/guide/changelog.md#042).
+
 ## 0.4.1
 
 Claude runs that load Bogen's full tool list work again: every tool schema passes JSON Schema draft 2020-12. [What is in it](docs/guide/changelog.md#041).

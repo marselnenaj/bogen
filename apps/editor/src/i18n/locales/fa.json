@@ -1024,7 +1024,6 @@
   "one": "اصلاح ایراد",
   "other": "اصلاح همهٔ {count} ایراد"
  },
- "Fix anyway": "با این حال اصلاح شود",
  "Fix it": "درستش کن",
  "Fix started": "اصلاح شروع شد",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "این فایل در پنجرهٔ دیگری باز است",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "این فایل به برندی پیوند دارد که روی این دستگاه نیست. شاید هنوز در حال همگام‌سازی باشد، یا حذف شده است.",
  "This file's score each time it was checked as a whole": "امتیاز این فایل در هر بار که به‌طور کامل بررسی شد",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "این اصلاح ممکن است {layers} لایه را در {pages} صفحه تغییر دهد. تغییرات عامل را می‌توان با یک گام از گفتگو برگرداند.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "این اصلاح ممکن است {layers} لایه را تغییر دهد. تغییرات عامل را می‌توان با یک گام از گفتگو برگرداند.",
  "This folder is empty": "این پوشه خالی است",
  "This framework does not say which file it came from, so your agent will search.": "این فریم‌ورک نمی‌گوید از کدام فایل آمده، پس عامل شما جستجو خواهد کرد.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "این نصب اسکریپت استقرار ندارد. در یک ترمینال، از درون یک checkout از Bogen، {command} را اجرا کنید.",

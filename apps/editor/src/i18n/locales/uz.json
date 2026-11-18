@@ -1024,7 +1024,6 @@
   "one": "Nuqsonni tuzatish",
   "other": "Barcha {count} ta nuqsonni tuzatish"
  },
- "Fix anyway": "Baribir tuzatish",
  "Fix it": "Tuzatish",
  "Fix started": "Tuzatish boshlandi",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Bu fayl boshqa oynada ochiq",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Bu fayl bu qurilmada yoʻq brendga bogʻlangan. U hali sinxronlanayotgan boʻlishi yoki oʻchirilgan boʻlishi mumkin.",
  "This file's score each time it was checked as a whole": "Bu fayl har safar butunligicha tekshirilgandagi ball",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Bu tuzatish {pages} ta sahifadagi {layers} ta qatlamga taʼsir qilishi mumkin. Agent oʻzgarishlarini chatdan bir qadamda bekor qilish mumkin.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Bu tuzatish {layers} ta qatlamga taʼsir qilishi mumkin. Agent oʻzgarishlarini chatdan bir qadamda bekor qilish mumkin.",
  "This folder is empty": "Bu jild boʻsh",
  "This framework does not say which file it came from, so your agent will search.": "Bu freymvork qaysi fayldan kelganini aytmaydi, shuning uchun agentingiz qidiradi.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Bu oʻrnatishda joylashtirish skripti yoʻq. Terminalda, Bogen nusxasidan {command}ni bajaring.",

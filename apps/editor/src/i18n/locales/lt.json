@@ -1044,7 +1044,6 @@
   "few": "Taisyti visus {count} defektus",
   "other": "Taisyti visus {count} defektų"
  },
- "Fix anyway": "Vis tiek taisyti",
  "Fix it": "Pataisyti",
  "Fix started": "Taisymas pradėtas",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Šis failas atidarytas kitame lange",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Šis failas susietas su prekės ženklu, kurio šiame įrenginyje nėra. Jis gali būti dar sinchronizuojamas arba buvo ištrintas.",
  "This file's score each time it was checked as a whole": "Šio failo įvertis kiekvieną kartą, kai jis buvo patikrintas kaip visuma",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Šis taisymas gali paliesti sluoksnius ({layers}) puslapiuose ({pages}). Agento pakeitimus galima atšaukti vienu žingsniu iš pokalbio.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Šis taisymas gali paliesti sluoksnius ({layers}). Agento pakeitimus galima atšaukti vienu žingsniu iš pokalbio.",
  "This folder is empty": "Šis aplankas tuščias",
  "This framework does not say which file it came from, so your agent will search.": "Ši sistema nenurodo, iš kurio failo tai kilo, todėl jūsų agentas ieškos.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Šis diegimas neturi diegimo scenarijaus. Terminale, iš Bogen kopijos, paleiskite {command}.",

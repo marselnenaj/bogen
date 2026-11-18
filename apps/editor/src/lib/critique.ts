@@ -1,4 +1,4 @@
-import { t } from '../i18n/store.ts';
+import { currentLanguage, t } from '../i18n/store.ts';
 
 export type Reviewer = 'auto' | 'fable' | 'opus' | 'sonnet';
 export interface CritiqueStatus { state: 'ready' | 'missing'; message?: string }
@@ -9,7 +9,7 @@ export interface CritiqueJob {
   screens: number; screenIds?: string[]; rendered?: number; sizes?: { width: number; height: number }[]; ruleFindings?: number; written?: { defects: number; taste: number };
   startedAt: number; endedAt?: number; recordId?: string; score?: number; defects?: number; next?: string; note?: string; error?: string;
 }
-export interface CritiqueStart { fileId: string; screens?: string[]; pageId?: string; flow?: boolean; reviewer: Reviewer; series?: string; until?: number; maxRounds?: number }
+export interface CritiqueStart { fileId: string; screens?: string[]; pageId?: string; flow?: boolean; reviewer: Reviewer; series?: string; until?: number; maxRounds?: number; replyLanguage?: string }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
@@ -21,7 +21,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 export const critiqueApi = {
   status: () => call<CritiqueStatus>('/api/critique'),
   start: (req: CritiqueStart) =>
-    call<{ job: CritiqueJob }>('/api/critique', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) }).then((r) => r.job),
+    call<{ job: CritiqueJob }>('/api/critique', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ replyLanguage: currentLanguage(), ...req }) }).then((r) => r.job),
   job: (id: string) => call<{ job: CritiqueJob }>(`/api/critique/${id}`).then((r) => r.job),
   cancel: (id: string) => call<{ job: CritiqueJob }>(`/api/critique/${id}`, { method: 'DELETE' }).then((r) => r.job),
   /** The picture of screen n (1-based) as the reviewer got it, while the job is kept. */

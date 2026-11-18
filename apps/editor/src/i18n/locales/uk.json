@@ -1044,7 +1044,6 @@
   "few": "Виправити всі {count} дефекти",
   "many": "Виправити всі {count} дефектів"
  },
- "Fix anyway": "Усе одно виправити",
  "Fix it": "Виправити",
  "Fix started": "Виправлення запущено",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Цей файл відкрито в іншому вікні",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Цей файл пов’язано з брендом, якого немає на цьому пристрої. Можливо, він ще синхронізується або його видалено.",
  "This file's score each time it was checked as a whole": "Оцінка цього файлу щоразу, коли його перевіряли цілком",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Це виправлення може зачепити шарів: {layers}, сторінок: {pages}. Зміни агента можна скасувати одним кроком із чату.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Це виправлення може зачепити шарів: {layers}. Зміни агента можна скасувати одним кроком із чату.",
  "This folder is empty": "Ця тека порожня",
  "This framework does not say which file it came from, so your agent will search.": "Цей фреймворк не вказує, з якого файлу він походить, тож агент шукатиме сам.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "У цьому встановленні немає скрипту розгортання. У терміналі, з копії репозиторію Bogen, виконайте {command}.",

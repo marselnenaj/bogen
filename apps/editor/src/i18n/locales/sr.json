@@ -1044,7 +1044,6 @@
   "few": "Исправи све {count} грешке",
   "other": "Исправи свих {count} грешака"
  },
- "Fix anyway": "Ипак исправи",
  "Fix it": "Поправи",
  "Fix started": "Исправка је покренута",
  "Fix {count} defects": {
@@ -3185,8 +3184,6 @@
  "This file is open in another window": "Ова датотека је отворена у другом прозору",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Ова датотека је повезана са брендом који није на овом уређају. Можда се још синхронизује или је обрисан.",
  "This file's score each time it was checked as a whole": "Оцена ове датотеке сваки пут кад је проверена у целини",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Ова исправка може да промени слојеве ({layers}) на страницама ({pages}). Измене агента могу се поништити једним кораком из ћаскања.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Ова исправка може да промени слојеве ({layers}). Измене агента могу се поништити једним кораком из ћаскања.",
  "This folder is empty": "Ова фасцикла је празна",
  "This framework does not say which file it came from, so your agent will search.": "Овај радни оквир не наводи из које датотеке потиче, па ће твој агент тражити.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Ова инсталација нема скрипту за постављање. У терминалу, из клона Bogen-а, покрени {command}.",

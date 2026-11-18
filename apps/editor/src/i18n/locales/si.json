@@ -1024,7 +1024,6 @@
   "one": "දෝෂය නිවැරදි කරන්න",
   "other": "දෝෂ {count}ම නිවැරදි කරන්න"
  },
- "Fix anyway": "කෙසේ වෙතත් නිවැරදි කරන්න",
  "Fix it": "එය නිවැරදි කරන්න",
  "Fix started": "නිවැරදි කිරීම ආරම්භ විය",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "මෙම ගොනුව වෙනත් කවුළුවක විවෘතව ඇත",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "මෙම ගොනුව මෙම උපාංගයේ නැති සන්නාමයකට සම්බන්ධයි. එය තවමත් සමමුහුර්ත වෙමින් තිබිය හැක, නැතහොත් මකා දමා ඇත.",
  "This file's score each time it was checked as a whole": "සමස්තයක් ලෙස පරීක්ෂා කළ සෑම වාරයකම මෙම ගොනුවේ ලකුණු",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "මෙම නිවැරදි කිරීම පිටු {pages}ක ස්තර {layers}කට බලපෑ හැක. නියෝජිතයාගේ වෙනස්කම් කතාබහෙන් එක් පියවරකින් අහෝසි කළ හැක.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "මෙම නිවැරදි කිරීම ස්තර {layers}කට බලපෑ හැක. නියෝජිතයාගේ වෙනස්කම් කතාබහෙන් එක් පියවරකින් අහෝසි කළ හැක.",
  "This folder is empty": "මෙම ෆෝල්ඩරය හිස්",
  "This framework does not say which file it came from, so your agent will search.": "මෙම රාමුකරණය එය පැමිණියේ කුමන ගොනුවෙන්දැයි නොකියන නිසා ඔබේ නියෝජිතයා සොයනු ඇත.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "මෙම ස්ථාපනයේ යෙදවීමේ ස්ක්‍රිප්ටයක් නැත. ටර්මිනලයක, Bogen හි checkout එකකින් {command} ධාවනය කරන්න.",

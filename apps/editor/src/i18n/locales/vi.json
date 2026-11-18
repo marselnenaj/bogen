@@ -1004,7 +1004,6 @@
  "Fix all {count} defects": {
   "other": "Sửa cả {count} lỗi"
  },
- "Fix anyway": "Vẫn sửa",
  "Fix it": "Sửa lại",
  "Fix started": "Đã bắt đầu sửa",
  "Fix {count} defects": {
@@ -3065,8 +3064,6 @@
  "This file is open in another window": "Tệp này đang mở trong một cửa sổ khác",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Tệp này liên kết với một thương hiệu không có trên thiết bị này. Có thể nó vẫn đang đồng bộ, hoặc đã bị xóa.",
  "This file's score each time it was checked as a whole": "Điểm của tệp này mỗi lần được kiểm tra toàn bộ",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Bản sửa này có thể động đến {layers} lớp trên {pages} trang. Có thể hoàn tác thay đổi của tác tử trong một bước từ cuộc trò chuyện.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Bản sửa này có thể động đến {layers} lớp. Có thể hoàn tác thay đổi của tác tử trong một bước từ cuộc trò chuyện.",
  "This folder is empty": "Thư mục này trống",
  "This framework does not say which file it came from, so your agent will search.": "Framework này không cho biết nó đến từ tệp nào, nên tác nhân của bạn sẽ tìm kiếm.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Bản cài đặt này không có script triển khai. Trong terminal, từ một bản checkout của Bogen, hãy chạy {command}.",

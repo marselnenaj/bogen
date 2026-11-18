@@ -1004,7 +1004,6 @@
  "Fix all {count} defects": {
   "other": "修复全部 {count} 个缺陷"
  },
- "Fix anyway": "仍然修复",
  "Fix it": "修复",
  "Fix started": "已开始修复",
  "Fix {count} defects": {
@@ -3065,8 +3064,6 @@
  "This file is open in another window": "此文件已在另一个窗口中打开",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "此文件关联的品牌不在此设备上。它可能仍在同步中，或已被删除。",
  "This file's score each time it was checked as a whole": "此文件每次作为整体检查时的得分",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "此修复可能涉及 {pages} 个页面上的 {layers} 个图层。代理的更改可在聊天中一步撤销。",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "此修复可能涉及 {layers} 个图层。代理的更改可在聊天中一步撤销。",
  "This folder is empty": "此文件夹为空",
  "This framework does not say which file it came from, so your agent will search.": "此框架不会说明元素来自哪个文件，因此智能体会自行搜索。",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "此安装没有部署脚本。请在终端中，从 Bogen 的检出目录运行 {command}。",

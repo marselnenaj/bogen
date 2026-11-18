@@ -320,3 +320,16 @@ describe('design_critique', () => {
     expect(status.message).toMatch(/Install Claude Code/);
   });
 });
+
+describe('the language of the findings', () => {
+  it('asks for findings in the language the person reads Bogen in, in plain words, with quotes kept as they are', async () => {
+    const { critiqueBrief: brief, replyLanguageName } = await import('../src/design-critique.ts');
+    const screens = [{ id: 'a', name: 'Start', width: 390, height: 844 }];
+    const de = brief({ screens, flow: false, language: 'en', replyLanguage: 'de', ruleFindings: [] } as never);
+    expect(de).toContain('Write all text in German, plainly for a non-designer');
+    expect(de).toContain('Quote screen text as is');
+    expect(de).not.toContain('nothing else, in English');
+    expect(brief({ screens, flow: false, language: 'de', ruleFindings: [] } as never)).toContain('Write all text in English');
+    expect(replyLanguageName('not a tag !')).toBe('English');
+  });
+});

@@ -1024,7 +1024,6 @@
   "one": "A hiba javítása",
   "other": "Mind a(z) {count} hiba javítása"
  },
- "Fix anyway": "Javítás mégis",
  "Fix it": "Javítás",
  "Fix started": "Javítás elindítva",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Ez a fájl egy másik ablakban van megnyitva",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Ez a fájl egy olyan márkához kapcsolódik, amely nincs ezen az eszközön. Lehet, hogy még szinkronizál, vagy törölték.",
  "This file's score each time it was checked as a whole": "A fájl pontszáma minden alkalommal, amikor egészként ellenőrizték",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Ez a javítás {layers} réteget érinthet {pages} oldalon. Az ügynök módosításai egy lépésben visszavonhatók a csevegőből.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Ez a javítás {layers} réteget érinthet. Az ügynök módosításai egy lépésben visszavonhatók a csevegőből.",
  "This folder is empty": "Ez a mappa üres",
  "This framework does not say which file it came from, so your agent will search.": "Ez a keretrendszer nem árulja el, melyik fájlból származik, ezért az ügynököd keresni fog.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Ennek a telepítésnek nincs deploy szkriptje. Egy terminálban, a Bogen egy klónjából futtasd ezt: {command}.",

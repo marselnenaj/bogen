@@ -1024,7 +1024,6 @@
   "one": "Den Mangel beheben",
   "other": "Alle {count} Mängel beheben"
  },
- "Fix anyway": "Trotzdem beheben",
  "Fix it": "Beheben",
  "Fix started": "Behebung gestartet",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Diese Datei ist in einem anderen Fenster offen",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Diese Datei ist mit einer Marke verknüpft, die nicht auf diesem Gerät ist. Vielleicht wird sie noch synchronisiert, oder sie wurde gelöscht.",
  "This file's score each time it was checked as a whole": "Die Bewertung dieser Datei bei jeder Prüfung als Ganzes",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Diese Behebung kann {layers} Ebenen auf {pages} Seiten ändern. Die Änderungen des Agenten lassen sich im Chat in einem Schritt rückgängig machen.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Diese Behebung kann {layers} Ebenen ändern. Die Änderungen des Agenten lassen sich im Chat in einem Schritt rückgängig machen.",
  "This folder is empty": "Dieser Ordner ist leer",
  "This framework does not say which file it came from, so your agent will search.": "Dieses Framework verrät nicht, aus welcher Datei es stammt, daher wird dein Agent suchen.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Diese Installation hat kein Deploy-Skript. Führe in einem Terminal in einem Checkout von Bogen {command} aus.",

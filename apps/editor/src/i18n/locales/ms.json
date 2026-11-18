@@ -1004,7 +1004,6 @@
  "Fix all {count} defects": {
   "other": "Baiki semua {count} kecacatan"
  },
- "Fix anyway": "Baiki juga",
  "Fix it": "Betulkan",
  "Fix started": "Pembaikan bermula",
  "Fix {count} defects": {
@@ -3065,8 +3064,6 @@
  "This file is open in another window": "Fail ini dibuka dalam tetingkap lain",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Fail ini dipautkan kepada jenama yang tiada pada peranti ini. Ia mungkin masih disegerakkan, atau telah dipadam.",
  "This file's score each time it was checked as a whole": "Skor fail ini setiap kali ia disemak secara keseluruhan",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Pembaikan ini mungkin menyentuh {layers} lapisan pada {pages} halaman. Perubahan ejen boleh dibuat asal dalam satu langkah dari sembang.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Pembaikan ini mungkin menyentuh {layers} lapisan. Perubahan ejen boleh dibuat asal dalam satu langkah dari sembang.",
  "This folder is empty": "Folder ini kosong",
  "This framework does not say which file it came from, so your agent will search.": "Rangka kerja ini tidak menyatakan fail asalnya, jadi ejen anda akan mencarinya.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Pemasangan ini tiada skrip penggunaan. Dalam terminal, dari checkout Bogen, jalankan {command}.",

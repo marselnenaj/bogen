@@ -1104,7 +1104,6 @@
   "many": "إصلاح كل العيوب ({count})",
   "other": "إصلاح كل العيوب ({count})"
  },
- "Fix anyway": "إصلاح على أي حال",
  "Fix it": "إصلاحه",
  "Fix started": "بدأ الإصلاح",
  "Fix {count} defects": {
@@ -3365,8 +3364,6 @@
  "This file is open in another window": "هذا الملف مفتوح في نافذة أخرى",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "هذا الملف مرتبط بعلامة تجارية ليست على هذا الجهاز. ربما لا تزال قيد المزامنة، أو حُذفت.",
  "This file's score each time it was checked as a whole": "نتيجة هذا الملف في كل مرة فُحص فيها كاملًا",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "قد يغيّر هذا الإصلاح طبقات عددها {layers} في صفحات عددها {pages}. يمكن التراجع عن تغييرات الوكيل بخطوة واحدة من المحادثة.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "قد يغيّر هذا الإصلاح طبقات عددها {layers}. يمكن التراجع عن تغييرات الوكيل بخطوة واحدة من المحادثة.",
  "This folder is empty": "هذا المجلد فارغ",
  "This framework does not say which file it came from, so your agent will search.": "لا يذكر إطار العمل هذا الملف الذي جاء منه، لذا سيبحث وكيلك.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "لا يحتوي هذا التثبيت على برنامج نشر. في الطرفية، من نسخة مستخرجة من Bogen، شغّل {command}.",

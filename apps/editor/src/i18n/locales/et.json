@@ -1024,7 +1024,6 @@
   "one": "Paranda viga",
   "other": "Paranda kõik {count} viga"
  },
- "Fix anyway": "Paranda ikkagi",
  "Fix it": "Paranda",
  "Fix started": "Parandus alustatud",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "See fail on avatud teises aknas",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "See fail lingib brändiga, mida selles seadmes pole. See võib veel sünkroonida või see on kustutatud.",
  "This file's score each time it was checked as a whole": "Selle faili skoor iga kord, kui seda tervikuna kontrolliti",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "See parandus võib puudutada {layers} kihti {pages} lehel. Agendi muudatused saab vestlusest ühe sammuga tagasi võtta.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "See parandus võib puudutada {layers} kihti. Agendi muudatused saab vestlusest ühe sammuga tagasi võtta.",
  "This folder is empty": "See kaust on tühi",
  "This framework does not say which file it came from, so your agent will search.": "See raamistik ei ütle, millisest failist see pärineb, seega agent otsib.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Sellel paigaldusel pole juurutusskripti. Käivitage terminalis Bogeni koopia kaustast {command}.",

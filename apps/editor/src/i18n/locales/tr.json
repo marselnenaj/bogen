@@ -1024,7 +1024,6 @@
   "one": "Kusuru düzelt",
   "other": "{count} kusurun tümünü düzelt"
  },
- "Fix anyway": "Yine de düzelt",
  "Fix it": "Düzelt",
  "Fix started": "Düzeltme başladı",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Bu dosya başka bir pencerede açık",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Bu dosya, bu cihazda olmayan bir markaya bağlı. Hâlâ eşitleniyor olabilir ya da silinmiş olabilir.",
  "This file's score each time it was checked as a whole": "Bu dosyanın, bütün olarak her kontrol edildiğindeki puanı",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Bu düzeltme {pages} sayfadaki {layers} katmanı etkileyebilir. Ajanın değişiklikleri sohbetten tek adımda geri alınabilir.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Bu düzeltme {layers} katmanı etkileyebilir. Ajanın değişiklikleri sohbetten tek adımda geri alınabilir.",
  "This folder is empty": "Bu klasör boş",
  "This framework does not say which file it came from, so your agent will search.": "Bu çatı hangi dosyadan geldiğini söylemiyor, bu yüzden ajanınız arayacak.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Bu kurulumda dağıtım betiği yok. Bir terminalde, Bogen'in bir çalışma kopyasından {command} komutunu çalıştırın.",

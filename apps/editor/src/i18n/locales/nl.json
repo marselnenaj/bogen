@@ -1024,7 +1024,6 @@
   "one": "De fout corrigeren",
   "other": "Alle {count} fouten corrigeren"
  },
- "Fix anyway": "Toch corrigeren",
  "Fix it": "Oplossen",
  "Fix started": "Correctie gestart",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "Dit bestand is open in een ander venster",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "Dit bestand is gekoppeld aan een merk dat niet op dit apparaat staat. Het wordt misschien nog gesynchroniseerd, of het is verwijderd.",
  "This file's score each time it was checked as a whole": "De score van dit bestand telkens als het als geheel werd gecontroleerd",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "Deze correctie kan {layers} lagen op {pages} pagina's raken. De wijzigingen van de agent zijn in één stap ongedaan te maken vanuit de chat.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "Deze correctie kan {layers} lagen raken. De wijzigingen van de agent zijn in één stap ongedaan te maken vanuit de chat.",
  "This folder is empty": "Deze map is leeg",
  "This framework does not say which file it came from, so your agent will search.": "Dit framework zegt niet uit welk bestand het komt, dus je agent gaat zoeken.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "Deze installatie heeft geen deployscript. Voer in een terminal, vanuit een checkout van Bogen, {command} uit.",

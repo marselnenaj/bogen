@@ -7,7 +7,7 @@ import { editor, useEditor } from '../state/store.ts';
 import { ui } from '../state/ui.ts';
 import { IconButton } from '../ui/controls.tsx';
 import { critiqueApi, type CritiqueStatus, type Reviewer } from '../lib/critique.ts';
-import { chatAgent, expectedRange, fixFindings, fixScope, loopChoice, setLoopChoice, startReview, stopFix, stopLoop, stopReview, useCritiqueFlow } from '../lib/critique-flow.ts';
+import { chatAgent, expectedRange, fixFindings, loopChoice, setLoopChoice, startReview, stopFix, stopLoop, stopReview, useCritiqueFlow } from '../lib/critique-flow.ts';
 import { elapsed } from '../lib/activity.ts';
 import { CritiqueWall, type WallBoard } from './CritiqueWall.tsx';
 import { useT } from '../i18n/react.ts';
@@ -23,10 +23,10 @@ import '../styles/critique.css';
  */
 
 const DIMENSION: Record<CritiqueDimension, string> = {
-  state: msg('State clarity'), consistency: msg('Consistency'), hierarchy: msg('Hierarchy'), copy: msg('Copy'), layout: msg('Layout'), brand: msg('Brand'),
+  state: msg('State clarity'), consistency: msg('Consistency'), hierarchy: msg('Hierarchy'), copy: msg('Text'), layout: msg('Layout'), brand: msg('Brand'),
 };
 const KIND: Record<string, string> = {
-  state: msg('State'), consistency: msg('Across screens'), copy: msg('Copy'), colour: msg('Colour'), brand: msg('Brand'), layout: msg('Layout'),
+  state: msg('State'), consistency: msg('Across screens'), copy: msg('Text'), colour: msg('Colour'), brand: msg('Brand'), layout: msg('Layout'),
   hierarchy: msg('Hierarchy'), naming: msg('Naming'), generated: msg('Reads as generated'), craft: msg('Craft'),
 };
 const REVIEWER: Record<Reviewer, string> = { auto: msg('Automatic'), fable: msg('Fable'), opus: msg('Opus'), sonnet: msg('Sonnet') };
@@ -34,7 +34,6 @@ const STAGES = ['rules', 'pictures', 'reviewer', 'writing'] as const;
 const LOOP_TARGET = 7.5;
 const LOOP_ROUNDS = 3;
 /** More than this many layers, or more than one page, and a fix asks once, in the dialog. */
-const CONFIRM_LAYERS = 20;
 
 function selectLayer(id: string): void {
   const { doc } = session();
@@ -293,13 +292,15 @@ function Result({ record, records, onShow, onClose, onAgain }: { record: Critiqu
   const flow = useCritiqueFlow((st) => st.files[s.fileId]);
   const fixing = flow?.fix?.state === 'running';
   const now = useNow(fixing);
+  // A fix started from the foot of a long list says so where the person is looking: the status comes into view.
+  const fixingRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (fixing) fixingRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [fixing]);
   const series = records.filter((r) => r.series === record.series).sort((a, b) => a.round - b.round);
   const latest = series.at(-1)?.id === record.id;
   const [defects, setDefects] = useState<Set<number>>(() => new Set(record.defects.map((d, i) => (d.addressed ? -1 : i)).filter((i) => i >= 0)));
   const [taste, setTaste] = useState<Set<number>>(new Set());
   const [loop, setLoopState] = useState(loopChoice);
   const setLoop = (on: boolean) => { setLoopChoice(on); setLoopState(on); };
-  const [confirm, setConfirm] = useState<{ defects: number[]; taste: number[]; layers: number; pages: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [agent, setAgent] = useState<string | null>(null);
   useEffect(() => { void chatAgent().then((a) => setAgent(a?.label ?? null), () => setAgent(null)); }, []);
@@ -322,11 +323,10 @@ function Result({ record, records, onShow, onClose, onAgain }: { record: Critiqu
     updateCritique(doc, record.id, (rec) => ({ ...rec, defects: rec.defects.map((d, j) => (j === i ? { ...d, threadId } : d)) }), LOCAL);
   };
 
-  const fix = async (d: number[], n: number[], confirmed = false) => {
+  // Fix starts the run at once: the person chose it, and the run is undone in one step from the chat. A confirm
+  // placed below the list went unseen, so a click seemed to do nothing.
+  const fix = async (d: number[], n: number[]) => {
     setError(null);
-    const reach = fixScope(doc, record, d, n);
-    if (!confirmed && (reach.layers > CONFIRM_LAYERS || reach.pages > 1)) { setConfirm({ defects: d, taste: n, ...reach }); return; }
-    setConfirm(null);
     try {
       await fixFindings({ fileId: s.fileId, record, defects: d, taste: n, loop: loop && d.length ? { series: record.series, until: target, maxRounds: Math.min(5, Math.max(record.maxRounds, LOOP_ROUNDS, record.round + 1)) } : null });
     } catch (e) { setError((e as Error).message); }
@@ -362,7 +362,7 @@ function Result({ record, records, onShow, onClose, onAgain }: { record: Critiqu
       </dl>
 
       {fixing && flow?.fix ? (
-        <div className="crit-fixing" role="status" data-testid="critique-fixing">
+        <div ref={fixingRef} className="crit-fixing" role="status" data-testid="critique-fixing">
           <span className="crit-fixing-dot" aria-hidden="true" />
           <span className="crit-fixing-text">{flow.fix.titles?.length === 1 ? t('{agent} is fixing: {title}', { agent: flow.fix.runner === 'codex' ? 'Codex' : 'Claude', title: flow.fix.titles[0]! }) : t('{agent} is fixing {count} findings', { agent: flow.fix.runner === 'codex' ? 'Codex' : 'Claude', count: flow.fix.titles?.length ?? flow.fix.defects + flow.fix.taste })}{flow.loop ? ` · ${t('then a new reviewer looks, until {until} or round {max}', { until: flow.loop.until, max: flow.loop.maxRounds })}` : ''}</span>
           <span className="crit-clock-n">{elapsed(now - flow.fix.startedAt)}</span>
@@ -393,12 +393,7 @@ function Result({ record, records, onShow, onClose, onAgain }: { record: Critiqu
         <ul className="crit-keep">{record.keep.map((k, i) => <li key={i}><Check size={14} aria-hidden="true" />{k}</li>)}</ul>
       </section> : null}
 
-      {confirm ? (
-        <div className="crit-confirm" role="alert" data-testid="critique-confirm">
-          <p>{confirm.pages > 1 ? t('This fix may touch {layers} layers on {pages} pages. The agent\'s changes can be undone in one step from the chat.', { layers: confirm.layers, pages: confirm.pages }) : t('This fix may touch {layers} layers. The agent\'s changes can be undone in one step from the chat.', { layers: confirm.layers })}</p>
-          <span className="crit-confirm-actions"><button type="button" className="btn btn-primary" onClick={() => void fix(confirm.defects, confirm.taste, true)} data-testid="critique-confirm-yes">{t('Fix anyway')}</button><button type="button" className="btn btn-quiet" onClick={() => setConfirm(null)}>{t('Cancel')}</button></span>
-        </div>
-      ) : null}
+
       {error ? <p className="crit-error" role="alert" data-testid="critique-fix-error">{error}</p> : null}
 
       <footer className="crit-foot crit-fixbar">

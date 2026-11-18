@@ -1024,7 +1024,6 @@
   "one": "Fix the defect",
   "other": "Fix all {count} defects"
  },
- "Fix anyway": "Fix anyway",
  "Fix it": "Fix it",
  "Fix started": "Fix started",
  "Fix {count} defects": {
@@ -3125,8 +3124,6 @@
  "This file is open in another window": "This file is open in another window",
  "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.": "This file links to a brand that is not on this device. It may still be syncing, or it was deleted.",
  "This file's score each time it was checked as a whole": "This file's score each time it was checked as a whole",
- "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.": "This fix may touch {layers} layers on {pages} pages. The agent's changes can be undone in one step from the chat.",
- "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.": "This fix may touch {layers} layers. The agent's changes can be undone in one step from the chat.",
  "This folder is empty": "This folder is empty",
  "This framework does not say which file it came from, so your agent will search.": "This framework does not say which file it came from, so your agent will search.",
  "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.": "This install has no deploy script. In a terminal, from a checkout of Bogen, run {command}.",
