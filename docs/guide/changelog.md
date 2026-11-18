@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.3
+
+Agents get on with it.
+
+- **Quick changes and new designs finish sooner.** A run no longer has to fill in a formal self-review (a fresh screenshot, written observations and an eight-part rubric) before it may finish. Only objective defects in what it changed (overflow, unreadable text, placeholder copy) and the canvas plan for three or more new screens hold it back. The self-review and "Review like a designer" are there when you ask for a review.
+- **"Do it again, it is not good" gets a new design.** Asked to redo a design that is not good enough, an agent used to run the checks, find no craft defects and leave it as it was. A request to redo ("redo it", "not good", "a lot better", "komplett neu", "nicht gut") now tells it that checks only find craft defects and that a clean check is never a reason to keep the design: it makes a visibly different, better one and says what changed.
+
 ## 0.4.2
 
 The design review speaks your language and acts on one click.

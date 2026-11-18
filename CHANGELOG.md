@@ -5,6 +5,10 @@ and the website builds its "What's new" page from it, so this file only points t
 
 Add a line there for anything a user or an agent notices.
 
+## 0.4.3
+
+Quick changes and new designs finish sooner, and a redo of a design that is not good gets a new design. [What is in it](docs/guide/changelog.md#043).
+
 ## 0.4.2
 
 The design review writes in your language and in plain words, and Fix starts at once. [What is in it](docs/guide/changelog.md#042).

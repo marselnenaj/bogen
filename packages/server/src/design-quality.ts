@@ -210,8 +210,8 @@ export class DesignQuality {
       }
       const blocking = report.automated.findings.filter((f) => f.severity === 'error' && (!affected.size || affected.has(f.node_id)));
       for (const issue of blocking.slice(0, 8)) notes.push(`${root}: ${issue.node_id} ${issue.rule}: ${issue.message}`);
-      if (report.visual.state !== 'self-assessed') notes.push(`${root}: inspect a fresh canvas_screenshot, then design_verify with discipline ${report.discipline} and evidence for priority, content and context. Current visual state: ${report.visual.state}.`);
-      if (report.rubric.state !== 'scored') notes.push(`${root}: the self-review rubric is ${report.rubric.state}. ${report.rubric.next} Pass it as rubric to design_verify, after the last edit.`);
+      // Only objective defects hold a run back. The self-review (design_verify with its rubric) and design_critique are
+      // there when the person asks for a review; making every run pass them made quick changes and new designs slow.
     }
     return { ok: !notes.length, message: notes.slice(0, 20).join('\n'), retryable };
   }

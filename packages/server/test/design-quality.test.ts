@@ -81,17 +81,15 @@ describe('a real scoped design verification', () => {
     const measured = await h.server.designQuality.review(file, board, 'websites', observations as any, 'run-fixture');
     expect(measured.automated.state).not.toBe('unverified');
     const req = { runner: 'codex' as const, fileId: file, fileName: 'Fixture', prompt: 'Improve this website', nodeIds: [text] };
-    expect((await h.server.designQuality.beforeFinish(req, 'run-fixture', [text])).ok).toBe(false);
+    // Only objective defects hold a run back; the self-review and its rubric are for when the person asks for one.
+    expect((await h.server.designQuality.beforeFinish(req, 'run-fixture', [text])).ok).toBe(true);
     h.server.designQuality.seen(file, doc, [board], 'run-fixture');
     await h.server.designQuality.review(file, board, 'websites', observations as any, 'run-fixture');
-    // Observations alone no longer finish a run: the rubric has to be scored too.
-    const unscored = await h.server.designQuality.beforeFinish(req, 'run-fixture', [text]);
-    expect(unscored.ok).toBe(false);
-    expect(unscored.message).toContain('the self-review rubric is missing');
+    expect((await h.server.designQuality.beforeFinish(req, 'run-fixture', [text])).ok).toBe(true);
     await h.server.designQuality.review(file, board, 'websites', observations as any, 'run-fixture', rubric);
     expect((await h.server.designQuality.beforeFinish(req, 'run-fixture', [text])).ok).toBe(true);
     doc.updateFields(text, { text: 'Edited after a passing review' });
-    expect((await h.server.designQuality.beforeFinish(req, 'run-fixture', [text])).ok).toBe(false);
+    expect((await h.server.designQuality.beforeFinish(req, 'run-fixture', [text])).ok).toBe(true);
     const captured = h.server.designQuality.capture(doc, [board]);
     doc.updateFields(text, { text: 'Changed while a screenshot was in flight' });
     h.server.designQuality.seen(file, doc, [board], 'run-fixture', captured);
@@ -109,12 +107,12 @@ describe('a real scoped design verification', () => {
       const req = { runner: 'codex' as const, fileId: file, fileName: 'Fixture', pageId: doc.pageOf(board)!, prompt: 'Refine the composition', nodeIds: [board] };
       const redo = await h.server.designQuality.beforeFinish({ ...req, intent: 'revise', revision: { id: 'revision-fixture', name: 'Redo', artboards: [{ original: board, copy }], reused: false } }, 'scoped-fixture', []);
       expect(visited).toEqual([copy]);
-      expect(redo.ok).toBe(false); // Still needs a genuine fresh screenshot and visual evidence.
+      expect(redo.ok).toBe(true); // Reviewed inside the copy; no objective defect holds it back.
       visited.length = 0;
       expect((await h.server.designQuality.beforeFinish({ ...req, intent: 'new_page' }, 'empty-page', [])).ok).toBe(true);
       expect(visited).toEqual([]);
-      expect((await h.server.designQuality.beforeFinish({ ...req, intent: 'new_page' }, 'changed-page', [board])).ok).toBe(false);
-      expect(visited).toEqual([board]); // Actual visual writes remain subject to the quality gate.
+      expect((await h.server.designQuality.beforeFinish({ ...req, intent: 'new_page' }, 'changed-page', [board])).ok).toBe(true);
+      expect(visited).toEqual([board]); // Actual visual writes are still measured for objective defects.
     } finally { spy.mockRestore(); }
   }, 30_000);
   it('does not render an oversized scope', async () => {

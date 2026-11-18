@@ -51,3 +51,17 @@ describe('questions and reviews ask for no change', () => {
     expect(NUDGE).toMatch(/review or opinion, change nothing/);
   });
 });
+
+describe('a redo because the design is not good', () => {
+  it('tells the run that a clean check is no reason to keep the design', async () => {
+    const { runInstructions, wantsRedo, REDO_LINE } = await import('../src/agents.ts');
+    expect(wantsRedo('Mach das Design komplett neu, weil es nicht gut ist')).toBe(true);
+    expect(wantsRedo('The design is not good, redo it')).toBe(true);
+    expect(wantsRedo('Mach die Überschrift größer')).toBe(false);
+    expect(wantsRedo('Is the headline good?')).toBe(false);
+    const base = { fileId: 'aaaaaaaaaa', nodeIds: [], runner: 'claude' } as never;
+    expect(runInstructions({ ...(base as object), prompt: 'The design is not good, redo it' } as never)).toContain(REDO_LINE);
+    expect(runInstructions({ ...(base as object), prompt: 'Make the headline bigger' } as never)).not.toContain(REDO_LINE);
+    expect(runInstructions({ ...(base as object), prompt: 'The design is not good, redo it', review: 'critique' } as never)).not.toContain(REDO_LINE);
+  });
+});
