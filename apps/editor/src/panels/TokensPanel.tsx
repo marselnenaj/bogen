@@ -68,10 +68,10 @@ function TokenRow({ token }: { token: Token }) {
   };
   return (
     <div className={`token-row${mode && own === undefined ? ' is-from-base' : ''}`} data-testid="token-row" data-token={token.name}>
-      <TextField className="token-name" value={token.name} onChange={rename} testId={`token-name-${token.name}`} />
+      <TextField className="token-name" value={token.name} onChange={rename} name={t('Name of --{token}', { token: token.name })} testId={`token-name-${token.name}`} />
       {token.kind === 'color'
-        ? <ColorField value={shown} onChange={setValue} testId={`token-color-${token.name}`} />
-        : <TextField className="token-value" value={shown} onChange={setValue} testId={`token-value-${token.name}`} />}
+        ? <ColorField value={shown} onChange={setValue} name={`--${token.name}`} testId={`token-color-${token.name}`} />
+        : <TextField className="token-value" value={shown} onChange={setValue} name={`--${token.name}`} testId={`token-value-${token.name}`} />}
       {mode && own !== undefined ? <IconButton className="token-reset" icon={<RotateCcw size={12} />} title={t('Use the base value in {mode}', { mode })} onClick={() => s.tx(() => setTokenMode(s.doc, token.name, mode, null))} tabIndex={-1} testId={`token-reset-${token.name}`} /> : null}
       <IconButton className="row-action" icon={<Trash2 size={13} />} title={t('Delete {token}', { token: `--${token.name}` })} onClick={() => s.tx(() => s.doc.deleteToken(token.name))} tabIndex={-1} testId={`token-delete-${token.name}`} />
     </div>
@@ -108,8 +108,8 @@ export function TokensPanel() {
       <div className="token-add">
         <SelectField<TokenKind> value={kind} options={KINDS.map((k) => ({ value: k.kind, label: t(k.label) }))} onChange={setKind} testId="token-kind" title={t('Kind')} />
         <div className="token-add-row">
-          <input className="token-input" placeholder={t('Name')} value={name} data-testid="token-new-name" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') add(); }} spellCheck={false} />
-          <input className="token-input" placeholder={def.placeholder} value={value} data-testid="token-new-value" onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') add(); }} spellCheck={false} />
+          <input className="token-input" placeholder={t('Name')} aria-label={t('Name of the new token')} value={name} data-testid="token-new-name" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') add(); }} spellCheck={false} />
+          <input className="token-input" placeholder={def.placeholder} aria-label={t('Its value')} value={value} data-testid="token-new-value" onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') add(); }} spellCheck={false} />
           <IconButton icon={<Plus size={14} />} title={t('Add token')} onClick={add} disabled={!name.trim()} testId="token-add" />
         </div>
       </div>

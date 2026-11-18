@@ -8,7 +8,7 @@ import { msg } from '../i18n/core.ts';
  * through them. Everything here but the store is pure, so that it can be tested without a browser.
  */
 
-export type SheetKind = 'pages' | 'layers' | 'edit' | 'comment' | 'ask' | 'photo';
+export type SheetKind = 'pages' | 'layers' | 'edit' | 'comment' | 'ask' | 'photo' | 'files';
 export type EditTab = 'text' | 'fill' | 'layout' | 'type';
 /** The tools of the bar at the bottom. Pages opens from the top bar. Labels are English, shown through `t(label)`. */
 export const TOOLS: { id: Exclude<SheetKind, 'pages'>; label: string }[] = [

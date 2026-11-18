@@ -2,6 +2,10 @@ import { newId, readCanvasPlan, blockKey, camelCss, FRAME_PRESETS, framePreset, 
 import { dropInvalidCss } from '@bogen/core/css-check';
 import { z } from 'zod';
 import { MAKE_IMAGES, mentionsGeneration, NO_GENERATION, readLocalImage, resolveImages, sniffImage } from '../images.ts';
+import { fetchPublic } from '../net-guard.ts';
+import { shaderAttrProblems } from '../shader-params.ts';
+import { setImageCredit } from '../image-credits.ts';
+import { imageById } from '../image-search.ts';
 import { assertUnlocked, fileIdArg, nextArtboardX, outline, pageIdArg, type ToolContext, type ToolDefiner } from './kit.ts';
 
 const MAX_HTML = 256 * 1024;
@@ -68,6 +72,11 @@ function requireLayer(doc: BogenDoc, id: string) {
   return node;
 }
 
+/** Every shader in an imported tree. */
+function shadersIn(nodes: NewNode[]): NewNode[] {
+  return nodes.flatMap((n) => [...(n.type === 'shader' ? [n] : []), ...shadersIn(n.children ?? [])]);
+}
+
 async function writeHtml(ctx: ToolContext, args: { html: string; mode: 'append' | 'prepend' | 'replace' | 'into'; target_id?: string; index?: number; page_id?: string; file_id?: string }) {
   const { html, mode, index, file_id } = args;
   if (html.length > MAX_HTML) throw new Error(`That is ${Math.round(html.length / 1024)} KB of HTML, over the limit of 256 KB. Write it in smaller chunks, one section per call.`);
@@ -81,6 +90,8 @@ async function writeHtml(ctx: ToolContext, args: { html: string; mode: 'append' 
 
   const { nodes, keyframes, droppedRules } = importHtml(html);
   if (!nodes.length) throw new Error('The HTML has no visible content. Note that scripts and head elements are dropped.');
+  const shaderProblems = shadersIn(nodes).flatMap((n) => shaderAttrProblems(n.attrs?.type, n.attrs ?? {}));
+  if (shaderProblems.length) throw new Error(`Nothing was written. ${[...new Set(shaderProblems)].join(' ')}`);
   resolveInstanceRefs(doc, nodes);
   // A browser drops these anyway. Kept, they would sit in the inspector doing nothing.
   const invalid = dropInvalidCss(nodes);
@@ -430,6 +441,10 @@ Modes: append (default) adds to the end of target_id. prepend adds to its start.
     const rest = Object.fromEntries(Object.entries(given).filter(([k]) => !onSvg(k)));
     const verdict = checkAttrs(node.type, Object.fromEntries(Object.entries(given).filter((e): e is [string, string] => e[1] !== null)));
     if (verdict.rejected.length) throw new Error(`Nothing was changed. ${verdict.rejected.map((r) => `${r.name}: ${r.reason}`).join(' ')}`);
+    if (node.type === 'shader') {
+      const problems = shaderAttrProblems(given.type ?? node.attrs?.type, given);
+      if (problems.length) throw new Error(`Nothing was changed. ${problems.join(' ')}`);
+    }
     if (!Object.keys(attrs).length) throw new Error('Give at least one attribute.');
     const patch: { attrs?: Record<string, string> | undefined; src?: string | undefined; svg?: string } = {};
     if (Object.keys(svgPatch).length) patch.svg = setSvgRootAttrs(node.svg ?? '', svgPatch);
@@ -471,12 +486,34 @@ Modes: append (default) adds to the end of target_id. prepend adds to its start.
     return { name, ...(block ? { css: block, usage: `layer_style with {"animation":"${name} 600ms ease-out both"}` } : { deleted: true }) };
   });
 
-  define('asset_upload', { description: `Store an image and get a src to use in html_write or layer_attrs: one your own image tool made, or a file from the person's repository. Bogen has no image generator, so this is how a bitmap gets in. Give path for a file on this computer, such as the one your image tool saved; the server reads it, up to ${MAX_FILE / 1024 / 1024} MB. Or send a small file as data_base64, up to ${MAX_UPLOAD / 1024 / 1024} MB. PNG, JPEG, WebP, GIF, AVIF and SVG. The bytes must be what mime_type says; with path, mime_type can be left out. SVG is sanitized the same way as inline SVG. Identical bytes give the same src. To fill a placeholder <img>, set its src with layer_attrs.` }, {
+  define('asset_upload', { description: `Store an image and get a src to use in html_write or layer_attrs: one your own image tool made, or a file from the person's repository. Bogen has no image model of its own: image_generate asks the Codex CLI when the person has it, and otherwise this is how a bitmap gets in. Give path for a file on this computer, such as the one your image tool saved; the server reads it, up to ${MAX_FILE / 1024 / 1024} MB. Or send a small file as data_base64, up to ${MAX_UPLOAD / 1024 / 1024} MB. PNG, JPEG, WebP, GIF, AVIF and SVG. The bytes must be what mime_type says; with path, mime_type can be left out. SVG is sanitized the same way as inline SVG. Identical bytes give the same src. To fill a placeholder <img>, set its src with layer_attrs. from_search takes the id of an image_search result instead: the image is downloaded, and its author, licence and source, as the provider states them, are kept with the file for image_credits.` }, {
     path: z.string().min(1).max(4096).optional().describe('An image file on this computer, as an absolute path (~/ works), under the home or temp folder.'),
     data_base64: z.string().min(1).optional().describe('Or the file as base64, with or without a data: prefix.'),
     mime_type: z.enum(UPLOAD_TYPES).optional().describe('Required with data_base64.'),
-  }, async ({ path, data_base64, mime_type }, ctx) => {
-    if (Boolean(path) === Boolean(data_base64)) throw new Error('Give either path or data_base64.');
+    from_search: z.string().max(120).optional().describe('Or the id of an image_search result, such as openverse:... or commons:12345.'),
+    file_id: fileIdArg,
+  }, async ({ path, data_base64, mime_type, from_search, file_id }, ctx) => {
+    if ([path, data_base64, from_search].filter(Boolean).length !== 1) throw new Error('Give one of path, data_base64 or from_search.');
+    if (from_search) {
+      if (ctx.dryRun) throw new Error('from_search downloads the image, so it does not run in a dry run.');
+      const found = await imageById(from_search);
+      const got = await fetchPublic(found.url, { timeoutMs: 20_000, maxBytes: MAX_FILE, accept: (t) => /^image\/(png|jpeg|webp|gif|avif)/.test(t) });
+      const type = sniffImage(got.bytes);
+      if (!type) throw new Error(`${new URL(found.url).host} did not send a PNG, JPEG, WebP, GIF or AVIF image.`);
+      const asset = await ctx.app.storage.putAsset(got.bytes, type);
+      const fileId = file_id ?? ctx.session.fileId;
+      let credited = false;
+      if (fileId && ctx.app.storage.get(fileId)) {
+        const room = await ctx.room(fileId);
+        ctx.write(room, () => setImageCredit(room.doc, asset.name, found));
+        credited = true;
+      }
+      return {
+        src: asset.src, bytes: got.bytes.length, mime_type: type, width: found.width, height: found.height, license: found.licenseName, author: found.author, source: found.source, credit: found.credit,
+        ...(credited ? {} : { note: 'No file is open, so the credit is not stored with a file: open one and import again, or credit the image yourself.' }),
+        usage: `<img src="${asset.src}" alt="..." style="width:100%;object-fit:cover">`,
+      };
+    }
     let bytes: Buffer;
     if (path) {
       if (!LOOPBACK.has(ctx.app.options.host)) throw new Error('path works only on a server that listens on this machine alone. Send the file as data_base64.');

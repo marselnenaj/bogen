@@ -99,7 +99,7 @@ export function LayersSheet({ onClose }: { onClose: () => void }) {
           const hidden = snap.nodes.get(r.id)?.hidden;
           return (
             <div key={r.id} role="listitem" className={`pf-layer${on ? ' is-selected' : ''}${r.board ? ' is-board' : ''}${hidden ? ' is-hidden' : ''}`} data-testid="pf-layer" data-layer-id={r.id}>
-              <button type="button" className="pf-layer-pick" style={{ paddingLeft: 20 + r.depth * 22 }} onClick={() => pick(r.id, r.board)} aria-pressed={on}>
+              <button type="button" className="pf-layer-pick" style={{ paddingLeft: r.depth ? `calc(var(--space-lg) + ${r.depth} * var(--space-xl))` : 'var(--space-lg)' }} onClick={() => pick(r.id, r.board)} aria-pressed={on}>
                 <span className="pf-layer-glyph" aria-hidden="true">{layerGlyph(r)}</span>
                 <span className="pf-layer-name" dir="auto">{r.name}</span>
               </button>

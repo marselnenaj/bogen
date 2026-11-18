@@ -36,10 +36,36 @@ function sameSecret(a: string, b: string): boolean {
 
 function cookieToken(req: IncomingMessage): string | undefined {
   for (const part of (req.headers.cookie ?? '').split(';')) {
-    const [key, value] = part.trim().split('=');
-    if (key === COOKIE) return value;
+    const at = part.indexOf('=');
+    if (at <= 0 || part.slice(0, at).trim() !== COOKIE) continue;
+    // Written with encodeURIComponent (server.ts), so read back the same way.
+    try {
+      return decodeURIComponent(part.slice(at + 1).trim());
+    } catch {
+      return undefined;
+    }
   }
   return undefined;
+}
+
+/**
+ * Every listener routes a path in one spelling only. The block lists for the tailnet and the phone (`isLocalOnlyPath`,
+ * `phoneRefusedPath`) match the path as written, while routing splits it into segments, so any other spelling of the
+ * same route would pass the list and still be routed: `/api//peers`, `/api/./peers`, `/api/%2e%2e/api/peers`,
+ * `/api\peers`. Such a path is refused before either sees it. Returns why, or null for a path that is fine.
+ */
+export function pathRefusal(rawUrl: string | undefined): string | null {
+  const raw = rawUrl ?? '/';
+  const end = raw.search(/[?#]/);
+  const path = end === -1 ? raw : raw.slice(0, end);
+  if (!path.startsWith('/') || path.length > 4096) return 'This path is not allowed.';
+  // Encoded slashes, backslashes, dots and NUL spell a segment boundary or a dot segment in disguise.
+  if (/%(2f|5c|2e|00)/i.test(path)) return 'This path is not allowed.';
+  if (/[\\\u0000- \u007f]/.test(path)) return 'This path is not allowed.';
+  const segments = path.split('/').slice(1);
+  // One empty segment is allowed at the end, for a trailing slash.
+  if (segments.slice(0, -1).some((s) => s === '') || segments.some((s) => s === '.' || s === '..')) return 'This path is not allowed.';
+  return null;
 }
 
 export function tokenMatches(options: GuardOptions, candidate: string | null | undefined): boolean {

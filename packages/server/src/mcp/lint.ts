@@ -3,8 +3,12 @@ import type { Renderer, Target } from '../render.ts';
 import { rulePairs } from '../rule-contrast.ts';
 import { confirmed, declaredLanguageOf, exampleLine, itemsForLanguage, judgeCopy, voiceFindings, voiceProfile, type BrandData } from '@bogen/core';
 import { copyIssues, type AvoidWord } from './copy-check.ts';
+import { BRAND_RULE_PROPERTIES, brandRuleIssues, consistencyIssues, toComputedText } from './consistency-check.ts';
+import { bookPolicy } from '@bogen/core';
+import { lengthKind, sizeTokenName } from './css-vars.ts';
+import { appIssues } from './app-checks.ts';
 
-export type LintRule = 'contrast' | 'token' | 'grid' | 'overflow' | 'alt' | 'small-text' | 'target' | 'repeated' | 'spacing' | 'hierarchy' | 'copy' | 'craft';
+export type LintRule = 'contrast' | 'token' | 'grid' | 'overflow' | 'alt' | 'small-text' | 'target' | 'repeated' | 'spacing' | 'hierarchy' | 'copy' | 'craft' | 'consistency' | 'platform';
 /**
  * A style to set on the layer, or in one of its blocks (`::before`, `@media (...)`, `:focus-visible`) when `block` says
  * which. Safe ones change nothing a person would notice, so `design_lint` with fix applies them.
@@ -38,15 +42,48 @@ function tokenKinds(prop: string): TokenKind[] {
   return type[prop] ? [type[prop]] : [];
 }
 
+const SPACE_PROP = /^(padding|margin|gap|rowGap|columnGap|inset|top|right|bottom|left)/;
+
+/**
+ * The tokens that are steps of space. A token filed as spacing is not one when its name says it is a corner (--radius),
+ * a type size (--text-sm) or the size of a thing (--row, --target), or when the layers only ever use it for something
+ * other than space: 4px of corner is not 4px of gap, and offering it for a gap teaches the wrong token.
+ */
+export function spacingTokenNames(doc: BogenDoc, nodes: BogenNode[]): Set<string> {
+  const usedFor = new Map<string, { space: boolean; other: boolean }>();
+  for (const n of nodes) {
+    for (const [prop, value] of Object.entries(n.style)) {
+      if (!value.includes('var(')) continue;
+      for (const m of value.matchAll(/var\(\s*--([\w-]+)/g)) {
+        const use = usedFor.get(m[1]!) ?? { space: false, other: false };
+        if (SPACE_PROP.test(prop)) use.space = true;
+        else use.other = true;
+        usedFor.set(m[1]!, use);
+      }
+    }
+  }
+  const out = new Set<string>();
+  for (const t of doc.getTokens()) {
+    // A safe-area inset is the platform's measure of its bars, not a step of the scale.
+    if (t.kind !== 'spacing' || lengthKind(t.name) || sizeTokenName(t.name) || /safe-area/.test(t.name)) continue;
+    const use = usedFor.get(t.name);
+    if (use && use.other && !use.space) continue;
+    out.add(t.name);
+  }
+  return out;
+}
+
 /** Checks that need only the document. */
 export function staticIssues(doc: BogenDoc, nodes: BogenNode[]): LintIssue[] {
   const byValue = new Map<string, string>();
+  const spaceSteps = spacingTokenNames(doc, nodes);
   for (const t of doc.getTokens()) {
+    if (t.kind === 'spacing' && !spaceSteps.has(t.name)) continue;
     const v = t.value.trim().toLowerCase();
     const key = `${t.kind}:${v}`;
     if (v && v !== '0' && v !== '0px' && !byValue.has(key)) byValue.set(key, t.name);
   }
-  const spacing = spacingIssues(doc, nodes);
+  const spacing = spacingIssues(doc, nodes, spaceSteps);
   // Off the file's own scale says more than off the 4px grid, so a value gets one of the two.
   const offScale = new Set(spacing.filter((i) => i.prop).map((i) => `${i.nodeId}:${i.prop}`));
   const out: LintIssue[] = [...repeatedSubtrees(doc, nodes), ...spacing.map(({ prop: _prop, ...issue }) => issue), ...ruleContrastIssues(doc, nodes)];
@@ -87,6 +124,7 @@ function ruleContrastIssues(doc: BogenDoc, nodes: BogenNode[]): LintIssue[] {
   });
   for (const n of nodes) {
     if (n.virtual && !n.instanceOf) continue;
+    if (switchedOff(doc, n)) continue;
     for (const p of rulePairs(doc, n, tokens)) {
       if (p.content || !p.color || !p.backdrop) continue;
       const fg = colorAlpha(p.color) < 1 ? flattenColor(p.color, p.backdrop) : p.color;
@@ -104,6 +142,12 @@ function ruleContrastIssues(doc: BogenDoc, nodes: BogenNode[]): LintIssue[] {
     }
   }
   return out;
+}
+
+const DISABLEABLE = new Set(['button', 'input', 'select', 'textarea', 'fieldset', 'optgroup', 'option']);
+/** A control that is switched off, or text inside one: WCAG 1.4.3 does not ask contrast of inactive components. */
+function switchedOff(doc: BogenDoc, n: BogenNode): boolean {
+  return [n, ...doc.ancestors(n.id).map((a) => doc.getNode(a))].some((a) => !!a && (a.attrs?.['aria-disabled'] === 'true' || (a.attrs?.disabled !== undefined && a.attrs.disabled !== 'false' && DISABLEABLE.has(a.tag))));
 }
 
 const SPACING_PROPS = ['gap', 'rowGap', 'columnGap', 'padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'paddingInline', 'paddingBlock'];
@@ -174,9 +218,9 @@ function siblingKind(n: BogenNode): string {
  * Spacing rhythm: gaps and paddings off the file's spacing tokens, with the nearest step as the fix, and siblings of
  * one kind (three cards, five rows) whose spacing differs from what most of them use.
  */
-function spacingIssues(doc: BogenDoc, nodes: BogenNode[]): (LintIssue & { prop?: string })[] {
+function spacingIssues(doc: BogenDoc, nodes: BogenNode[], steps = spacingTokenNames(doc, nodes)): (LintIssue & { prop?: string })[] {
   const tokens = new Map(doc.getTokens().map((t) => [t.name, t]));
-  const scale = doc.getTokens().filter((t) => t.kind === 'spacing').flatMap((t) => {
+  const scale = doc.getTokens().filter((t) => steps.has(t.name)).flatMap((t) => {
     const v = lengthPx(t.value, tokens);
     return v !== null && v > 0 ? [{ name: t.name, px: v }] : [];
   }).sort((a, b) => a.px - b.px);
@@ -374,11 +418,19 @@ function repeatedSubtrees(doc: BogenDoc, nodes: BogenNode[]): LintIssue[] {
 
 interface ProbeIssue { rule: 'contrast' | 'overflow' | 'small-text' | 'target'; id: string; message: string }
 
+/** Geometry and type from the same settled render as the lint findings. */
+export interface RenderedBox {
+  id: string; parent: string | null; tag: string; role: string;
+  x: number; y: number; width: number; height: number;
+  text: string; lines: number; style: Record<string, string>;
+}
+
 /** Runs in the page, so it can only use its argument. */
-function probe(arg: { ids: string[]; minText: number; minTarget: number }): { issues: ProbeIssue[]; texts: TextFact[] } {
+export function lintProbe(arg: { ids: string[]; minText: number; minTarget: number; map?: boolean }): { issues: ProbeIssue[]; texts: TextFact[]; boxes: RenderedBox[] } {
   const wanted = new Set(arg.ids);
   const out: ProbeIssue[] = [];
   const texts: TextFact[] = [];
+  const boxes: RenderedBox[] = [];
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 1;
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
@@ -441,6 +493,32 @@ function probe(arg: { ids: string[]; minText: number; minTarget: number }): { is
     const style = getComputedStyle(el);
     const box = el.getBoundingClientRect();
     if (style.display === 'none' || style.visibility === 'hidden' || !box.width) continue;
+    // Text for screen readers only (a 1px box, clipped away) is hidden on purpose: there is nothing to see, cut or read.
+    if ((box.width <= 1 && box.height <= 1) || /^inset\(\s*50%/.test(style.clipPath) || /^rect\(\s*(0|1)px,?\s+\1px,?\s+\1px,?\s+\1px\s*\)$/.test(style.clip)) continue;
+    if (opacity(el) === 0 || el.checkVisibility?.({ visibilityProperty: true }) === false) continue;
+    if (arg.map && box.height) {
+      let visible = true;
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        const ps = getComputedStyle(p), r = p.getBoundingClientRect();
+        if ((ps.overflowX !== 'visible' && (box.right <= r.left || box.left >= r.right)) || (ps.overflowY !== 'visible' && (box.bottom <= r.top || box.top >= r.bottom))) { visible = false; break; }
+      }
+      if (!visible) continue;
+      const own = [...el.childNodes].filter((c) => c.nodeType === Node.TEXT_NODE && c.textContent?.trim());
+      const rows: number[] = [];
+      for (const c of own) {
+        const range = document.createRange(); range.selectNodeContents(c);
+        for (const r of range.getClientRects()) if (r.width && r.height && !rows.some((y) => Math.abs(y - r.top) < 1)) rows.push(r.top);
+      }
+      const props = ['padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'row-gap', 'column-gap', 'font-family', 'font-size', 'font-weight', 'color', 'background-color', 'background-image', 'border-top', 'border-right', 'border-bottom', 'border-left', 'display', 'flex-direction'];
+      boxes.push({ id, parent: el.parentElement?.closest('[data-bogen-id]')?.getAttribute('data-bogen-id') ?? null,
+        tag: el.tagName.toLowerCase(), role: el.getAttribute('role') ?? '', x: box.x, y: box.y, width: box.width, height: box.height,
+        text: own.map((c) => c.textContent).join(' ').replace(/\s+/g, ' ').trim(), lines: rows.length,
+        style: Object.fromEntries(props.map((p) => [p, style.getPropertyValue(p)])) });
+      if (own.length && el.scrollHeight > el.clientHeight + 1 && style.overflowY !== 'visible') out.push({ rule: 'overflow', id, message: style.webkitLineClamp !== 'none' ? 'The text is ellipsised by line clamp.' : 'The text is clipped vertically by its own box.' });
+      if (own.length && el.scrollWidth > el.clientWidth + 1 && style.textOverflow === 'ellipsis') out.push({ rule: 'overflow', id, message: 'The text is ellipsised.' });
+    }
+    // WCAG 1.4.3 leaves out the text of a control that is switched off.
+    const inactive = Boolean(el.closest(':disabled, [aria-disabled="true"]'));
 
     // A link inside a line of text is exempt in WCAG, as it has the text around it.
     if ((el.tagName === 'BUTTON' || el.tagName === 'A') && style.display !== 'inline' && (box.width < arg.minTarget || box.height < arg.minTarget)) {
@@ -451,7 +529,7 @@ function probe(arg: { ids: string[]; minText: number; minTarget: number }): { is
     if (hasText) {
       texts.push({ id, size: Number.parseFloat(style.fontSize), tag: el.tagName.toLowerCase(), chars: (el.textContent ?? '').trim().length });
       if (Number.parseFloat(style.fontSize) < arg.minText) out.push({ rule: 'small-text', id, message: `The text is ${style.fontSize}, under ${arg.minText}px.` });
-      const back = backdrop(el);
+      const back = inactive ? null : backdrop(el);
       if (back) {
         const fg = rgba(style.color);
         fg[3] *= opacity(el);
@@ -463,7 +541,15 @@ function probe(arg: { ids: string[]; minText: number; minTarget: number }): { is
         const need = large ? 3 : 4.5;
         if (ratio < need) out.push({ rule: 'contrast', id, message: `Text contrast is ${ratio.toFixed(2)}:1, under WCAG AA ${need}:1 for ${large ? 'large' : 'normal'} text (${size}px).` });
       }
-      if (el.scrollWidth > el.clientWidth + 1 && style.overflowX !== 'visible') out.push({ rule: 'overflow', id, message: 'The text is cut off by its own box.' });
+      if (el.scrollWidth > el.clientWidth + 1 && style.overflowX !== 'visible') {
+        // Shortened on purpose: an ellipsis shows that the text goes on, and a title or a name on it, or on the control
+        // it is in, gives the rest. Without one, the end of the text is nowhere to be read.
+        const whole = (el.textContent ?? '').trim();
+        const reachable = (a: Element | null) => Boolean(a && [a.getAttribute('title'), a.getAttribute('aria-label')].some((v) => v && whole && v.includes(whole)));
+        const told = reachable(el) || reachable(el.closest('[title]')) || reachable(el.closest('[aria-label]'));
+        if (style.textOverflow !== 'ellipsis') out.push({ rule: 'overflow', id, message: 'The text is cut off by its own box.' });
+        else if (!told) out.push({ rule: 'overflow', id, message: 'The text ends in an ellipsis, and nothing gives the rest: set its whole text as the title of the layer or of the control it is in.' });
+      }
     }
 
     // Words a ::before or ::after puts in are text too, drawn in their own colour and maybe on their own background.
@@ -471,7 +557,7 @@ function probe(arg: { ids: string[]; minText: number; minTarget: number }): { is
       const ps = getComputedStyle(el, pseudo);
       const words = /^"((?:\\.|[^"])*)"$/.exec(ps.content ?? '');
       if (!words || !/[\p{L}\p{N}]/u.test(words[1]!) || ps.display === 'none' || ps.visibility === 'hidden') continue;
-      const under = backdrop(el);
+      const under = inactive ? null : backdrop(el);
       if (!under || ps.backgroundImage !== 'none') continue;
       const own = rgba(ps.backgroundColor);
       const back = own[3] > 0 ? over(own, under) : under;
@@ -494,13 +580,26 @@ function probe(arg: { ids: string[]; minText: number; minTarget: number }): { is
     // A bleeding absolute layer is usually on purpose, unless the parent cuts it off.
     if (absolute && !clips) continue;
     const p = parent.getBoundingClientRect();
-    const sides = ([['left', p.left - box.left], ['right', box.right - p.right], ['top', p.top - box.top], ['bottom', box.bottom - p.bottom]] as const).filter(([, d]) => d > 1);
+    // A scroll container shows the rest when it is scrolled, so only the axes it does not scroll can cut.
+    const scrolls = (side: string) => /auto|scroll/.test(side === 'left' || side === 'right' ? parentStyle.overflowX : parentStyle.overflowY);
+    // A run of text in a line reaches a little past its box where a glyph overhangs, such as an italic or a quote mark:
+    // up to 2px of an inline run is that, as long as the parent does not cut it.
+    const slack = style.display === 'inline' && !clips ? 2 : 1;
+    let sides = ([['left', p.left - box.left], ['right', box.right - p.right], ['top', p.top - box.top], ['bottom', box.bottom - p.bottom]] as const).filter(([side, d]) => d > slack && !(clips && scrolls(side)));
+    if (clips && sides.length) {
+      // What is wholly outside a clipping box is not cut: it is not shown, as with the slides of a carousel or the
+      // parts of a canvas out of view. Nor is a box that is a window onto a larger plane, whose content reaches beyond
+      // it by more than its own size: a canvas, a map or a carousel track, moved to show the rest.
+      const outside = box.right <= p.left + 1 || box.left >= p.right - 1 || box.bottom <= p.top + 1 || box.top >= p.bottom - 1;
+      const viewport = parent.scrollWidth > 2 * parent.clientWidth || parent.scrollHeight > 2 * parent.clientHeight;
+      if (outside || viewport) sides = [];
+    }
     if (sides.length) {
       const detail = sides.map(([side, d]) => `${Math.round(d)}px on the ${side}`).join(', ');
       out.push({ rule: 'overflow', id, message: `${clips ? 'Clipped by' : 'Overflows'} its parent by ${detail}.` });
     }
   }
-  return { issues: out, texts };
+  return { issues: out, texts, boxes };
 }
 
 /**
@@ -519,7 +618,7 @@ export function craftIssues(doc: BogenDoc, nodes: BogenNode[]): LintIssue[] {
 }
 
 /** Every issue in the layers, rendered where it has to be. */
-export async function lintIssues(doc: BogenDoc, renderer: Renderer, target: Target, nodes: BogenNode[], options: { avoid?: AvoidWord[]; brand?: BrandData; contentLanguage?: string | null } = {}): Promise<LintIssue[]> {
+export async function lintIssues(doc: BogenDoc, renderer: Renderer, target: Target, nodes: BogenNode[], options: { avoid?: AvoidWord[]; brand?: BrandData; contentLanguage?: string | null; fileName?: string } = {}): Promise<LintIssue[]> {
   const names = new Map(nodes.map((n) => [n.id, n.name]));
   // With a brand, each text layer is judged in the brand language it is written in, and gets that language's words.
   const brand = options.brand;
@@ -532,10 +631,15 @@ export async function lintIssues(doc: BogenDoc, renderer: Renderer, target: Targ
     if (!perLanguage.has(spoken)) perLanguage.set(spoken, itemsForLanguage(brandAvoid, profile!.languages, spoken).map((w) => ({ word: w.word, ...(w.instead ? { instead: w.instead } : {}) })));
     return perLanguage.get(spoken)!;
   };
-  const rendered = await renderer.probe(doc, target, probe, { ids: nodes.map((n) => n.id), minText: MIN_TEXT_PX, minTarget: MIN_TARGET_PX });
+  const rendered = await renderer.probe(doc, target, lintProbe, { ids: nodes.map((n) => n.id), minText: MIN_TEXT_PX, minTarget: MIN_TARGET_PX });
+  const brandRules = brand ? await brandRuleFindings(doc, renderer, nodes, brand) : [];
+  // Phone app screens: safe areas, platform targets, edges and gaps that slip by a few pixels, the tab bar, the kit.
+  const app = await appIssues(doc, renderer, nodes, options.fileName).catch(() => ({ issues: [] as LintIssue[], boards: [] as string[], exempt: new Set<string>() }));
+  const appBoards = new Set(app.boards);
+  const onAppBoard = (id: string) => appBoards.size > 0 && [id, ...doc.ancestors(id)].some((a) => appBoards.has(a));
   return [
     // Overflow and clipping beyond 2px is a broken layout, not a matter of taste.
-    ...rendered.issues.map((r) => ({ rule: r.rule, nodeId: r.id, name: names.get(r.id) ?? '', message: r.message, ...(r.rule === 'overflow' && overflowPx(r.message) > 2 ? { severity: 'hard' as const } : {}) })),
+    ...rendered.issues.filter((r) => !(r.rule === 'target' && onAppBoard(r.id)) && !(r.rule === 'small-text' && app.exempt.has(r.id))).map((r) => ({ rule: r.rule, nodeId: r.id, name: names.get(r.id) ?? '', message: r.message, ...(r.rule === 'overflow' && overflowPx(r.message) > 2 ? { severity: 'hard' as const } : {}) })),
     // Few and about the whole artboard, so they come before the per-value findings that can fill a report.
     ...craftIssues(doc, nodes),
     ...staticIssues(doc, nodes),
@@ -544,7 +648,23 @@ export async function lintIssues(doc: BogenDoc, renderer: Renderer, target: Targ
     // The brand's measurable voice, when the file has a brand. A counter-example breaks it on purpose.
     ...(brand && profile ? voiceFindings(brand, nodes.filter((n) => !n.virtual && n.text?.trim() && exampleKindOf(doc, n.id) !== 'dont').map((n) => ({ id: n.id, name: n.name, tag: n.tag, text: n.text!, lang: langOf(n) })), { profile })
       .map((v) => ({ rule: 'copy' as const, nodeId: v.node_id, name: v.layer, message: `${v.message} ${v.how}${exampleLine(v.example)}` })) : []),
+    // What a reader catches: double negatives, open quotes, the danger colour on a calm state, one label spelled two ways, the brand's own rules.
+    ...consistencyIssues(doc, nodes),
+    ...brandRules,
+    ...app.issues,
   ];
+}
+
+/** The brand's stated rules on capitals, italic headings, families and shadows, against computed styles. */
+async function brandRuleFindings(doc: BogenDoc, renderer: Renderer, nodes: BogenNode[], brand: BrandData): Promise<LintIssue[]> {
+  const policy = bookPolicy(brand);
+  if (!policy.upperFamily && !policy.italicFamily && !policy.headingFamily && !policy.noUpper && !policy.noShadow && !policy.noDashed) return [];
+  const ids = nodes.filter((n) => !n.virtual && !n.hidden && (n.text?.trim() || policy.noShadow || policy.noDashed)).map((n) => n.id).slice(0, 600);
+  if (!ids.length) return [];
+  try {
+    const got = await renderer.computed(doc, ids, BRAND_RULE_PROPERTIES);
+    return brandRuleIssues(doc, nodes, brand, new Map(Object.entries(got).map(([id, v]) => [id, toComputedText(v.style)])));
+  } catch { return []; }
 }
 
 /** The px of an overflow finding, as its message says it: "Overflows its parent by 3px on the right." */
@@ -552,17 +672,18 @@ function overflowPx(message: string): number {
   return Math.max(0, ...[...message.matchAll(/(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1])));
 }
 
-export interface LintReport { total: number; counts: Record<string, number>; hard: number; issues: LintIssue[]; skippedOnImagesNote?: string; next?: string }
+export interface LintReport { total: number; counts: Record<string, number>; hard: number; issues: LintIssue[]; skippedOnImagesNote?: string; next?: string; next_offset?: number; paging?: string }
 
-export function lintReport(issues: LintIssue[], nodes: BogenNode[]): LintReport {
-  const counts: Record<string, number> = { contrast: 0, overflow: 0, token: 0, grid: 0, alt: 0, 'small-text': 0, target: 0, repeated: 0, spacing: 0, hierarchy: 0, copy: 0, craft: 0 };
+export function lintReport(issues: LintIssue[], nodes: BogenNode[], page: { offset: number; limit: number } = { offset: 0, limit: 100 }): LintReport {
+  const counts: Record<string, number> = { contrast: 0, overflow: 0, token: 0, grid: 0, alt: 0, 'small-text': 0, target: 0, repeated: 0, spacing: 0, hierarchy: 0, copy: 0, craft: 0, consistency: 0, platform: 0 };
   for (const issue of issues) counts[issue.rule]!++;
   // The generated look first: those are what keep a review from passing.
   const hard = issues.filter((i) => i.severity === 'hard');
   const ordered = [...hard, ...issues.filter((i) => i.severity !== 'hard')];
   return {
-    total: issues.length, counts, hard: hard.length, issues: ordered.slice(0, 100),
-    ...(hard.length ? { next: `${hard.length} hard ${hard.length === 1 ? 'finding is an objective defect' : 'findings are objective defects'} (overflow, unreadable text, placeholder copy): fix ${hard.length === 1 ? 'it' : 'them'} before design_verify. Advisory findings say why a choice often reads as default; keep one when your direction has a reason, and say so in design_verify kept.` } : {}),
+    total: issues.length, counts, hard: hard.length, issues: ordered.slice(page.offset, page.offset + page.limit),
+    ...(ordered.length > page.offset + page.limit ? { next_offset: page.offset + page.limit, paging: 'More findings: design_lint with next_offset as offset and the same scope, fix false. Counts cover every finding; edits invalidate offsets.' } : {}),
+    ...(hard.length ? { next: `${hard.length} hard ${hard.length === 1 ? 'finding is an objective defect' : 'findings are objective defects'} (overflow, unreadable text, placeholder copy, edges or gaps that slip by 1 to 3px, content in a phone's safe areas): fix ${hard.length === 1 ? 'it' : 'them'} before design_verify. Advisory findings say why a choice often reads as default; keep one when your direction has a reason, and say so in design_verify kept.` } : {}),
     ...(nodes.some((n) => n.type === 'shader' || n.type === 'image' || n.style.backgroundImage) ? { skippedOnImagesNote: 'Contrast is not measured for text over images, gradients or shaders. Check those in a screenshot.' } : {}),
   };
 }

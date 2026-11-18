@@ -6,10 +6,7 @@ import { nodeAt } from '../../ops/breakpoints.ts';
 import { inspectorStyle, updateScoped } from '../../ops/breakpoints.ts';
 import { useMemo, useState } from 'react';
 import type { BogenNode } from '@bogen/core';
-import {
-  AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalDistributeCenter, AlignStartHorizontal, AlignStartVertical, AlignVerticalDistributeCenter,
-  ArrowDown, ArrowRight, Ban, Crop, MoveHorizontal, MoveVertical, RectangleHorizontal, RectangleVertical, FlipHorizontal2, FlipVertical2, Grid3x3, LayoutGrid, Lock, Maximize2, Scan, Square, WrapText, Rows3,
-} from 'lucide-react';
+import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalDistributeCenter, AlignStartHorizontal, AlignStartVertical, AlignVerticalDistributeCenter, ArrowDown, ArrowRight, Ban, Crop, MoveHorizontal, MoveVertical, RectangleHorizontal, RectangleVertical, FlipHorizontal2, FlipVertical2, Grid3x3, LayoutGrid, Lock, Maximize2, Scan, Square, WrapText, Rows3 } from 'lucide-react';
 import { useFrameVersion, useSelectedNodes } from '../../doc/hooks.ts';
 import { session } from '../../doc/session.ts';
 import { computedBox, elOf, flowOf, isFlow, measure, parentLinear, rectOf } from '../../canvas/measure.ts';
@@ -24,8 +21,9 @@ import { RawCssSection } from './RawCss.tsx';
 import { RepeatSection } from './RepeatSection.tsx';
 import { ComponentSection, ModeSection, PageModeSection } from './ComponentSection.tsx';
 import { ImageSection, ShaderSection, VectorSection } from './Media.tsx';
+import { isMockup, isPattern, MockupSection, PatternSection } from './BrandApps.tsx';
 import { CodeSection } from './CodeSection.tsx';
-import { Empty } from '../../ui/controls.tsx';
+import { PageSummary } from './PageSummary.tsx';
 import { FRAME_PRESETS, presetOfSize, type FramePresetGroup } from '@bogen/core';
 import { LayoutGridSection } from './LayoutGridSection.tsx';
 import { resizeToPreset, swapOrientation } from '../../ops/frames.ts';
@@ -57,7 +55,7 @@ function Header({ nodes }: { nodes: BogenNode[] }) {
   return (
     <div className="insp-header">
       {single ? (
-        <TextField className="insp-name" value={single.name} onChange={(name) => setFields([single.id], { name })} testId="insp-name" />
+        <TextField className="insp-name" name={t('Layer name')} value={single.name} onChange={(name) => setFields([single.id], { name })} testId="insp-name" />
       ) : <span className="insp-count">{t.n(nodes.length, '{count} layer', '{count} layers')}</span>}
       {single && (single.type === 'frame' || single.type === 'text') ? (
         <SelectField
@@ -420,8 +418,8 @@ function PaddingFields({ nodes, ids }: { nodes: BogenNode[]; ids: string[] }) {
   return (
     <>
       <Row>
-        <NumberField label="↔" value={symmetric ? v('left') : MIXED} min={0} title={t('Horizontal padding')} testId="insp-pad-x" onChange={(n) => write({ left: n, right: n })} />
-        <NumberField label="↕" value={symmetric ? v('top') : MIXED} min={0} title={t('Vertical padding')} testId="insp-pad-y" onChange={(n) => write({ top: n, bottom: n })} />
+        <NumberField label={<MoveHorizontal size={12} aria-hidden="true" />} value={symmetric ? v('left') : MIXED} min={0} title={t('Horizontal padding')} testId="insp-pad-x" onChange={(n) => write({ left: n, right: n })} />
+        <NumberField label={<MoveVertical size={12} aria-hidden="true" />} value={symmetric ? v('top') : MIXED} min={0} title={t('Vertical padding')} testId="insp-pad-y" onChange={(n) => write({ top: n, bottom: n })} />
       </Row>
       <details className="details" open={!symmetric}>
         <summary>{t('Each side')}</summary>
@@ -595,12 +593,6 @@ function FrameTool() {
   );
 }
 
-function PageSummary() {
-  const t = useT();
-  const count = useMemo(() => session().snap.nodes.size, []);
-  return <Empty title={t('Nothing selected')} hint={count ? t('Click a layer on the canvas or in the list on the left.') : t('Draw something with the tools above, or paste HTML to begin.')} />;
-}
-
 export function Inspector() {
   const raw = useSelectedNodes();
   // At a breakpoint, every section reads the layer as it is at that width and writes into that width's block.
@@ -635,7 +627,9 @@ export function Inspector() {
       {hasMedia?.type === 'image' ? <ImageSection node={hasMedia} /> : null}
       {hasMedia?.code ? <CodeSection node={hasMedia} /> : null}
       <PathActions nodes={nodes} />
-      {hasMedia?.type === 'svg' ? <VectorSection node={hasMedia} /> : null}
+      {hasMedia && isPattern(hasMedia) ? <PatternSection node={hasMedia} /> : null}
+      {hasMedia && isMockup(hasMedia) ? <MockupSection node={hasMedia} /> : null}
+      {hasMedia?.type === 'svg' && !isPattern(hasMedia) ? <VectorSection node={hasMedia} /> : null}
       {anyText ? <TypographySection nodes={nodes} allText={allText} /> : null}
       <ModeSection nodes={nodes} />
       <AppearanceSection nodes={nodes} />

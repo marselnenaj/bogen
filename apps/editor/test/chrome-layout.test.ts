@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CANVAS_MIN, chromeLayout, FILE_NAME_MIN, fitToolbar, toolbarLevel, toolbarNeed, type ChromeInput, type ToolbarContent, type ToolbarLevel } from '../src/state/chrome-layout.ts';
+import { CANVAS_MIN, chromeLayout, FILE_NAME_MIN, fitToolbar, toolbarLabels, toolbarLevel, toolbarNeed, type ChromeInput, type ToolbarContent, type ToolbarLevel } from '../src/state/chrome-layout.ts';
 
 const at = (width: number, height: number, scale = 1, leftWidth = 248, rightWidth = 280): ChromeInput => ({ width, height, scale, leftWidth, rightWidth });
 const canvas = (l: ReturnType<typeof chromeLayout>, width: number) => width - (l.left === 'docked' ? l.leftPx : 0) - (l.right === 'docked' ? l.rightPx : 0);
@@ -50,14 +50,14 @@ describe('the editor chrome at each window size', () => {
   });
 
   it('shows less of the toolbar as it narrows, by its width at the UI scale', () => {
-    expect([1440, 1120, 1024, 900, 860, 700, 640, 560, 480].map(toolbarLevel)).toEqual(['full', 'full', 'tight', 'tight', 'compact', 'compact', 'mini', 'mini', 'micro']);
+    expect([1440, 1220, 1120, 1024, 900, 860, 700, 640, 560, 480].map(toolbarLevel)).toEqual(['full', 'full', 'tight', 'tight', 'tight', 'compact', 'compact', 'mini', 'mini', 'micro']);
   });
 
   it('fits the toolbar to what it holds: branches, a synced device, people and drawers move tools into menus first', () => {
     const none: ToolbarContent = { leftDrawer: false, rightDrawer: false, sync: false, peers: 0, following: false, branchNamed: false };
     const busy: ToolbarContent = { leftDrawer: true, rightDrawer: true, sync: true, peers: 2, following: true, branchNamed: true };
     // Nothing extra: the window's own level, as before.
-    for (const w of [1440, 1120, 1024, 900, 860, 700, 640, 560, 480, 300]) expect(fitToolbar(w, none)).toBe(toolbarLevel(w));
+    for (const w of [1440, 1220, 1120, 1024, 900, 860, 700, 640, 560, 480, 300]) expect(fitToolbar(w, none)).toBe(toolbarLevel(w));
     // A long branch and a synced device at 1280: the view buttons move into More, the branch keeps its name.
     expect(fitToolbar(1280, { ...none, sync: true, peers: 1, branchNamed: true })).toBe('tight');
     expect(fitToolbar(1280, { ...none, peers: 1, branchNamed: true })).toBe('full');
@@ -69,6 +69,23 @@ describe('the editor chrome at each window size', () => {
     expect(toolbarNeed('micro', busy)).toBeLessThanOrEqual(430 / 1.5);
     expect(toolbarNeed('micro', busy)).toBe(toolbarNeed('micro', { ...busy, following: false }));
     expect(toolbarNeed('mini', busy)).toBeGreaterThan(toolbarNeed('mini', { ...busy, following: false }));
+  });
+
+  it('keeps the full toolbar centred: the wider side counts twice, and Preview and Ask agent say only what fits', () => {
+    const none: ToolbarContent = { leftDrawer: false, rightDrawer: false, sync: false, peers: 0, following: false, branchNamed: false };
+    const text = { preview: 50, agent: 62, keys: 40 };
+    // A synced device widens the left side, people the right: the need follows the wider of the two.
+    expect(toolbarNeed('full', { ...none, sync: true })).toBeGreaterThan(toolbarNeed('full', none));
+    expect(toolbarNeed('full', { ...none, sync: true, peers: 3 })).toBe(toolbarNeed('full', { ...none, sync: true }));
+    // Words and the shortcut on a wide window, then words alone, then Ask agent's alone, then icons.
+    expect(toolbarLabels(1920, 'full', none, text)).toBe('keys');
+    expect(toolbarLabels(1560, 'full', none, text)).toBe('text');
+    expect(toolbarLabels(1440, 'full', none, text)).toBe('primary');
+    expect(toolbarLabels(1280, 'full', none, text)).toBe('none');
+    // Longer words in another language give way sooner; below the full level they are always icons.
+    expect(toolbarLabels(1440, 'full', none, { preview: 90, agent: 120, keys: 40 })).toBe('none');
+    expect(toolbarLabels(1560, 'full', none, { preview: 90, agent: 120, keys: 40 })).toBe('primary');
+    expect(toolbarLabels(1920, 'tight', none, text)).toBe('none');
   });
 
   it('leaves the file name its minimum at every level it picks, for the supported window sizes', () => {

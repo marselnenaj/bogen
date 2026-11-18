@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Ellipsis, EllipsisVertical, GitBranch, Shapes, ListChecks, BookOpen, Circle, CircleHelp, Eye, Frame, Hand, Play, Settings2, Image as ImageIcon, Smartphone, History, DoorOpen, Keyboard, MessageCircle, Minus, MousePointer2, Pen, Pencil, Redo2, SlidersHorizontal, Sparkles, Square, Type, Undo2, ZoomIn, ArrowLeft } from 'lucide-react';
 import { COMMANDS, displayKeys, runCommand } from '../commands/registry.ts';
 import { setLocalName, stopFollowing } from '../doc/presence.ts';
@@ -13,7 +13,8 @@ import { editor, useEditor, type Tool } from '../state/store.ts';
 import { toggleChat } from './prompt-actions.ts';
 import { ui, useUi } from '../state/ui.ts';
 import { fitScreen } from '../ops/fit-view.ts';
-import { fitToolbar, PEERS_SHOWN, useWindowSize, type ChromeLayout, type ToolbarLevel } from '../state/chrome-layout.ts';
+import { fitToolbar, PEERS_SHOWN, toolbarLabels, useWindowSize, type ChromeLayout, type ToolbarContent, type ToolbarLabels, type ToolbarLevel } from '../state/chrome-layout.ts';
+import { textWidth } from '../home/head-fit.ts';
 import { useSettings } from '../state/settings.ts';
 import { openTab, PanelMenuItem, PanelToggle, useChrome } from './ChromePanels.tsx';
 import { IconButton, Popover } from '../ui/controls.tsx';
@@ -25,22 +26,25 @@ import { BranchMenu } from './BranchMenu.tsx';
 import { msg } from '../i18n/core.ts';
 import { useT } from '../i18n/react.ts';
 
-const TOOLS: { tool: Tool; icon: typeof Hand; title: string; cmd: string }[] = [
-  { tool: 'move', icon: MousePointer2, title: msg('Move'), cmd: 'tool.move' },
-  { tool: 'hand', icon: Hand, title: msg('Hand'), cmd: 'tool.hand' },
-  { tool: 'frame', icon: Frame, title: msg('Frame'), cmd: 'tool.frame' },
-  { tool: 'rect', icon: Square, title: msg('Rectangle'), cmd: 'tool.rect' },
-  { tool: 'ellipse', icon: Circle, title: msg('Ellipse'), cmd: 'tool.ellipse' },
-  { tool: 'line', icon: Minus, title: msg('Line'), cmd: 'tool.line' },
-  { tool: 'text', icon: Type, title: msg('Text'), cmd: 'tool.text' },
-  { tool: 'pen', icon: Pen, title: msg('Pen'), cmd: 'tool.pen' },
-  { tool: 'pencil', icon: Pencil, title: msg('Pencil'), cmd: 'tool.pencil' },
+/** What a tool is for. Tools of one group stand together in the toolbar, with a separator before the next group. */
+type ToolGroup = 'pointer' | 'shape' | 'draw' | 'insert' | 'annotate' | 'view';
+
+const TOOLS: { tool: Tool; icon: typeof Hand; title: string; cmd: string; group: ToolGroup }[] = [
+  { tool: 'move', icon: MousePointer2, title: msg('Move'), cmd: 'tool.move', group: 'pointer' },
+  { tool: 'hand', icon: Hand, title: msg('Hand'), cmd: 'tool.hand', group: 'pointer' },
+  { tool: 'frame', icon: Frame, title: msg('Frame'), cmd: 'tool.frame', group: 'shape' },
+  { tool: 'rect', icon: Square, title: msg('Rectangle'), cmd: 'tool.rect', group: 'shape' },
+  { tool: 'ellipse', icon: Circle, title: msg('Ellipse'), cmd: 'tool.ellipse', group: 'shape' },
+  { tool: 'line', icon: Minus, title: msg('Line'), cmd: 'tool.line', group: 'shape' },
+  { tool: 'text', icon: Type, title: msg('Text'), cmd: 'tool.text', group: 'draw' },
+  { tool: 'pen', icon: Pen, title: msg('Pen'), cmd: 'tool.pen', group: 'draw' },
+  { tool: 'pencil', icon: Pencil, title: msg('Pencil'), cmd: 'tool.pencil', group: 'draw' },
 ];
 
-const TOOLS2: { tool: Tool; icon: typeof Hand; title: string; cmd: string }[] = [
-  { tool: 'comment', icon: MessageCircle, title: msg('Comment'), cmd: 'tool.comment' },
-  { tool: 'shader', icon: Sparkles, title: msg('Shader'), cmd: 'tool.shader' },
-  { tool: 'zoom', icon: ZoomIn, title: msg('Zoom'), cmd: 'tool.zoom' },
+const TOOLS2: { tool: Tool; icon: typeof Hand; title: string; cmd: string; group: ToolGroup }[] = [
+  { tool: 'comment', icon: MessageCircle, title: msg('Comment'), cmd: 'tool.comment', group: 'annotate' },
+  { tool: 'shader', icon: Sparkles, title: msg('Shader'), cmd: 'tool.shader', group: 'annotate' },
+  { tool: 'zoom', icon: ZoomIn, title: msg('Zoom'), cmd: 'tool.zoom', group: 'view' },
 ];
 
 function keyOf(cmd: string): string {
@@ -202,7 +206,7 @@ function FileName() {
       />
     );
   }
-  return <button type="button" className="file-name" onClick={() => setEditing(true)} title={t('Rename file')} dir="auto" data-testid="file-name">{name || t('Untitled')}</button>;
+  return <h1 className="toolbar-title"><button type="button" className="file-name" onClick={() => setEditing(true)} title={t('Rename file')} dir="auto" data-testid="file-name">{name || t('Untitled')}</button></h1>;
 }
 
 function UndoRedo() {
@@ -239,15 +243,15 @@ const PRIMARY: Record<ToolbarLevel, Set<string> | null> = {
   micro: new Set(),
 };
 
-interface ToolItem { id: string; icon: typeof Hand; title: string; keys: string; active: boolean; run: () => void }
+interface ToolItem { id: string; icon: typeof Hand; title: string; keys: string; active: boolean; run: () => void; group: ToolGroup }
 
 function toolItems(tool: Tool): ToolItem[] {
-  const pick = (t: (typeof TOOLS)[number]): ToolItem => ({ id: t.tool, icon: t.icon, title: t.title, keys: keyOf(t.cmd), active: tool === t.tool, run: () => editor().setTool(t.tool) });
+  const pick = (t: (typeof TOOLS)[number]): ToolItem => ({ id: t.tool, icon: t.icon, title: t.title, keys: keyOf(t.cmd), active: tool === t.tool, run: () => editor().setTool(t.tool), group: t.group });
   return [
     ...TOOLS.map(pick),
-    { id: 'image', icon: ImageIcon, title: msg('Place image'), keys: keyOf('tool.image'), active: false, run: () => pickImage() },
-    { id: 'app-screen', icon: Smartphone, title: msg('Import an app screen from Tomacco'), keys: '', active: false, run: openAppScreenBeside },
-    { id: 'icons', icon: Shapes, title: msg('Icons'), keys: '', active: false, run: () => ui().set({ iconsOpen: true }) },
+    { id: 'image', icon: ImageIcon, title: msg('Place image'), keys: keyOf('tool.image'), active: false, run: () => pickImage(), group: 'insert' },
+    { id: 'app-screen', icon: Smartphone, title: msg('Import an app screen from Tomacco'), keys: '', active: false, run: openAppScreenBeside, group: 'insert' },
+    { id: 'icons', icon: Shapes, title: msg('Icons'), keys: '', active: false, run: () => ui().set({ iconsOpen: true }), group: 'insert' },
     ...TOOLS2.map(pick),
   ];
 }
@@ -354,13 +358,19 @@ function MoreMenu({ level, lay, branch, followed }: { level: ToolbarLevel; lay: 
 }
 
 /** The toolbar's content that decides its room: data the editor has anyway, never a measured width. */
-function useToolbarLevel(lay: ChromeLayout, named: boolean, sync: boolean): ToolbarLevel {
+function useToolbarLevel(lay: ChromeLayout, named: boolean, sync: boolean, words: { preview: string; agent: string }): { level: ToolbarLevel; labels: ToolbarLabels } {
   const { width } = useWindowSize();
   const scale = useSettings((s) => s.uiScale) || 1;
   const peers = useEditor((s) => s.peers.length);
   const following = useEditor((s) => s.peers.some((p) => p.clientId === s.followClientId));
-  return fitToolbar(width / scale, { leftDrawer: lay.left === 'drawer', rightDrawer: lay.right === 'drawer', sync, peers, following, branchNamed: named }, lay.toolbar);
+  const text = useMemo(() => ({ preview: textWidth(words.preview, 13, 500), agent: textWidth(words.agent, 13, 500), keys: textWidth(ASK_KEYS, 12) }), [words.preview, words.agent]);
+  const content: ToolbarContent = { leftDrawer: lay.left === 'drawer', rightDrawer: lay.right === 'drawer', sync, peers, following, branchNamed: named };
+  const level = fitToolbar(width / scale, content, lay.toolbar);
+  return { level, labels: toolbarLabels(width / scale, level, content, text) };
 }
+
+/** The shortcut on the Ask agent button, as keys rather than as the chord its title writes. */
+const ASK_KEYS = 'Ctrl K';
 
 export function Toolbar() {
   const t = useT();
@@ -373,25 +383,35 @@ export function Toolbar() {
   const devices = useSyncPeers();
   const [branch, setBranch] = useState<{ named: boolean; name: string }>({ named: false, name: '' });
   const onBranch = useCallback((named: boolean, name: string) => setBranch((b) => (b.named === named && b.name === name ? b : { named, name })), []);
-  const level = useToolbarLevel(lay, branch.named, devices.length > 0);
+  const words = { preview: t('Preview'), agent: t('Ask agent') };
+  const { level, labels } = useToolbarLevel(lay, branch.named, devices.length > 0, words);
   const primary = PRIMARY[level];
   const items = toolItems(tool);
   const shown = primary ? items.filter((i) => primary.has(i.id)) : items;
   const overflow = primary ? items.filter((i) => !primary.has(i.id)) : [];
   const wide = level === 'full';
   const micro = level === 'micro';
+  // Groups are told apart only where every tool shows; a short row of the main ones reads as one.
+  const grouped = !primary;
+  const askTitle = prompt ? t('Hide the chat ({shortcut})', { shortcut: 'Ctrl+Alt+3' }) : t('Chat with your agent ({shortcut})', { shortcut: 'Ctrl+K' });
   return (
-    <header className="toolbar" data-testid="toolbar" data-level={level}>
+    <header className="toolbar" data-testid="toolbar" data-level={level} data-labels={labels}>
       <div className="toolbar-left">
         <a className="icon-btn" href="#/" title={t('All files')} aria-label={t('All files')} data-testid="home-link"><ArrowLeft size={15} /></a>
         {micro ? null : <PanelToggle side="left" lay={lay} />}
         <FileName />
         <BranchMenu compact={level !== 'full' && level !== 'tight'} onLabel={onBranch} />
+        <SyncStatus peers={devices} />
       </div>
       <div className="toolbar-center" role="toolbar" aria-label={t('Tools')}>
-        {shown.map((it) => (it.id === 'icons'
-          ? <IconPicker key="icons" />
-          : <IconButton key={it.id} icon={<it.icon size={16} />} title={it.keys ? `${t(it.title)} (${it.keys})` : t(it.title)} active={it.active} onClick={it.run} testId={`tool-${it.id}`} />))}
+        {shown.map((it, i) => (
+          <Fragment key={it.id}>
+            {grouped && i > 0 && shown[i - 1]!.group !== it.group ? <span className="toolbar-sep" role="separator" aria-orientation="vertical" /> : null}
+            {it.id === 'icons'
+              ? <IconPicker />
+              : <IconButton icon={<it.icon size={16} />} title={it.keys ? `${t(it.title)} (${it.keys})` : t(it.title)} active={it.active} onClick={it.run} testId={`tool-${it.id}`} />}
+          </Fragment>
+        ))}
         {overflow.length ? <MoreTools items={overflow} /> : null}
         {overflow.some((it) => it.id === 'icons') ? <IconPicker inline={false} /> : null}
       </div>
@@ -399,25 +419,31 @@ export function Toolbar() {
         {followed && !micro ? (
           <button type="button" className="follow-pill" onClick={stopFollowing} title={t('Stop following {name}', { name: followed.user.name })} data-testid="follow-pill" style={{ color: followed.user.color }}><Eye size={13} /> <span className="follow-name">{t('Following {name}', { name: followed.user.name })}</span></button>
         ) : null}
-        <SyncStatus peers={devices} />
         <Peers max={PEERS_SHOWN[level]} />
         {micro ? null : <Me />}
         {micro ? null : <span className="toolbar-sep" />}
         {micro ? null : <UndoRedo />}
-        <IconButton icon={<Sparkles size={15} />} title={prompt ? t('Hide the chat ({shortcut})', { shortcut: 'Ctrl+Alt+3' }) : t('Chat with your agent ({shortcut})', { shortcut: 'Ctrl+K' })} active={prompt} onClick={toggleChat} testId="prompt-toggle" />
         {wide ? (
           <>
-            <IconButton icon={<SlidersHorizontal size={15} />} title={t('Hide panels ({shortcut})', { shortcut: 'Ctrl+\\' })} onClick={() => editor().set({ minimal: !editor().minimal })} testId="minimal-toggle" />
-            <IconButton icon={<Play size={15} />} title={t('Preview ({shortcut})', { shortcut: 'Ctrl+Alt+Enter' })} onClick={() => runCommand('view.preview')} testId="preview-open" />
+            <span className="toolbar-sep" />
             <IconButton icon={<ListChecks size={15} />} title={t('Design checks')} onClick={() => runCommand('view.checks')} testId="checks-open" />
-            <IconButton icon={<Settings2 size={15} />} title={t('Settings ({shortcut})', { shortcut: 'Ctrl+,' })} onClick={() => runCommand('view.settings')} testId="settings-open" />
             <IconButton icon={<History size={15} />} title={t('History: changes and commits ({shortcut} to commit)', { shortcut: 'Ctrl+Alt+S' })} onClick={() => openTab('right', { rightTab: 'history' })} testId="toolbar-history" />
+            <IconButton icon={<SlidersHorizontal size={15} />} title={t('Hide panels ({shortcut})', { shortcut: 'Ctrl+\\' })} onClick={() => editor().set({ minimal: !editor().minimal })} testId="minimal-toggle" />
+            <IconButton icon={<Settings2 size={15} />} title={t('Settings ({shortcut})', { shortcut: 'Ctrl+,' })} onClick={() => runCommand('view.settings')} testId="settings-open" />
             <HelpMenu />
           </>
         ) : null}
         {micro ? null : <PanelToggle side="right" lay={lay} />}
         {wide ? null : <MoreMenu level={level} lay={lay} branch={branch.named && level !== 'tight' ? branch.name : null} followed={followed && micro ? { name: followed.user.name, color: followed.user.color } : null} />}
         {level === 'mini' || level === 'micro' ? null : <ZoomControl />}
+        {wide ? (
+          <button type="button" className={`toolbar-action${labels === 'keys' || labels === 'text' ? '' : ' is-icon'}`} title={t('Preview ({shortcut})', { shortcut: 'Ctrl+Alt+Enter' })} onClick={() => runCommand('view.preview')} data-testid="preview-open">
+            <Play size={15} aria-hidden="true" /><span className="toolbar-action-label">{words.preview}</span>
+          </button>
+        ) : null}
+        <button type="button" className={`toolbar-action is-primary${labels === 'none' ? ' is-icon' : ''}${prompt ? ' is-active' : ''}`} title={askTitle} aria-pressed={prompt} onClick={toggleChat} data-testid="prompt-toggle">
+          <Sparkles size={15} aria-hidden="true" /><span className="toolbar-action-label">{words.agent}</span><kbd className="toolbar-action-keys" aria-hidden="true">{ASK_KEYS}</kbd>
+        </button>
       </div>
     </header>
   );

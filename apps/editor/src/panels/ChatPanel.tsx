@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Copy, Images, Layers, Loader2, MessageSquarePlus, PanelRightClose, Paperclip, Pencil, Plus, RotateCcw, Square, X } from 'lucide-react';
-import { isRunnerId, MAX_DIRECTION_LANES, LANE_COLORS, inferIntent, type RunIntent, type RunLanguageChoice } from '@bogen/core';
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Copy, Images, Layers, Loader2, PanelRightClose, Paperclip, Phone, Pencil, Plus, RotateCcw, Sparkles, Square, X } from 'lucide-react';
+import { isRunnerId, MAX_DIRECTION_LANES, LANE_COLORS, inferIntent, stripSayTags, type RunIntent, type RunLanguageChoice } from '@bogen/core';
 import { api, resolveAsset, type ConversationSummary, type Runner } from '../lib/api.ts';
 import type { LaneChoice, RunnerCatalog } from '../lib/agent-api.ts';
 import { collabApi, type RemoteRunner } from '../lib/collab-api.ts';
@@ -14,6 +14,8 @@ import { session } from '../doc/session.ts';
 import { IconButton, SelectField } from '../ui/controls.tsx';
 import { Markdown } from '../ui/Markdown.tsx';
 import { MicButton, useVoice, VoiceNotice, VoiceRecording } from '../ui/VoiceInput.tsx';
+import { CallPanel } from '../call/CallPanel.tsx';
+import { startCall, useCall } from '../call/call-session.ts';
 import { joinWords } from '../ui/voice-state.ts';
 import { msg } from '../i18n/core.ts';
 import { useT } from '../i18n/react.ts';
@@ -24,9 +26,9 @@ import { stepLines } from './collab-words.ts';
 import { effectiveLanguage, LanguageChoice, languageNote, useBrandVoice, useFileLanguage } from './ContentLanguage.tsx';
 import { CHAT_FOCUS_EVENT, newChat, openChat, rebuildStoredImage, restoreChat, sendPrompt, setChatOpen, startRace, stopPrompt } from './prompt-actions.ts';
 import { screenRedoPrompt } from './redo-screen.ts';
-import { RunChoice, runnerName, useRunnerCatalogs, useRunSettings } from './RunChoice.tsx';
+import { runnerName, useRunnerCatalogs, useRunSettings } from './RunChoice.tsx';
 import { RunResult } from './RunResult.tsx';
-import { ChatBranch, ChatPicker, loadSkills, pickerItems, SkillSheet, TraceLink, VariationControls, type ChatSkill, type PickerItem } from './ChatExtras.tsx';
+import { AgentPicker, ChatBranch, ChatPicker, loadSkills, ModeIcon, ModePicker, modeWords, pickerItems, SkillSheet, TraceLink, VariationControls, type ChatSkill, type PickerItem } from './ChatExtras.tsx';
 import { keptMentions, loadVariation, pickerQuery, proposalVariation, raceVariation, saveVariation, type Mention, type VariationChoice } from './chat-extras-state.ts';
 
 /**
@@ -87,6 +89,11 @@ function reviewWords(review: string | undefined): string {
 }
 
 /** Who answered, in words: a runner's id as its name, a name already given (on another device) as it is. */
+/** The model Bogen picked for a request by its size, as the chat shows it: "Sonnet · small change". */
+function sizedWords(size: 'small' | 'large' | 'answer', model: string): string {
+  return size === 'small' ? t('{model} · small change', { model }) : size === 'answer' ? t('{model} · question', { model }) : t('{model} · large request', { model });
+}
+
 function whoWords(runner: string | undefined): string {
   if (!runner) return t('Agent');
   return isRunnerId(runner) ? runnerName(runner) : runner;
@@ -172,6 +179,8 @@ function ChatResizer() {
  */
 export function ChatHost({ lay, minimal }: { lay: ChatChrome; minimal: boolean }) {
   const open = useEditor((s) => s.prompt.open);
+  // The full call panel shows in the call's own file; anywhere else the call bar stands for it.
+  const fileId = useEditor((e) => e.fileId);
   const docked = !minimal && open && lay.chat === 'docked';
   const drawer = !minimal && open && lay.chat === 'drawer';
   const shown = docked || drawer;
@@ -207,6 +216,9 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
   const t = useT();
   const prompt = useEditor((s) => s.prompt);
   const fileId = useEditor((s) => s.fileId);
+  // The call in this file shows as a card under the chat's header; anywhere else the call bar stands for it.
+  const calling = useCall((c) => c.active && c.fileId === fileId);
+  const callSaid = useCall((c) => c.captions.length > 0);
   const selection = useEditor((s) => s.selection);
   const [view, setView] = useState<'chat' | 'history'>('chat');
   const [text, setText] = useState('');
@@ -215,7 +227,9 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
   const [runners, setRunners] = useState<Runner[] | null>(null);
   const [remote, setRemote] = useState<RemoteRunner[]>([]);
   const [runner, setRunnerState] = useState('');
-  const [storedReview, setReviewState] = useState<Review>((stored(REVIEW_KEY) as Review | null) ?? 'direct');
+  // Critique changes nothing, so it is never the remembered mode: it applies to one message and the chat goes back to the
+  // remembered mode after sending. An older build could have stored it; that reads as Change it.
+  const [storedReview, setReviewState] = useState<Review>(() => { const v = stored(REVIEW_KEY) as Review | null; return v && v !== 'critique' ? v : 'direct'; });
   const review = prompt.redo ? 'direct' : storedReview;
   const [lanes, setLanesState] = useState<LaneChoice[]>(storedLanes);
   const [lastReview, setLastReview] = useState<Review | null>(null);
@@ -249,7 +263,7 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
   };
   const setReview = (value: Review) => {
     setReviewState(value);
-    remember(REVIEW_KEY, value);
+    if (value !== 'critique') remember(REVIEW_KEY, value);
   };
   const setVariation = (value: VariationChoice) => {
     setVariationState(value);
@@ -313,6 +327,18 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
     setSkill(null);
     setMentions([]);
   }, [fileId]);
+
+  // Words handed over from elsewhere in the editor go into the field once, to be read and sent by the person.
+  useEffect(() => {
+    const draft = prompt.draft;
+    if (!draft) return;
+    setText(draft.text);
+    // Words handed over to fix something are a change request, whatever mode the chat was left in.
+    setReview(draft.review ?? 'direct');
+    setView('chat');
+    inputRef.current?.focus();
+    editor().set({ prompt: { ...editor().prompt, draft: undefined } });
+  }, [prompt.draft?.id]);
 
   // Whether this chat is over: its branch in the repository was merged.
   const conversationId = fileId ? conversationFor(fileId) : '';
@@ -418,6 +444,7 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
       setReview('direct');
       editor().set({ prompt: { ...editor().prompt, redo: undefined } });
     }
+    if (review === 'critique') { const back = stored(REVIEW_KEY) as Review | null; setReviewState(back && back !== 'critique' ? back : 'direct'); }
     void sendPrompt(v, runnerId, {
       ...(model ? { model } : {}), ...(effort ? { effort } : {}),
       ...(review !== 'direct' ? { review } : languageMode === 'add' ? {} : { intent }),
@@ -425,6 +452,19 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
       ...(sentImages.length ? { images: sentImages } : {}),
       ...(skill ? { discipline: skill.id } : {}), ...(said.length ? { mentions: said.map(({ kind, id }) => ({ kind, id })) } : {}), ...(varied ? { variation: varied } : {}),
     }, { context: [...(skill ? [t('Skill: {name}', { name: skill.name })] : []), ...names.map((n) => n.name)], runnerLabel: deviceName ? t('{runner} on {device}', { runner: runnerLabel, device: deviceName }) : runnerId, review });
+  };
+
+  /** A first ask from the empty chat goes into the field with its mode, to be read and sent by the person. */
+  const startWith = (words: string, mode: Review) => {
+    setReview(mode);
+    setText(words);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(words.length, words.length);
+      setCaret(words.length);
+    });
   };
 
   const attach = async (files: File[]) => {
@@ -463,13 +503,25 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
     : intentOverride === 'edit' && inferred !== 'edit' ? { say: t('Changes the existing layers in place.'), other: inferred === 'revise' ? t('Redo as a revision') : t('Make a new page'), to: inferred } : null;
 
   const label = target.length === 1 ? names[0]!.name : target.length ? t.n(target.length, '{count} layer', '{count} layers') : t('This page');
+  // The same, inside a sentence.
+  const where = target.length ? label : t('this page');
   const cost = review === 'directions'
     ? ` · ${t.n(lanes.length, '{count} run, each on your own plan', '{count} runs, each on your own plan')}`
     : deviceId ? ` · ${deviceName ? t('runs on {device}, its plan, and comes back by sync', { device: deviceName }) : t('runs on another device, its plan, and comes back by sync')}` : '';
-  const modeLine = review === 'proposal' ? (proposalVariation(variation)?.count ?? 1) > 1 ? t.n(variation.count, 'Changes go into {count} copy next to {target}. You accept or discard it.', 'Changes go into {count} copies next to {target}. You accept or discard them.', { target: label }) : t('Changes go into a copy next to {target}. You accept or discard it.', { target: label })
-    : review === 'critique' ? t('Notes as comments on {target}. Nothing changes.', { target: label })
-    : review === 'directions' ? t('Several runs, each in its own copy of {target}, side by side.', { target: label })
-    : null;
+  const agentName = deviceName ? t('{runner} on {device}', { runner: runnerLabel, device: deviceName }) : runnerLabel || t('Your agent');
+  // What Send will do, in one sentence under the field: the mode, who, and on what.
+  const modeLine = review === 'proposal' ? (proposalVariation(variation)?.count ?? 1) > 1 ? t.n(variation.count, 'Changes go into {count} copy next to {target}. You accept or discard it.', 'Changes go into {count} copies next to {target}. You accept or discard them.', { target: where }) : t('Changes go into a copy next to {target}. You accept or discard it.', { target: where })
+    : review === 'critique' ? t('Notes as comments on {target}. Nothing changes.', { target: where })
+    : review === 'directions' ? t('Several runs, each in its own copy of {target}, side by side.', { target: where })
+    : intentNote ? t('{agent} works on {target}.', { agent: agentName, target: where })
+    : t('{agent} edits {target}. Undo takes the whole run back.', { agent: agentName, target: where });
+  // The model in short on its button; the sheet names the agent, the model and the effort.
+  const catalog = settings?.catalogs[runnerId];
+  const chosen = deviceId ? undefined : settings?.settings.runners[runnerId]?.prompt;
+  const modelName = chosen?.model ? catalog?.models.find((m) => m.id === chosen.model)?.label ?? chosen.model : catalog?.defaultModel;
+  const effortName = chosen?.effort ? chosen.effort.charAt(0).toUpperCase() + chosen.effort.slice(1) : undefined;
+  const agentSummary = deviceId ? agentName : [modelName ?? runnerLabel, effortName].filter(Boolean).join(' · ');
+  const runnerOptions = runners ? [...runners.map((r) => ({ value: r.id, label: r.available ? runnerName(r.id) : r.reason && (r.installed || r.checked) ? t('{runner} (not available)', { runner: runnerName(r.id) }) : t('{runner} (not found)', { runner: runnerName(r.id) }), disabled: !r.available })), ...elsewhere] : [];
   const showNotes = lastReview === 'critique' && !prompt.running && prompt.messages.length > 0;
   const placeholder = prompt.restoring ? t('Loading') : none
     ? t('Install {claude} or {codex} to use this', { claude: 'claude', codex: 'codex' })
@@ -498,18 +550,27 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
       }}
     >
       {view === 'history' ? (
-        <ChatHistory fileId={fileId} running={prompt.running} onBack={() => setView('chat')} onPick={(id) => { void openChat(id).then(() => { setView('chat'); focusInput(); }); }} onNew={() => { newChat(); setView('chat'); focusInput(); }} />
+        <>{calling ? <CallPanel /> : null}<ChatHistory fileId={fileId} running={prompt.running} onBack={() => setView('chat')} onPick={(id) => { void openChat(id).then(() => { setView('chat'); focusInput(); }); }} onNew={() => { newChat(); setView('chat'); focusInput(); }} /></>
       ) : (
         <>
           <header className="chat-head">
-            <button type="button" className="chat-title" onClick={() => setView('history')} title={t('Earlier chats in this file')} data-testid="chat-title">
-              <span dir="auto">{title || t('New chat')}</span>
-              <ChevronDown size={12} aria-hidden="true" />
+            <button type="button" className="chat-title" onClick={() => setView('history')} title={t('Earlier chats in this file')} data-testid="chat-history-open">
+              <RotateCcwClock />
+              <span dir="auto" data-testid="chat-title">{title || t('New chat')}</span>
+              <span className="chat-sr">{t('Earlier chats in this file')}</span>
             </button>
-            <IconButton icon={<MessageSquarePlus size={14} />} title={t('New chat: the agent forgets what was said here')} onClick={() => { newChat(); focusInput(); }} disabled={prompt.running || !prompt.messages.length} testId="prompt-new-chat" />
-            <IconButton icon={<RotateCcwClock />} title={t('Earlier chats in this file')} onClick={() => setView('history')} testId="chat-history-open" />
+            {prompt.messages.length ? (
+              <button type="button" className="chat-pill is-quiet chat-new" onClick={() => { newChat(); focusInput(); }} disabled={prompt.running} title={t('New chat: the agent forgets what was said here')} data-testid="prompt-new-chat">
+                <Plus size={12} aria-hidden="true" /> {t('New chat')}
+              </button>
+            ) : null}
+            {calling ? (
+              // In a call here, the button that started it becomes the call's live mark, in the same place.
+              <span className="chat-call-live" data-testid="chat-call-live"><Phone size={14} fill="currentColor" strokeWidth={0} aria-hidden="true" /><span className="chat-sr">{t('In a call')}</span></span>
+            ) : <IconButton icon={<Phone size={14} />} title={t('Call your agent: talk instead of typing')} onClick={() => void startCall()} testId="chat-call" />}
             <IconButton icon={<PanelRightClose size={14} />} title={drawer ? t('Close ({shortcut})', { shortcut: 'Esc' }) : t('Hide the chat ({shortcut})', { shortcut: 'Ctrl+Alt+3' })} onClick={() => setChatOpen(false)} testId="chat-close" />
           </header>
+          {calling ? <CallPanel /> : null}
           {prompt.redo ? <div className="prompt-redo" data-testid="prompt-redo"><strong>{t('Redo this screen…')} {prompt.redo.name}</strong><button type="button" className="run-link" onClick={() => { editor().set({ prompt: { ...editor().prompt, redo: undefined } }); setIntentOverride(null); setText(''); }}>{t('Cancel')}</button></div> : null}
           <ChatLog
             messages={prompt.messages}
@@ -518,6 +579,8 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
             fileId={fileId}
             onRetry={() => { const last = lastUserMessage(prompt.messages); if (last) submit(last.text); }}
             onEdit={editLast}
+            empty={none || prompt.redo || prompt.restoring ? null : { target: target.length ? label : null, count: target.length, race: Boolean(raceTarget && artboard), typing: Boolean(text.trim()), onStart: startWith }}
+            calling={calling ? (callSaid ? 'talking' : 'fresh') : null}
           />
           {showNotes ? <div className="prompt-notes"><button type="button" className="run-link" onClick={() => editor().set({ rightTab: 'comments' })} data-testid="prompt-show-notes">{t('Show the notes')}</button></div> : null}
           <footer className="chat-composer">
@@ -616,13 +679,12 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
               {voice.phase === 'recording' ? <VoiceRecording voice={voice} testId="chat-mic" /> : (
                 <div className="chat-controls">
                   <IconButton icon={<Paperclip size={14} />} title={t('Attach an image, or paste or drop one here')} onClick={() => pickImages((files) => void attach(files))} disabled={none} testId="chat-attach" />
+                  <ModePicker value={review} onChange={setReview} lanes={lanes.length} disabled={Boolean(prompt.redo)} />
                   {runners?.length && review !== 'directions' ? (
-                    <SelectField className="prompt-runner" value={runner} options={[...runners.map((r) => ({ value: r.id, label: r.available ? runnerName(r.id) : r.reason && (r.installed || r.checked) ? t('{runner} (not available)', { runner: runnerName(r.id) }) : t('{runner} (not found)', { runner: runnerName(r.id) }), disabled: !r.available })), ...elsewhere]} onChange={setRunner} testId="prompt-runner" title={t('Which CLI runs this, here or on a paired device that allows it')} />
+                    <AgentPicker runner={runner} options={runnerOptions} onRunner={setRunner} choice={runner && !deviceId ? runner : null} summary={agentSummary} {...(deviceId ? { note: t('That device runs it with its own model and effort.') } : {})} />
                   ) : null}
-                  {runner && !deviceId && review !== 'directions' ? <RunChoice runner={runner} scope="prompt" testId="prompt-choice" /> : null}
-                  <SelectField<Review> disabled={Boolean(prompt.redo)} className="prompt-review" value={review} options={[{ value: 'direct', label: t('Change it') }, { value: 'proposal', label: t('Propose') }, { value: 'directions', label: t.n(lanes.length || 3, '{count} direction', '{count} directions') }, { value: 'critique', label: t('Critique') }]} onChange={setReview} testId="prompt-review" title={t('Change the layers, work in copies you accept or discard, race several runs, or only get comments')} />
                   <span className="chat-controls-end">
-                  <LanguageChoice
+                  {prompt.running ? null : <LanguageChoice
                     value={language}
                     onChange={setLanguage}
                     canAdd={review === 'direct' && !prompt.redo}
@@ -632,10 +694,10 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
                       setText((current) => (current.trim() ? `${current.trimEnd()} ${line}` : line));
                       inputRef.current?.focus();
                     }}
-                  />
+                  />}
                   {prompt.running ? null : <MicButton voice={voice} testId="chat-mic" />}
                   {prompt.running ? (
-                    <button type="button" className="chat-stop prompt-stop" onClick={stopPrompt} data-testid="prompt-stop" title={t('Stop')}>
+                    <button type="button" className="chat-stop prompt-stop" onClick={() => stopPrompt()} data-testid="prompt-stop" title={t('Stop')}>
                       <Square size={9} fill="currentColor" aria-hidden="true" />
                       <span className="chat-stop-time" aria-hidden="true"><Elapsed since={prompt.startedAt} /></span>
                       {t('Stop')}
@@ -660,7 +722,7 @@ export function ChatPanel({ drawer = false }: { drawer?: boolean }) {
                 {!prompt.redo ? <button type="button" className="run-link" onClick={() => setIntentOverride(intentNote.to)} data-testid="prompt-intent-switch">{intentNote.other}</button> : null}
               </div>
             ) : null}
-            <p className="prompt-target chat-target" data-testid="prompt-target">{modeLine ?? label}{cost}</p>
+            <p className="prompt-target chat-target" data-testid="prompt-target">{modeLine}{cost}</p>
           </footer>
         </>
       )}
@@ -722,7 +784,9 @@ function ContextChips({ names }: { names: { id: string; name: string }[] }) {
 
 // ---------------------------------------------------------------- the conversation
 
-function ChatLog({ messages, running, runId, fileId, onRetry, onEdit }: { messages: PromptMessage[]; running: boolean; runId: string | null; fileId: string | null; onRetry: () => void; onEdit: () => void }) {
+interface FirstAsks { target: string | null; count: number; race: boolean; /** Something is written: the first asks step aside. */ typing: boolean; onStart: (words: string, mode: Review) => void }
+
+function ChatLog({ messages, running, runId, fileId, onRetry, onEdit, empty, calling = null }: { messages: PromptMessage[]; running: boolean; runId: string | null; fileId: string | null; onRetry: () => void; onEdit: () => void; empty: FirstAsks | null; calling?: 'fresh' | 'talking' | null }) {
   const t = useT();
   const listRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -750,7 +814,9 @@ function ChatLog({ messages, running, runId, fileId, onRetry, onEdit }: { messag
   // A chat opened again starts at its end.
   useEffect(() => { stick.current = true; }, [fileId]);
 
-  if (!messages.length) return <ChatEmpty />;
+  // During a call the call has the panel: no first suggestions, one quiet line about where the words go.
+  if (!messages.length && calling) return <div className="chat-empty is-call" data-testid="chat-empty">{calling === 'fresh' ? <p>{t('What you say in the call shows here, with the agent’s answers and steps.')}</p> : null}</div>;
+  if (!messages.length) return <ChatEmpty asks={empty} />;
   return (
     <div className="chat-log-wrap">
       <div
@@ -780,19 +846,44 @@ function ChatLog({ messages, running, runId, fileId, onRetry, onEdit }: { messag
   );
 }
 
-function ChatEmpty() {
+/** Nothing said yet: a few first asks for what is selected, or for the page, each with the mode it suits. */
+function ChatEmpty({ asks }: { asks: FirstAsks | null }) {
   const t = useT();
+  const one = asks?.target && asks.count === 1 ? asks.target : null;
+  const heading = one ? t('Ask for a change in {name}', { name: one })
+    : asks?.count ? t.n(asks.count, 'Ask for a change in this layer', 'Ask for a change in these {count} layers')
+    : t('Ask for a change on this page');
+  const name = one ?? t('the selection');
+  const list: { words: string; mode: Review }[] = !asks || asks.typing ? [] : asks.count ? [
+    { words: t('What would you change in {name}?', { name }), mode: 'critique' },
+    { words: t('Make {name} calmer: less text, one clear action', { name }), mode: 'direct' },
+    { words: t('Give {name} its hover, focus and disabled states', { name }), mode: 'proposal' },
+    ...(asks.race ? [{ words: t('Try three different layouts for {name}', { name }), mode: 'directions' as const }] : []),
+  ] : [
+    { words: t('What should I fix first on this page?'), mode: 'critique' },
+    { words: t('Tighten the spacing and alignment to the grid'), mode: 'direct' },
+    { words: t('Make the hierarchy clearer: one loud thing per screen'), mode: 'direct' },
+    { words: t('Add the missing empty, loading and error states'), mode: 'proposal' },
+  ];
   return (
     <div className="chat-empty" data-testid="chat-empty">
-      <h2>{t('Ask your agent about this page')}</h2>
-      <p>{t('It works on what you select, or on the whole page. The chat stays with this file, and the next message knows what was said.')}</p>
-      <dl>
-        <dt>{t('Change it')}</dt><dd>{t('Edits the layers. Undo takes the whole run back.')}</dd>
-        <dt>{t('Propose')}</dt><dd>{t('Works in a copy you accept or discard.')}</dd>
-        <dt>{t('Directions')}</dt><dd>{t('Several runs, each in its own copy, side by side.')}</dd>
-        <dt>{t('Critique')}</dt><dd>{t('Notes as comments. Nothing changes.')}</dd>
-      </dl>
-      <p className="chat-keys">{t('Enter sends, Shift+Enter adds a line. {shortcut} shows or hides the chat.', { shortcut: 'Ctrl+Alt+3' })}</p>
+      <div className="chat-empty-head">
+        <h2>{heading}</h2>
+        <p>{t('It works on what you select, or on the whole page, and remembers this chat.')}</p>
+      </div>
+      {list.length ? (
+        <ul className="chat-starters" aria-label={t('First asks')}>
+          {list.map((ask) => (
+            <li key={ask.words}>
+              <button type="button" className="chat-starter" onClick={() => asks!.onStart(ask.words, ask.mode)} title={t('Put it in the field to edit or send')} data-testid="chat-starter" data-mode={ask.mode}>
+                <span className="chat-starter-words" dir="auto">{ask.words}</span>
+                <span className="chat-starter-mode"><ModeIcon mode={ask.mode} />{modeWords(ask.mode, 3).label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="chat-keys">{t('Type / for a playbook, @ for a layer, component or token.')}</p>
     </div>
   );
 }
@@ -801,7 +892,8 @@ function Turn({ turn, last, running, liveRunId, fileId, onRetry, onEdit }: { tur
   const t = useT();
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
-  const words = replyText(turn);
+  // A voice call's reply ends with a <say> block for the voice: its words stay, the tags do not.
+  const words = stripSayTags(replyText(turn));
   const steps = stepLines(turn.steps.map((tool) => ({ tool })), running ? 6 : 40);
   const done = !running;
   // What a run changed goes under its words, once it is over.
@@ -829,9 +921,10 @@ function Turn({ turn, last, running, liveRunId, fileId, onRetry, onEdit }: { tur
       {turn.replies.length || turn.steps.length || turn.error || running || turn.notes.length ? (
         <div className="chat-agent" data-testid="chat-agent">
           <div className="chat-who">
-            <span className="chat-who-dot" aria-hidden="true" />
+            <span className="chat-who-mark" aria-hidden="true"><Sparkles size={10} /></span>
             <span className="chat-who-name">{whoWords(turn.user?.runner)}</span>
-            {turn.user ? <span>{reviewWords(turn.user.review)}</span> : null}
+            {turn.user?.review && turn.user.review !== 'direct' ? <span>{reviewWords(turn.user.review)}</span> : null}
+            {turn.user?.sized?.label ? <span className="chat-who-model" title={t('Picked by the size of the request, because no model is chosen')} data-testid="chat-sized">{sizedWords(turn.user.sized.size, turn.user.sized.label)}</span> : null}
             {turn.user?.at ? <span className="chat-who-at">{shortAgo(turn.user.at)}</span> : null}
           </div>
           {words ? <Markdown text={words} className="md prompt-msg is-agent" /> : null}
@@ -868,10 +961,10 @@ function Turn({ turn, last, running, liveRunId, fileId, onRetry, onEdit }: { tur
           {result ? <RunResult fileId={fileId!} runId={turn.runId!} /> : null}
           {done && (words || last) && !turn.error ? (
             <div className="chat-actions">
-              {words ? <IconButton icon={copied ? <Check size={13} /> : <Copy size={13} />} title={copied ? t('Copied') : t('Copy the answer')} onClick={copy} testId="chat-copy" /> : null}
+              {words ? <button type="button" className="chat-act" title={t('Copy the answer')} onClick={copy} data-testid="chat-copy">{copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}{copied ? t('Copied') : t('Copy')}</button> : null}
+              {last && turn.user ? <button type="button" className="chat-act" title={t('Send the same message again')} onClick={onRetry} data-testid="chat-ask-again"><RotateCcw size={12} aria-hidden="true" />{t('Ask again')}</button> : null}
+              {last && turn.user ? <button type="button" className="chat-act" title={t('Edit your message')} onClick={onEdit} data-testid="chat-edit"><Pencil size={12} aria-hidden="true" />{t('Edit')}</button> : null}
               {turn.runId ? <TraceLink runId={turn.runId} /> : null}
-              {last && turn.user ? <IconButton icon={<RotateCcw size={13} />} title={t('Ask again')} onClick={onRetry} testId="chat-ask-again" /> : null}
-              {last && turn.user ? <IconButton icon={<Pencil size={13} />} title={t('Edit your message')} onClick={onEdit} testId="chat-edit" /> : null}
             </div>
           ) : null}
         </div>
@@ -913,7 +1006,7 @@ function ChatHistory({ fileId, running, onBack, onPick, onNew }: { fileId: strin
               <button type="button" className={`chat-history-row${c.id === current ? ' is-current' : ''}`} aria-current={c.id === current ? 'true' : undefined} disabled={running && c.id !== current} onClick={() => (c.id === current ? onBack() : onPick(c.id))} data-testid="chat-history-row">
                 <span className="chat-history-top">
                   <span className="chat-history-title" dir="auto">{c.title || t('New chat')}</span>
-                  {c.id === current ? <span className="chat-history-open">{t('Open')}</span> : null}
+                  {c.id === current ? <span className="chat-history-open">{t('Current')}</span> : null}
                 </span>
                 <span className="chat-history-meta">{[c.runners.map(runnerName).join(', '), t.n(c.turns, '{count} message', '{count} messages'), shortAgo(c.updatedAt)].filter(Boolean).join(' · ')}</span>
               </button>

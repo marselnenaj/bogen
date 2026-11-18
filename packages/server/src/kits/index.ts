@@ -247,12 +247,26 @@ export function brandTheme(kit: Kit, brand: BrandData): Record<string, string> {
 }
 
 /** Sets a theme onto the kit's tokens in a file, in the base mode, or in one mode. Unknown tokens are refused. */
+/**
+ * A family name with a digit or a space is only valid CSS in quotes ("Source Sans 3"); unquoted, the browser drops the
+ * whole declaration and the kit falls back to its serif default. Generic names and var() stay as they are.
+ */
+export function quoteFamilies(value: string): string {
+  if (/var\(/.test(value)) return value;
+  return value.split(',').map((part) => {
+    const f = part.trim();
+    if (!f || /^["']/.test(f) || /^(serif|sans-serif|monospace|system-ui|cursive|fantasy|math|emoji|ui-[\w-]+|-apple-system)$/i.test(f)) return f;
+    return /[\s\d]/.test(f) ? `"${f.replace(/"/g, '')}"` : f;
+  }).join(', ');
+}
+
 export function applyKitTheme(doc: BogenDoc, kit: Kit, theme: Record<string, string>, mode?: string): string[] {
   const known = new Map(kit.tokens.map((t) => [t.name, t]));
   const done: string[] = [];
-  for (const [name, val] of Object.entries(theme)) {
+  for (const [name, given] of Object.entries(theme)) {
     const token = known.get(name.replace(/^--/, ''));
     if (!token) throw new Error(`${kit.name} has no token "${name}". Its tokens: ${kit.tokens.map((t) => t.name).join(', ')}.`);
+    const val = token.kind === 'font-family' ? quoteFamilies(given) : given;
     if (!doc.tokens.has(token.name)) doc.setToken(token.name, token.kind, token.light);
     if (mode) setTokenMode(doc, token.name, mode, val);
     else {

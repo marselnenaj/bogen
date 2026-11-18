@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { docFromContent, fontFacesCss, keyframesCss, nodeToHtml, tokensCss } from '@bogen/core';
 import { onWheel } from '../canvas/pointer.ts';
+import { demoteDesignLandmarks } from '../canvas/landmarks.ts';
 import { resolveAsset } from '../lib/api.ts';
 import { camera } from '../state/camera.ts';
 import { useEditor } from '../state/store.ts';
@@ -21,6 +22,14 @@ function Preview({ view }: { view: Extract<StageView, { kind: 'preview' }> }) {
   const shield = useRef<HTMLDivElement>(null);
   const html = useMemo(() => doc.getChildren(pageId).map((n) => nodeToHtml(doc, n.id, { resolve: resolveAsset })).join(''), [doc, pageId]);
   const css = useMemo(() => [fontFacesCss(doc, resolveAsset), tokensCss(doc, '.history-world'), keyframesCss(doc)].filter(Boolean).join('\n'), [doc]);
+  const boardWord = t('Artboard');
+  // Like the live canvas, the older version adds no landmarks of its own inside the stage.
+  useLayoutEffect(() => {
+    const root = world.current;
+    if (!root) return;
+    const names = doc.getChildren(pageId).map((n) => n.name);
+    demoteDesignLandmarks(root, (el) => names[Array.from(root.children).indexOf(el)], boardWord);
+  }, [html, doc, pageId, boardWord]);
 
   useEffect(() => {
     const apply = () => {

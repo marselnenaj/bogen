@@ -152,7 +152,7 @@ function Language() {
   return (
     <section className="phone-set" aria-labelledby="set-language" data-testid="set-language">
       <h2 id="set-language" className="phone-set-title">{t('Language')}</h2>
-      <LanguageSelect testId="set-language-select" className="phone-language" />
+      <LanguageSelect testId="set-language-select" className="phone-language phone-select" />
       <p className="phone-set-note">{t('For this phone only. Automatic follows the languages of the phone. Designs and chats keep their own words.')}</p>
     </section>
   );
@@ -165,7 +165,11 @@ export function Settings() {
     <main className="phone-main" data-testid="phone-settings">
       <header className="phone-head is-compact"><h1 className="phone-title">{t('Settings')}</h1></header>
       <div className="phone-sets">
-        <section className="phone-set" aria-labelledby="set-workspace-view"><h2 id="set-workspace-view" className="phone-set-title">{t('View')}</h2><WorkspaceView /></section>
+        <section className="phone-set" aria-labelledby="set-workspace-view">
+          <h2 id="set-workspace-view" className="phone-set-title">{t('View')}</h2>
+          <WorkspaceView variant="field" />
+          <p className="phone-set-note">{t('Touch view is made for the phone. Full workspace is the editor of the computer, with every panel.')}</p>
+        </section>
         <Language />
         <Notifications />
         <Computers />

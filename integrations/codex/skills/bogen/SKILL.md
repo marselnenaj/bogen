@@ -8,7 +8,7 @@ description: Work with Bogen, an open source HTML/CSS design canvas that a perso
 
 Bogen is a design canvas where every layer is real HTML and CSS. You draw on it live, a person may be watching, and your edits are undoable per agent.
 
-Design work: work like a strong art director, and aim for what a senior designer would ship for this subject. The subject supplies the ideas; Bogen supplies the means.
+Design work: work like a strong art director, and aim for what a senior designer would ship for this subject. The subject supplies the ideas.
 
 1. Direction, before the first html_write. Orient (context_get, layer_tree, tokens_get, brand_get; reuse what is there), sketch three directions in a line each, keep the one only this subject could have, and write it in your reply:
    Audience and job: who it is for, the one message and the one primary action of each screen.
@@ -18,20 +18,21 @@ Design work: work like a strong art director, and aim for what a senior designer
    Layout: per screen, what is big, what is dense and where the eye lands first.
    Then ask what in it a similar brief would also get, and make that part this subject's own. Decide yourself and give the reason.
 2. System: tokens_set or tokens_from_css for that scale, a spacing scale and those colours. Every value is var(--name); semantic HTML, flex and grid; content sets heights.
-3. Build with ambition, one section per html_write and a canvas_screenshot after each, every section and every screen at the level of the first:
-   - Show the real thing large: the product's screen, output or object, drawn in HTML or inline SVG, or made with your own image tool and asset_upload, then image_crop and image_filter for one treatment.
+3. Build with ambition, one section per html_write, checked with canvas_screenshot map_only or design_lint, every section and every screen at the level of the first:
+   - Show the real thing large: the product's screen, output or object, drawn in HTML or inline SVG, or made with image_generate or your own image tool and asset_upload, then image_crop and image_filter for one treatment.
    - Density: specific content in quantity (names, figures with units, dates, states), as much as a screen in use holds.
    - Hierarchy: one loud thing per screen; on a marketing page display type at 2.5 times the body or more, with tighter tracking and chosen line breaks.
    - A layout idea per section, in the form its content has: a curve, a table of real values, a timeline, a drawn mechanism, one large quote.
    - States and detail: hover, selected, empty, error and loading where the task has them; real labels, units and long names.
-   The means: reference_search for what the person collected, palette_suggest, kit_list and kit_use for ready component kits, icon_insert, components and instances, motion_preset and keyframes_set, interaction_set for prototypes, shaders, script_run for one edit across many layers, and your own image tool.
-4. Check: look at the whole artboard at its real size, run design_lint, design_review and responsive_check. Fix hard findings, the objective defects (overflow, unreadable text, placeholder copy). Advisory findings say why a choice often reads as default: change it, or keep it when your direction has a reason. Then design_verify with observations, the scored rubric and kept, and report the scores and what is open.
+   The means: reference_search for what the person collected, palette_suggest, kit_list and kit_use, icon_insert, components and instances, motion_preset and keyframes_set, interaction_set for prototypes, shaders, script_run for one edit across many layers.
+4. Check: look at the whole artboard at its real size, run design_lint, design_review and responsive_check. Fix hard findings, the objective defects. Advisory findings: change the choice or explain it in kept. At most one design_critique round: fix its defects without re-reviewing. Scores never block. Loops need the person's explicit request quoted as loop_request. Then design_verify once per changed artboard with observations, the scored rubric and kept (again only after fixing its hard defects); report scores and open work.
+   Phone screens: start from the platform kit (kit_use ionic-ios or material-3), read guide_get apps; same done-step.
 
-What often reads as default, so that you can choose past it: one grotesk with monospace labels, dark with glow, cream with terracotta, navy with amber, grey with one accent, a serif with italic accent words, hairline-ruled rows, cards around everything, and one skeleton (headline left, paragraph right, the same split per section, a stat strip, a dark closing band). They are the first thing a model reaches for, so they look like every other generated page; any of them is fine when the direction chose it.
+What often reads as default, so that you can choose past it: one grotesk with monospace labels, dark with glow, cream with terracotta, navy with amber, grey with one accent, a serif with italic accent words, hairline-ruled rows, cards around everything, and one skeleton (headline left, paragraph right, the same split per section, a stat strip, a dark closing band). They are the first thing a model reaches for; any of them is fine when the direction chose it.
 
-Read guide_get design before your first screen: worked examples, what the checks measure and the rubric. design_knowledge action skill adds one discipline's decisions (built-in runs already have it). The current request overrides personal guidance, which overrides these defaults.
+Read guide_get design before your first screen: worked examples, the checks and the rubric. design_knowledge action skill adds one discipline's decisions (built-in runs already have it). Request > personal guidance > these defaults.
 
-Also: read canvas_plan_get before adding screens, keep changes reversible (agent_undo, batch, proposal_create for taste-based changes to existing work), reuse components (component_list), and brand_get before designing for a brand.
+Also: read canvas_plan_get before adding screens, keep changes reversible (agent_undo, batch, proposal_create for taste-based changes), reuse components (component_list), and brand_get before designing for a brand.
 
 ## Worked examples, each a default and a decision made for the subject
 
@@ -60,13 +61,13 @@ design_lint points at copy that reads as generated, with the phrase and what to 
 
 ## Review before accept
 
-proposal_create makes a marked copy of a layer next to it. Change only the copy, using the id it returns; the original stays as it was. The person gets Accept and Discard on the canvas, and accepting puts the copy's content into the original as one undo step, so its id and place stay.
+proposal_create makes a marked copy of a layer next to it. Change only the copy, using the id it returns; the original stays as it was. The person gets Accept and Discard; accepting puts the copy into the original as one undo step, keeping its id and place.
 - Use it when the layer is something they already care about, when the change is large, or when it is a matter of taste.
 - Do not use it for a new artboard, for a small fix they asked for directly, or when they said to just do it.
 - For options, proposal_create with count 3 and a note per copy gives three directions side by side, and accepting one discards the others. Make them really differ in composition and hierarchy, not in colour alone.
 - Accepting is the person's decision. Only call proposal_accept when they tell you to. Wait for it: proposal_accepted and proposal_discarded arrive through wait_for_event. After a discard, ask what was wrong rather than guessing again.
-- In a race, the person started several runs on one request, and each works in a copy of its own. Your prompt names yours and its layer ids: change only that copy, and do not create, accept or discard proposals. The person compares the copies and picks one.
+- In a race, several runs work on one request, each in its own copy; your prompt names yours and its layer ids. Change only that copy and never create, accept or discard proposals: the person picks one.
 
 ## Finishing
 
-Use <style> or layer_style pseudo/when for ::before, ::after, @container, @media (artboard width) and states such as :hover. After the last edit, inspect a fresh canvas_screenshot and run design_verify with priority, content and context observations and the rubric: 1 to 5 with evidence for hierarchy, type, spacing, colour, content, craft, originality and fit. A rubric does not count while a hard finding (an objective defect) stands; advisory findings say why a choice often reads as default, and kept records your reason for keeping one. Report the scores and remaining failures without inferring human approval. Save durable preferences with design_knowledge_update. Read guide_get code before repository handoff.
+Use <style> or layer_style pseudo/when for ::before, ::after, @container, @media (artboard width) and states such as :hover. Check edits with map_only or design_lint; a picture only for the first and final look. Done: design_lint hard 0, at most one design_critique (fix its objective defects without re-reviewing; loops only on the person's quoted loop_request; scores never block), then design_verify once per changed artboard, again only after fixing hard defects, with priority, content and context observations and the 1-to-5 rubric with evidence. Hard findings block the rubric; give reasons for kept advisory findings. Report scores and open failures; they are not approval. Save durable preferences with design_knowledge_update. Read guide_get code before repository handoff.

@@ -69,9 +69,15 @@ export function decodePng(bytes: Uint8Array): Rgba {
   if (interlace) throw new Error('Interlaced PNG.');
   const channels = ({ 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 } as Record<number, number>)[type];
   if (!channels || ![1, 2, 4, 8, 16].includes(depth)) throw new Error('This PNG has an unknown colour type.');
-  const raw = inflateSync(Buffer.concat(idat));
   const bpp = Math.max(1, (channels * depth) >> 3);
   const stride = Math.ceil((width * channels * depth) / 8);
+  // No more than the picture can hold: a few kilobytes of IDAT must not inflate into gigabytes.
+  let raw: Buffer;
+  try {
+    raw = inflateSync(Buffer.concat(idat), { maxOutputLength: (stride + 1) * height + 1024 });
+  } catch {
+    throw new Error('This PNG is damaged, or holds more data than its size allows.');
+  }
   if (raw.length < (stride + 1) * height) throw new Error('This PNG is cut short.');
   const out = new Uint8ClampedArray(width * height * 4);
   let prev = Buffer.alloc(stride);

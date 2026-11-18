@@ -158,7 +158,7 @@ export function ColorPicker({ value, onChange }: { value: string; onChange: (val
 }
 
 /** Swatch plus value, opening the picker in a popover. */
-export function ColorField({ value, onChange, placeholder, mixed, testId, onRemove }: { value: string; onChange: (value: string) => void; placeholder?: string; mixed?: boolean; testId?: string; onRemove?: () => void }) {
+export function ColorField({ value, onChange, placeholder, mixed, testId, onRemove, name }: { value: string; onChange: (value: string) => void; placeholder?: string; mixed?: boolean; testId?: string; onRemove?: () => void; name?: string }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
@@ -167,10 +167,10 @@ export function ColorField({ value, onChange, placeholder, mixed, testId, onRemo
   void onRemove;
   return (
     <div className="color-field">
-      <button ref={ref} type="button" className="swatch" onClick={() => setOpen(!open)} title={t('Edit colour')} data-testid={testId}>
+      <button ref={ref} type="button" className="swatch" onClick={() => setOpen(!open)} title={t('Edit colour')} aria-label={name ? t('Edit {name}', { name }) : t('Edit colour')} data-testid={testId}>
         <span className="swatch-fill" style={{ background: swatch ? withTokenValues(swatch) : 'transparent' }} />
       </button>
-      <TextField className="color-text" value={value} mixed={mixed} placeholder={label} onChange={onChange} />
+      <TextField className="color-text" value={value} mixed={mixed} placeholder={label} onChange={onChange} name={name ?? t('Colour')} />
       {open ? (
         <Popover anchor={ref.current} onClose={() => setOpen(false)}>
           <ColorPicker value={value || '#000000'} onChange={onChange} />

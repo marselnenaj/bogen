@@ -1,0 +1,5201 @@
+{
+ "color-panels": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.8,
+     2.32
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     360
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     -0.3,
+     0.18
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.6
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     2
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#ff9d00",
+     "#fd4f30",
+     "#809bff",
+     "#6d2eff",
+     "#333aff",
+     "#f15cff",
+     "#ffd557"
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "angle1": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     -1,
+     0.4
+    ]
+   },
+   "angle2": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     -1,
+     0.4
+    ]
+   },
+   "length": {
+    "kind": "number",
+    "default": 1.1,
+    "range": [
+     0.52,
+     3
+    ]
+   },
+   "edges": {
+    "kind": "boolean",
+    "default": false
+   },
+   "blur": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "fadeIn": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "fadeOut": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     0.3,
+     1
+    ]
+   },
+   "gradient": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.78
+    ]
+   },
+   "density": {
+    "kind": "number",
+    "default": 3,
+    "range": [
+     1.6,
+     3
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Glass",
+   "Gradient",
+   "Opening"
+  ]
+ },
+ "dithering": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.6,
+     1.2
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colorFront": {
+    "kind": "color",
+    "default": "#00b2ff"
+   },
+   "shape": {
+    "kind": "choice",
+    "default": "sphere",
+    "options": [
+     "simplex",
+     "warp",
+     "dots",
+     "wave",
+     "ripple",
+     "swirl",
+     "sphere"
+    ]
+   },
+   "type": {
+    "kind": "choice",
+    "default": "4x4",
+    "options": [
+     "random",
+     "2x2",
+     "4x4",
+     "8x8"
+    ]
+   },
+   "size": {
+    "kind": "number",
+    "default": 2,
+    "range": [
+     2,
+     11
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Warp",
+   "Sine Wave",
+   "Ripple",
+   "Bugs",
+   "Swirl"
+  ]
+ },
+ "dot-grid": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colorFill": {
+    "kind": "color",
+    "default": "#ffffff"
+   },
+   "colorStroke": {
+    "kind": "color",
+    "default": "#ffaa00"
+   },
+   "size": {
+    "kind": "number",
+    "default": 2,
+    "range": [
+     2,
+     9
+    ]
+   },
+   "gapX": {
+    "kind": "number",
+    "default": 32,
+    "range": [
+     20,
+     32
+    ]
+   },
+   "gapY": {
+    "kind": "number",
+    "default": 32,
+    "range": [
+     32,
+     90
+    ]
+   },
+   "strokeWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "sizeRange": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "opacityRange": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.6
+    ]
+   },
+   "shape": {
+    "kind": "choice",
+    "default": "circle",
+    "options": [
+     "circle",
+     "diamond",
+     "square",
+     "triangle"
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Triangles",
+   "Tree line",
+   "Wallpaper"
+  ]
+ },
+ "dot-orbit": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.4,
+     1.64
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1.5,
+    "range": [
+     0.1,
+     5
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#ffc96b",
+     "#ff6200",
+     "#ff2f00",
+     "#421100",
+     "#1a0000"
+    ]
+   },
+   "size": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.3,
+     1
+    ]
+   },
+   "sizeRange": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.7
+    ]
+   },
+   "spreading": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.3,
+     1
+    ]
+   },
+   "stepsPerColor": {
+    "kind": "number",
+    "default": 4,
+    "range": [
+     2,
+     4
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Bubbles",
+   "Shine",
+   "Hallucinatory"
+  ]
+ },
+ "fluted-glass": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "cover",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     4
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#00000000"
+   },
+   "colorShadow": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colorHighlight": {
+    "kind": "color",
+    "default": "#ffffff"
+   },
+   "shadows": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0,
+     0.4
+    ]
+   },
+   "size": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.4,
+     0.9
+    ]
+   },
+   "angle": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     30
+    ]
+   },
+   "distortionShape": {
+    "kind": "choice",
+    "default": "prism",
+    "options": [
+     "prism",
+     "lens",
+     "contour",
+     "cascade",
+     "flat"
+    ]
+   },
+   "highlights": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "shape": {
+    "kind": "choice",
+    "default": "lines",
+    "options": [
+     "lines",
+     "linesIrregular",
+     "wave",
+     "zigzag",
+     "pattern"
+    ]
+   },
+   "distortion": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     1
+    ]
+   },
+   "shift": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "blur": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "edges": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0.25,
+     0.5
+    ]
+   },
+   "stretch": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "margin": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "marginLeft": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "marginRight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "marginTop": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "marginBottom": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "grainMixer": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "grainOverlay": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Abstract",
+   "Waves",
+   "Folds"
+  ]
+ },
+ "gem-smoke": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.6,
+     0.6
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.5,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#f0efea"
+   },
+   "colorInner": {
+    "kind": "color",
+    "default": "#fafaf5"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#333333",
+     "#e7e6df"
+    ]
+   },
+   "outerGlow": {
+    "kind": "number",
+    "default": 0.55,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "innerGlow": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.65,
+     1
+    ]
+   },
+   "innerDistortion": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.6,
+     1
+    ]
+   },
+   "outerDistortion": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.6,
+     1
+    ]
+   },
+   "offset": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.2
+    ]
+   },
+   "angle": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "size": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.8,
+     1
+    ]
+   },
+   "shape": {
+    "kind": "choice",
+    "default": "diamond",
+    "options": [
+     "none",
+     "circle",
+     "daisy",
+     "diamond",
+     "metaballs"
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Fire",
+   "Fluorescent",
+   "Infrared"
+  ]
+ },
+ "god-rays": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     -0.6,
+     0.2
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": -0.55,
+    "range": [
+     -0.8,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colorBloom": {
+    "kind": "color",
+    "default": "#0000ff"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#a600ff6e",
+     "#6200fff0",
+     "#ffffff",
+     "#33fff5"
+    ]
+   },
+   "density": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     0.03,
+     0.45
+    ]
+   },
+   "spotty": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     0.15,
+     0.77
+    ]
+   },
+   "midIntensity": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0.4,
+     0.75
+    ]
+   },
+   "midSize": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     0.1,
+     0.33
+    ]
+   },
+   "intensity": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.6,
+     0.8
+    ]
+   },
+   "bloom": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0.4,
+     1
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0.75,
+    "range": [
+     0.5,
+     2
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Warp",
+   "Linear",
+   "Ether"
+  ]
+ },
+ "grain-gradient": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.5,
+     1.3
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#7300ff",
+     "#eba8ff",
+     "#00bfff",
+     "#2a00ff"
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "intensity": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.15,
+     1
+    ]
+   },
+   "noise": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0.25,
+     1
+    ]
+   },
+   "shape": {
+    "kind": "choice",
+    "default": "corners",
+    "options": [
+     "wave",
+     "dots",
+     "truchet",
+     "corners",
+     "ripple",
+     "blob",
+     "sphere"
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Wave",
+   "Dots",
+   "Truchet",
+   "Ripple",
+   "Blob"
+  ]
+ },
+ "halftone-cmyk": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "cover",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#fbfaf5"
+   },
+   "colorC": {
+    "kind": "color",
+    "default": "#00b4ff"
+   },
+   "colorM": {
+    "kind": "color",
+    "default": "#fc519f"
+   },
+   "colorY": {
+    "kind": "color",
+    "default": "#ffd800"
+   },
+   "colorK": {
+    "kind": "color",
+    "default": "#231f20"
+   },
+   "size": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     0.01,
+     0.88
+    ]
+   },
+   "contrast": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     2
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "grainSize": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "grainMixer": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.15
+    ]
+   },
+   "grainOverlay": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.25
+    ]
+   },
+   "gridNoise": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     0.2,
+     0.6
+    ]
+   },
+   "floodC": {
+    "kind": "number",
+    "default": 0.15,
+    "range": [
+     0,
+     0.15
+    ]
+   },
+   "floodM": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "floodY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "floodK": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.1
+    ]
+   },
+   "gainC": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     -0.17,
+     1
+    ]
+   },
+   "gainM": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     -0.45,
+     0.44
+    ]
+   },
+   "gainY": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     -1,
+     0.2
+    ]
+   },
+   "gainK": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "type": {
+    "kind": "choice",
+    "default": "ink",
+    "options": [
+     "dots",
+     "ink",
+     "sharp"
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Drops",
+   "Newspaper",
+   "Vintage"
+  ]
+ },
+ "halftone-dots": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "cover",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#f2f1e8"
+   },
+   "colorFront": {
+    "kind": "color",
+    "default": "#2b2b2b"
+   },
+   "size": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.8
+    ]
+   },
+   "radius": {
+    "kind": "number",
+    "default": 1.25,
+    "range": [
+     1,
+     2
+    ]
+   },
+   "contrast": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0.01,
+     1
+    ]
+   },
+   "originalColors": {
+    "kind": "boolean",
+    "default": false
+   },
+   "inverted": {
+    "kind": "boolean",
+    "default": false
+   },
+   "grainMixer": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     0,
+     0.2
+    ]
+   },
+   "grainOverlay": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     0,
+     0.3
+    ]
+   },
+   "grainSize": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "grid": {
+    "kind": "choice",
+    "default": "hex",
+    "options": [
+     "square",
+     "hex"
+    ]
+   },
+   "type": {
+    "kind": "choice",
+    "default": "gooey",
+    "options": [
+     "classic",
+     "gooey",
+     "holes",
+     "soft"
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "LED screen",
+   "Mosaic",
+   "Round and square"
+  ]
+ },
+ "heatmap": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.75,
+    "range": [
+     0.75,
+     0.75
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.5,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "contour": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "angle": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "noise": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.75
+    ]
+   },
+   "innerGlow": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "outerGlow": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#11206a",
+     "#1f3ba2",
+     "#2f63e7",
+     "#6bd7ff",
+     "#ffe679",
+     "#ff991e",
+     "#ff4c00"
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Sepia"
+  ]
+ },
+ "image-dithering": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "cover",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorFront": {
+    "kind": "color",
+    "default": "#94ffaf"
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000c38"
+   },
+   "colorHighlight": {
+    "kind": "color",
+    "default": "#eaff94"
+   },
+   "type": {
+    "kind": "choice",
+    "default": "8x8",
+    "options": [
+     "random",
+     "2x2",
+     "4x4",
+     "8x8"
+    ]
+   },
+   "size": {
+    "kind": "number",
+    "default": 2,
+    "range": [
+     1,
+     3
+    ]
+   },
+   "colorSteps": {
+    "kind": "number",
+    "default": 2,
+    "range": [
+     1,
+     5
+    ]
+   },
+   "originalColors": {
+    "kind": "boolean",
+    "default": false
+   },
+   "inverted": {
+    "kind": "boolean",
+    "default": false
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Noise",
+   "Retro",
+   "Natural"
+  ]
+ },
+ "lens-distortion": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "spread": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.1,
+     0.7
+    ]
+   },
+   "bias": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     -1,
+     1
+    ]
+   },
+   "angle": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "perspective": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0,
+     0.75
+    ]
+   },
+   "count": {
+    "kind": "number",
+    "default": 35,
+    "range": [
+     2,
+     50
+    ]
+   },
+   "dispersion": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "dispersionShift": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "dispersionColor": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.1,
+     0.7
+    ]
+   },
+   "focusCenter": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0,
+     0.9
+    ]
+   },
+   "focusEdges": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "swirl": {
+    "kind": "number",
+    "default": 0.35,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "noise": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "noiseFrequency": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0.25,
+     0.35
+    ]
+   },
+   "noiseOffset": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.3
+    ]
+   },
+   "lensBulge": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.95
+    ]
+   },
+   "lensCircle": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "grainMixer": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "grainOverlay": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.3
+    ]
+   },
+   "imageX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "imageY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Fisheye",
+   "Duotone",
+   "Smoke"
+  ]
+ },
+ "liquid-metal": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.6,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#AAAAAC"
+   },
+   "colorTint": {
+    "kind": "color",
+    "default": "#ffffff"
+   },
+   "distortion": {
+    "kind": "number",
+    "default": 0.07,
+    "range": [
+     0,
+     0.4
+    ]
+   },
+   "repetition": {
+    "kind": "number",
+    "default": 2,
+    "range": [
+     1.5,
+     6
+    ]
+   },
+   "shiftRed": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "shiftBlue": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     -1,
+     0.3
+    ]
+   },
+   "contour": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0,
+     0.4
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0.05,
+     0.8
+    ]
+   },
+   "angle": {
+    "kind": "number",
+    "default": 70,
+    "range": [
+     0,
+     90
+    ]
+   },
+   "shape": {
+    "kind": "choice",
+    "default": "diamond",
+    "options": [
+     "none",
+     "circle",
+     "daisy",
+     "diamond",
+     "metaballs"
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Noir",
+   "Backdrop",
+   "Stripes"
+  ]
+ },
+ "mesh-gradient": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     90
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.1,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#e0eaff",
+     "#241d9a",
+     "#f75092",
+     "#9f50d3"
+    ]
+   },
+   "distortion": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.8,
+     1
+    ]
+   },
+   "swirl": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0.1,
+     1
+    ]
+   },
+   "grainMixer": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "grainOverlay": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Ink",
+   "Purple",
+   "Beach"
+  ]
+ },
+ "metaballs": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     4
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     -0.3,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.5,
+     2
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#6e33cc",
+     "#ff5500",
+     "#ffc105",
+     "#ffc800",
+     "#f585ff"
+    ]
+   },
+   "count": {
+    "kind": "number",
+    "default": 10,
+    "range": [
+     7,
+     18
+    ]
+   },
+   "size": {
+    "kind": "number",
+    "default": 0.83,
+    "range": [
+     0.1,
+     0.83
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Ink Drops",
+   "Solar",
+   "Background"
+  ]
+ },
+ "neuro-noise": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.55,
+     3
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorFront": {
+    "kind": "color",
+    "default": "#ffffff"
+   },
+   "colorMid": {
+    "kind": "color",
+    "default": "#47a6ff"
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "brightness": {
+    "kind": "number",
+    "default": 0.05,
+    "range": [
+     0,
+     0.24
+    ]
+   },
+   "contrast": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     0.12,
+     1
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Sensation",
+   "Bloodstream",
+   "Ghost"
+  ]
+ },
+ "paper-texture": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.9,
+    "range": [
+     0.9,
+     0.9
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#d3d2ab"
+   },
+   "colorPaper": {
+    "kind": "color",
+    "default": "#ffffff"
+   },
+   "colorShadow": {
+    "kind": "color",
+    "default": "#cccccc"
+   },
+   "blending": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "distortion": {
+    "kind": "number",
+    "default": 0.75,
+    "range": [
+     -0.5,
+     0.75
+    ]
+   },
+   "clip": {
+    "kind": "boolean",
+    "default": false
+   },
+   "angle": {
+    "kind": "number",
+    "default": 300,
+    "range": [
+     0,
+     300
+    ]
+   },
+   "seed": {
+    "kind": "number",
+    "default": 4,
+    "range": [
+     4,
+     613
+    ]
+   },
+   "roughness": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0.15,
+     1
+    ]
+   },
+   "roughnessSize": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.25,
+     0.5
+    ]
+   },
+   "roughnessRows": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.6
+    ]
+   },
+   "fiber": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0.4,
+     0.7
+    ]
+   },
+   "fiberSize": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     1
+    ]
+   },
+   "folds": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "foldSizeX": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "foldSizeY": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.44,
+     1
+    ]
+   },
+   "foldOffsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.59
+    ]
+   },
+   "foldOffsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "wrinkles": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "wrinkleSize": {
+    "kind": "number",
+    "default": 0.65,
+    "range": [
+     0,
+     0.65
+    ]
+   },
+   "crumples": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "crumpleCount": {
+    "kind": "number",
+    "default": 6,
+    "range": [
+     4,
+     9
+    ]
+   },
+   "drops": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0,
+     0.4
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Spread",
+   "Creased",
+   "Flat"
+  ]
+ },
+ "perlin-noise": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.9,
+     6.666666666666667
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#632ad5"
+   },
+   "colorFront": {
+    "kind": "color",
+    "default": "#fccff7"
+   },
+   "proportion": {
+    "kind": "number",
+    "default": 0.35,
+    "range": [
+     0.35,
+     0.65
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0,
+     0.35
+    ]
+   },
+   "octaveCount": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     6
+    ]
+   },
+   "persistence": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.55,
+     1
+    ]
+   },
+   "lacunarity": {
+    "kind": "number",
+    "default": 1.5,
+    "range": [
+     1.5,
+     2.55
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Nintendo Water",
+   "Moss",
+   "Worms"
+  ]
+ },
+ "pulsing-border": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.6,
+     1.1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.18,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#0dc1fd",
+     "#d915ef",
+     "#ff3f2ecc"
+    ]
+   },
+   "roundness": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "thickness": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "margin": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "marginLeft": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "marginRight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "marginTop": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "marginBottom": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "aspectRatio": {
+    "kind": "choice",
+    "default": "auto",
+    "options": [
+     "auto",
+     "square"
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 0.75,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "intensity": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     0,
+     0.2
+    ]
+   },
+   "bloom": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0.15,
+     0.45
+    ]
+   },
+   "spots": {
+    "kind": "number",
+    "default": 4,
+    "range": [
+     3,
+     4
+    ]
+   },
+   "spotSize": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.25,
+     1
+    ]
+   },
+   "pulse": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "smoke": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "smokeSize": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0,
+     0.6
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Circle",
+   "Northern lights",
+   "Solid line"
+  ]
+ },
+ "simplex-noise": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.2,
+     1.6
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     2
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#4449CF",
+     "#FFD1E0",
+     "#F94446",
+     "#FFD36B",
+     "#FFFFFF"
+    ]
+   },
+   "stepsPerColor": {
+    "kind": "number",
+    "default": 2,
+    "range": [
+     1,
+     2
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Spots",
+   "First contact",
+   "Bubblegum"
+  ]
+ },
+ "smoke-ring": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.8,
+     2.5
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     4
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#ffffff"
+    ]
+   },
+   "noiseScale": {
+    "kind": "number",
+    "default": 3,
+    "range": [
+     1.1,
+     3
+    ]
+   },
+   "noiseIterations": {
+    "kind": "number",
+    "default": 8,
+    "range": [
+     2,
+     10
+    ]
+   },
+   "radius": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0.25,
+     0.5
+    ]
+   },
+   "thickness": {
+    "kind": "number",
+    "default": 0.65,
+    "range": [
+     0.01,
+     0.8
+    ]
+   },
+   "innerShape": {
+    "kind": "number",
+    "default": 0.7,
+    "range": [
+     0.7,
+     4
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Line",
+   "Solar",
+   "Cloud"
+  ]
+ },
+ "spiral": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.45,
+     1.3
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#001429"
+   },
+   "colorFront": {
+    "kind": "color",
+    "default": "#79D1FF"
+   },
+   "density": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.2,
+     1
+    ]
+   },
+   "distortion": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "strokeWidth": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.75
+    ]
+   },
+   "strokeTaper": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.18
+    ]
+   },
+   "strokeCap": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "noise": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "noiseFrequency": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.33
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.75,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Jungle",
+   "Droplet",
+   "Swirl"
+  ]
+ },
+ "static-mesh-gradient": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 270,
+    "range": [
+     0,
+     270
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#ffad0a",
+     "#6200ff",
+     "#e2a3ff",
+     "#ff99fd"
+    ]
+   },
+   "positions": {
+    "kind": "number",
+    "default": 2,
+    "range": [
+     0,
+     42
+    ]
+   },
+   "waveX": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.45,
+     1
+    ]
+   },
+   "waveXShift": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0,
+     0.7
+    ]
+   },
+   "waveY": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.7,
+     1
+    ]
+   },
+   "waveYShift": {
+    "kind": "number",
+    "default": 0.21,
+    "range": [
+     0,
+     0.7
+    ]
+   },
+   "mixing": {
+    "kind": "number",
+    "default": 0.93,
+    "range": [
+     0,
+     0.93
+    ]
+   },
+   "grainMixer": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.37
+    ]
+   },
+   "grainOverlay": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.78
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "1960s",
+   "Sunset",
+   "Sea"
+  ]
+ },
+ "static-radial-gradient": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#00bbff",
+     "#00ffe1",
+     "#ffffff"
+    ]
+   },
+   "radius": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.8,
+     1
+    ]
+   },
+   "focalDistance": {
+    "kind": "number",
+    "default": 0.99,
+    "range": [
+     0,
+     0.99
+    ]
+   },
+   "focalAngle": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "falloff": {
+    "kind": "number",
+    "default": 0.24,
+    "range": [
+     0,
+     0.9
+    ]
+   },
+   "mixing": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "distortion": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "distortionShift": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "distortionFreq": {
+    "kind": "number",
+    "default": 12,
+    "range": [
+     12,
+     12
+    ]
+   },
+   "grainMixer": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "grainOverlay": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0.5
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Lo-Fi",
+   "Cross Section",
+   "Radial"
+  ]
+ },
+ "swirl": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     1
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     -0.4,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0.32,
+    "range": [
+     0.32,
+     1
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#330000"
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#ffd1d1",
+     "#ff8a8a",
+     "#660000"
+    ]
+   },
+   "bandCount": {
+    "kind": "number",
+    "default": 4,
+    "range": [
+     2,
+     5
+    ]
+   },
+   "twist": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0.1,
+     0.3
+    ]
+   },
+   "center": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     0,
+     0.2
+    ]
+   },
+   "proportion": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "noiseFrequency": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "noise": {
+    "kind": "number",
+    "default": 0.2,
+    "range": [
+     0,
+     0.2
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "007",
+   "Opening",
+   "Candy"
+  ]
+ },
+ "voronoi": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     3.3
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#ff8247",
+     "#ffe53d"
+    ]
+   },
+   "stepsPerColor": {
+    "kind": "number",
+    "default": 3,
+    "range": [
+     1,
+     3
+    ]
+   },
+   "colorGlow": {
+    "kind": "color",
+    "default": "#ffffff"
+   },
+   "colorGap": {
+    "kind": "color",
+    "default": "#2e0000"
+   },
+   "distortion": {
+    "kind": "number",
+    "default": 0.4,
+    "range": [
+     0.38,
+     0.5
+    ]
+   },
+   "gap": {
+    "kind": "number",
+    "default": 0.04,
+    "range": [
+     0,
+     0.04
+    ]
+   },
+   "glow": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     1
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Lights",
+   "Cells",
+   "Bubbles"
+  ]
+ },
+ "warp": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.8,
+     2.5
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     160
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     -0.3,
+     0.6
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     1,
+     20
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colors": {
+    "kind": "colors",
+    "default": [
+     "#121212",
+     "#9470ff",
+     "#121212",
+     "#8838ff"
+    ]
+   },
+   "proportion": {
+    "kind": "number",
+    "default": 0.45,
+    "range": [
+     0.05,
+     0.67
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0,
+     1.5
+    ]
+   },
+   "distortion": {
+    "kind": "number",
+    "default": 0.25,
+    "range": [
+     0,
+     0.25
+    ]
+   },
+   "swirl": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.2,
+     0.9
+    ]
+   },
+   "swirlIterations": {
+    "kind": "number",
+    "default": 10,
+    "range": [
+     3,
+     10
+    ]
+   },
+   "shapeScale": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0.1,
+     1
+    ]
+   },
+   "shape": {
+    "kind": "choice",
+    "default": "checks",
+    "options": [
+     "checks",
+     "stripes",
+     "edge"
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Cauldron Pot",
+   "Live Ink",
+   "Kelp",
+   "Nectar",
+   "Passion"
+  ]
+ },
+ "water": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "contain",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0.4,
+     3
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "speed": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.1,
+     2
+    ]
+   },
+   "frame": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#909090"
+   },
+   "colorHighlight": {
+    "kind": "color",
+    "default": "#ffffff"
+   },
+   "highlights": {
+    "kind": "number",
+    "default": 0.07,
+    "range": [
+     0,
+     0.4
+    ]
+   },
+   "layering": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0,
+     0.5
+    ]
+   },
+   "edges": {
+    "kind": "number",
+    "default": 0.8,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "waves": {
+    "kind": "number",
+    "default": 0.3,
+    "range": [
+     0,
+     1
+    ]
+   },
+   "caustic": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0,
+     0.4
+    ]
+   },
+   "size": {
+    "kind": "number",
+    "default": 1,
+    "range": [
+     0.15,
+     1
+    ]
+   },
+   "image": {
+    "kind": "image"
+   }
+  },
+  "presets": [
+   "Default",
+   "Slow-mo",
+   "Abstract",
+   "Streaming"
+  ]
+ },
+ "waves": {
+  "params": {
+   "fit": {
+    "kind": "choice",
+    "default": "none",
+    "options": [
+     "none",
+     "contain",
+     "cover"
+    ]
+   },
+   "scale": {
+    "kind": "number",
+    "default": 0.6,
+    "range": [
+     0.5,
+     5
+    ]
+   },
+   "rotation": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     90
+    ]
+   },
+   "offsetX": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "offsetY": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "originX": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "originY": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.5,
+     0.5
+    ]
+   },
+   "worldWidth": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "worldHeight": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   },
+   "colorFront": {
+    "kind": "color",
+    "default": "#ffbb00"
+   },
+   "colorBack": {
+    "kind": "color",
+    "default": "#000000"
+   },
+   "shape": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     3
+    ]
+   },
+   "frequency": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.2,
+     0.5
+    ]
+   },
+   "amplitude": {
+    "kind": "number",
+    "default": 0.5,
+    "range": [
+     0.25,
+     1
+    ]
+   },
+   "spacing": {
+    "kind": "number",
+    "default": 1.2,
+    "range": [
+     1.05,
+     1.25
+    ]
+   },
+   "proportion": {
+    "kind": "number",
+    "default": 0.1,
+    "range": [
+     0.1,
+     1
+    ]
+   },
+   "softness": {
+    "kind": "number",
+    "default": 0,
+    "range": [
+     0,
+     0
+    ]
+   }
+  },
+  "presets": [
+   "Default",
+   "Groovy",
+   "Tangled up",
+   "Ride the wave"
+  ]
+ }
+}

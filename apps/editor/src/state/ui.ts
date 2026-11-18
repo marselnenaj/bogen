@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { DesignSource } from '../lib/code-api.ts';
+import type { GenerateTarget } from '../panels/GenerateImage.tsx';
 
 /** Transient editor surfaces that come and go, apart from the document-facing state in store.ts. */
 export interface GradientEdit { nodeId: string; fillIndex: number; stop: number }
@@ -17,11 +18,14 @@ interface UiState {
   /** The export, install and apply dialog of an Omarchy theme file. */
   omarchyThemeOpen: boolean;
   checksOpen: boolean;
+  critiqueOpen: boolean;
   complianceOpen: boolean;
   /** Find on canvas. With `replace`, it finds the words of text layers, on this page or all of them, and replaces them. */
   find: { open: boolean; query: string; index: number; replace?: boolean; with?: string; matchCase?: boolean; wholeWord?: boolean; allPages?: boolean };
   /** The dialog that renames several layers at once. */
   bulkRename: string[] | null;
+  /** Generate image, and where the picked picture goes. */
+  generateImage: GenerateTarget | null;
   gradient: GradientEdit | null;
   /** The image layer being cropped with handles on the canvas. */
   crop: { nodeId: string } | null;
@@ -52,9 +56,11 @@ export const useUi = create<UiState>((set) => ({
   restyleOpen: false,
   omarchyThemeOpen: false,
   checksOpen: false,
+  critiqueOpen: false,
   complianceOpen: false,
   find: { open: false, query: '', index: 0 },
   bulkRename: null,
+  generateImage: null,
   gradient: null,
   crop: null,
   lightbox: null,

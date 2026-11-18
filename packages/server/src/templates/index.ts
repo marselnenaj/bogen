@@ -130,7 +130,7 @@ export function writeBoards(doc: BogenDoc, pageId: string, boards: BoardPlan[], 
   for (const board of boards) {
     const id = doc.insert(pageId, {
       type: 'frame', tag: board.tag ?? 'main', name: board.name, artboard: true,
-      ...(discipline ? { attrs: { 'data-bogen-discipline': discipline } } : {}),
+      ...(discipline || board.attrs ? { attrs: { ...(discipline ? { 'data-bogen-discipline': discipline } : {}), ...(board.attrs ?? {}) } } : {}),
       style: {
         position: 'absolute', left: `${x}px`, top: '0px', width: `${board.width}px`, height: board.height ? `${board.height}px` : 'fit-content',
         display: 'flex', flexDirection: 'column', backgroundColor: board.background, color: board.color, fontFamily: board.font, overflow: 'hidden',
@@ -205,6 +205,8 @@ export async function runTemplate(app: BogenServer, run: TemplateRun): Promise<T
     components: new Set(listMains(doc.source).flatMap((m) => [m.name, m.component?.set ?? ''].filter(Boolean))),
     version: head?.n ?? null,
     date: new Date(),
+    provisional: new Set(((doc.meta.get('brandProvisionalTokens') as unknown[] | undefined) ?? []).filter((n): n is string => typeof n === 'string')),
+    tokenValues: new Map(doc.getTokens().map((t) => [t.name, t.value])),
   };
   const plan = template.build(env, run.options ?? {});
   if (!plan.boards.length) throw new Error(`Nothing to make: none of ${(run.options?.only ?? []).join(', ')} is a part of ${template.id}. Parts: ${template.parts.map((p) => p.key).join(', ')}.`);

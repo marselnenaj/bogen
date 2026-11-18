@@ -44,7 +44,9 @@ function toProps(params: Params, still: boolean): Record<string, unknown> {
   const props: Record<string, unknown> = { style: { width: '100%', height: '100%' } };
   for (const [key, raw] of Object.entries(params)) {
     if (key === 'type' || key.startsWith('data-')) continue;
-    if (key === 'colors') props.colors = splitColors(raw);
+    // The effect's own type is written variant, since type names the effect (shader-params.ts).
+    if (key === 'variant') props.type = raw;
+    else if (key === 'colors') props.colors = splitColors(raw);
     else if (raw === 'true' || raw === 'false') props[key] = raw === 'true';
     else if (raw !== '' && !Number.isNaN(Number(raw))) props[key] = Number(raw);
     else props[key] = raw;

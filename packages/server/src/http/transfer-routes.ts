@@ -5,7 +5,7 @@ import { exportPresets, type ExportPreset } from '../exporter.ts';
 import { parseFigmaUrl, placeFigma, readFigmaFile } from '../figma.ts';
 import { captureSite, MAX_SITE_LIMIT, type SiteEvent } from '../site-capture.ts';
 import { fetchPublic } from '../net-guard.ts';
-import { atomicWrite, errorMessage, HttpError } from '../util.ts';
+import { errorMessage, HttpError } from '../util.ts';
 import type { BogenServer } from './server.ts';
 import { fromThisDevice, jsonBody, readBody, sendJson } from './server.ts';
 import type { GuardOptions } from './security.ts';
@@ -226,7 +226,7 @@ export async function handleTransfer(app: BogenServer, req: IncomingMessage, res
     }
     const { newId } = await import('@bogen/core');
     const id = newId();
-    await atomicWrite(app.storage.docPath(id), state);
+    await app.storage.writeDoc(id, state);
     const entry = app.storage.create(parsed.data.name, id);
     await app.brands.classify(id);
     app.hub.broadcast({ t: 'files' });

@@ -235,7 +235,7 @@ export function MotionPanel() {
         <Section title={t('Animations')} actions={<IconButton icon={<Plus size={14} />} title={t('Add the first keyframes in this file, or a new set')} testId="motion-add" onClick={() => { const first = frames[0]; if (first) write([...anims, { ...DEFAULT_ANIMATION, name: first.name }]); else addPreset('Fade in'); }} />}>
           {anims.map((a, i) => <AnimationRow key={`${a.name}-${i}`} spec={a} index={i} frames={frames} onChange={(next) => write(anims.map((x, j) => (j === i ? next : x)))} onRemove={() => write(anims.filter((_, j) => j !== i))} />)}
           {!anims.length ? <div className="hint">{t('This layer has no animation.')}</div> : null}
-          <SelectField<string> label={t('Preset')} value="" options={[{ value: '', label: t('Add'), disabled: true }, ...MOTION_PRESETS.map((p) => ({ value: p.name, label: t(p.name) }))]} onChange={addPreset} testId="motion-preset" />
+          <SelectField<string> label={t('Preset')} value="" options={[{ value: '', label: t('Choose one to add'), disabled: true }, ...MOTION_PRESETS.map((p) => ({ value: p.name, label: t(p.name) }))]} onChange={addPreset} testId="motion-preset" />
           <TextField label={t('New')} placeholder={t('Name of new keyframes')} testId="motion-new" value="" onChange={(name) => { const clean = name.trim().replace(/[^\w-]/g, '-'); if (!clean) return; writeKeyframes({ name: clean, stops: [{ offset: 0, css: 'opacity:0' }, { offset: 100, css: 'opacity:1' }] }); write([...anims, { ...DEFAULT_ANIMATION, name: clean }]); }} />
         </Section>
       ) : <Empty title={nodes.length ? t.n(nodes.length, '{count} layer selected', '{count} layers selected') : t('Nothing selected')} hint={t('Select one layer to see and edit its animation.')} />}

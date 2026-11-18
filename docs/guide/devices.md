@@ -49,7 +49,7 @@ between two people. Only a catch-up after the link was down settles text, and on
 changed the file while it was down. A device on an older build gets the settled text but shows no note,
 and when the older build catches up first, the text merges per character as it did before.
 
-When a file changed while nobody had it open, a banner says once what changed, and also how many texts
+When a file changed while nobody had it open, a notice in the recent-changes strip says once who changed it, and a banner also says how many texts
 kept one side's words.
 
 ## What you need
@@ -139,7 +139,7 @@ and it does not touch your designs. `integrations/omarchy/deploy.sh` is the same
 ### From the editor
 
 When a paired device runs another build, the sync indicator in the editor's top bar says
-**MacBook: other version** with **Update the other device** next to it (the Sync section of the Agents tab
+**MacBook: other version** with **Update** next to it (the Sync section of the Agents tab
 has the same as **Update MacBook**). It opens a dialog that:
 
 1. Names both builds, and says which is newer when this computer's checkout can tell. If the other

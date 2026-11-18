@@ -1,4 +1,4 @@
-import { applyPlan, branchContent, listDesignBranches, previewMergeContent, BogenDoc, commentsToContent, contentDelta, docFromContent, docToContent, labelChange, planRevert, Y, type RevertPlan } from '@bogen/core';
+import { applyContent, applyPlan, branchContent, listDesignBranches, previewMergeContent, BogenDoc, commentsToContent, contentDelta, docFromContent, docToContent, labelChange, planRevert, Y, type RevertPlan } from '@bogen/core';
 import { contentAssets, diffFolders, writeFolder, type FolderDiff } from './design-folder.ts';
 import { gitCommit, type GitAuthor } from './git-mirror.ts';
 import type { BogenServer } from './http/server.ts';
@@ -234,13 +234,26 @@ export async function createBranch(app: BogenServer, fileId: string, name: strin
   const { newId } = await import('@bogen/core');
   const { doc } = await app.rooms.get(fileId);
   const copyId = newId();
-  await atomicWrite(app.storage.docPath(copyId), Y.encodeStateAsUpdate(doc.y));
+  await app.storage.writeDoc(copyId, Y.encodeStateAsUpdate(doc.y));
   const copy = app.storage.create(`${source.name} (branch: ${name})`, copyId);
   const branch: BranchInfo = { id: copy.id, name, at: Date.now(), fileId };
   await writeBranches(app, fileId, [...await readBranches(app, fileId), branch]);
   app.hub.broadcast({ t: 'files' });
   app.hub.broadcast({ t: 'history', fileId });
   return branch;
+}
+
+/**
+ * Merges a copy into a file the way the CRDT would, but writes the result with the file's own Yjs id: the merge
+ * happens in a private document and its design is laid onto the file value by value. For team files, whose
+ * changes must be written with ids derived from this device (docs/teams.md, N6).
+ */
+export function mergeByContent(main: BogenDoc, copy: Y.Doc, origin: unknown): void {
+  const scratch = new Y.Doc();
+  Y.applyUpdate(scratch, Y.encodeStateAsUpdate(main.y));
+  Y.applyUpdate(scratch, Y.encodeStateAsUpdate(copy));
+  applyContent(main, docToContent(new BogenDoc(scratch)), origin);
+  scratch.destroy();
 }
 
 /** Everything in the copy goes into the file through the CRDT. What was changed on both sides merges by its usual rules. */
@@ -252,7 +265,12 @@ export async function mergeBranch(app: BogenServer, fileId: string, branchId: st
   const copy = await app.rooms.get(branchId);
   const saved = await createCommit(app, fileId, { message: `Before merging ${branch.name}`, author: options.author, authorKind: options.authorKind, kind: 'restore' });
   const before = docToContent(main.doc);
-  Y.applyUpdate(main.doc.y, Y.encodeStateAsUpdate(copy.doc.y), `merge:${branch.name}`);
+  if (app.teams?.teamOf(fileId)) {
+    // A team file: the copy's changes were written with ids no member could tell are this device's. The CRDT merge
+    // happens in a private document, and its design is laid onto the file value by value, written with one of this
+    // device's ids, so the merge is signed and members get it (docs/teams.md, N6).
+    mergeByContent(main.doc, copy.doc.y, `merge:${branch.name}`);
+  } else Y.applyUpdate(main.doc.y, Y.encodeStateAsUpdate(copy.doc.y), `merge:${branch.name}`);
   await app.timeline.flush(fileId);
   app.hub.broadcast({ t: 'history', fileId });
   return { merged: branch.name, savedAs: saved.id, delta: contentDelta(before, docToContent(main.doc)) };

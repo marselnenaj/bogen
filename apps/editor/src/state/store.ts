@@ -48,10 +48,14 @@ export interface PromptMessage {
   review?: string;
   context?: string[];
   images?: string[];
+  /** The model Bogen picked for this request by its size, because nobody chose one. */
+  sized?: { size: 'small' | 'large' | 'answer'; label?: string };
 }
 export interface PromptState {
   /** An explicit scoped redo; opening it starts no agent. */
   redo?: { id: string; nodeId: string; name: string };
+  /** Words another part of the editor puts into the chat's field; the chat takes them once. */
+  draft?: { id: string; text: string; review?: 'direct' | 'proposal' };
   open: boolean;
   runId: string | null;
   running: boolean;

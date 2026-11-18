@@ -45,5 +45,5 @@
 /* iOS zooms the whole page into any field set below 16px when it gets focus, and leaves it zoomed.
    On a touch screen every field is 16px at least, in the phone layout and in the full editor. */
 @media (pointer: coarse) {
-  input, textarea, select, [contenteditable="true"], [contenteditable=""] { font-size: max(16px, 1em) !important; }
+  input, textarea, select, [contenteditable="true"], [contenteditable=""] { font-size: var(--text-xl) !important; }
 }

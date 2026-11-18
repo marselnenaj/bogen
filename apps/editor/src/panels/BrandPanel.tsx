@@ -1,13 +1,14 @@
 import { BrandBook } from './BrandBook.tsx';
+import { BrandEdition } from './BrandEdition.tsx';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ALL_LANGUAGES, bindingFields, brandCounts, brandLanguages, brandSuggestions, brandVersions, confirmBrandItems, confirmSuggestions, contrastRatio, deleteBrandItem, dismissSuggestions, markBrandFields, normalizeLanguageTag, readBrand, resolveBrandColor, setBrandField, upsertBrandItem, voiceProfile, type BrandColor, type BrandData, type BrandFields, type BrandRule, type BrandRuleCheck, type BrandSection } from '@bogen/core';
-import { ArrowLeft, Check, Download, FilePlus2, Plus, Redo2, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Download, FilePlus2, Plus, Redo2, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { Session, setSession } from '../doc/session.ts';
 import { api, downloadBlob, resolveAsset } from '../lib/api.ts';
 import { brandApi, type BrandChange, type BrandFull, type FileImpact } from '../lib/brand-api.ts';
 import { onServerEvent } from '../lib/events.ts';
 import { ColorField } from '../ui/ColorPicker.tsx';
-import { IconButton, NumberField, Segmented, SelectField, TextField } from '../ui/controls.tsx';
+import { IconButton, NumberField, Popover, Segmented, SelectField, TextField } from '../ui/controls.tsx';
 import { BrandHealth } from './BrandHealth.tsx';
 import { BrandReview } from './BrandReview.tsx';
 import { MemorySuggestions } from './MemorySuggestions.tsx';
@@ -19,18 +20,30 @@ import { useT } from '../i18n/react.ts';
 /** The logo's clear space, as a short field label: not the Clear button. */
 const CLEAR_SPACE = ctx('logo clear space, short field label', 'Clear');
 
-type Tab = 'book' | 'review' | 'health' | 'identity' | 'logos' | 'colors' | 'type' | 'layout' | 'imagery' | 'voice' | 'rules' | 'examples' | 'assets' | 'versions';
+type Tab = 'book' | 'chapters' | 'review' | 'files' | 'identity' | 'logos' | 'colors' | 'type' | 'layout' | 'imagery' | 'voice' | 'rules' | 'examples' | 'assets' | 'versions';
 /** Where each kind of suggestion is edited. */
 const TAB_OF_SECTION: Record<string, Tab> = {
-  fields: 'identity', colors: 'colors', pairings: 'colors', logos: 'logos', families: 'type', typeScale: 'type', spacing: 'layout', radius: 'layout', rules: 'rules', words: 'voice', voiceExamples: 'voice', artboards: 'examples', assets: 'assets',
+  fields: 'identity', colors: 'colors', pairings: 'colors', logos: 'logos', families: 'type', typeScale: 'type', spacing: 'layout', radius: 'layout', rules: 'rules', words: 'voice', voiceExamples: 'voice', artboards: 'examples', assets: 'assets', treatments: 'imagery',
 };
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'book', label: msg('Brandbook') },
-  { id: 'review', label: msg('Review suggestions') },
-  { id: 'health', label: msg('Across files') },
-  { id: 'identity', label: msg('Identity') }, { id: 'logos', label: msg('Logos') }, { id: 'colors', label: msg('Colour') }, { id: 'type', label: msg('Typography') }, { id: 'layout', label: msg('Spacing and layout') },
-  { id: 'imagery', label: msg('Imagery and icons') }, { id: 'voice', label: msg('Voice') }, { id: 'rules', label: msg('Rules') }, { id: 'examples', label: msg('Examples') }, { id: 'assets', label: msg('Assets') }, { id: 'versions', label: msg('Versions') },
+/**
+ * The brand page's sections, in groups: the book to look at first, then what to edit, the written chapters, and what
+ * the brand is used for. Each is its own address, #/brand/<id>/<section>; "health" was the old name of Files using it.
+ */
+const GROUPS: { label: string | null; tabs: { id: Tab; label: string }[] }[] = [
+  { label: null, tabs: [{ id: 'book', label: msg('Brand book') }] },
+  { label: msg('Edit'), tabs: [
+    { id: 'identity', label: msg('Identity') }, { id: 'logos', label: msg('Logos') }, { id: 'colors', label: msg('Colour') }, { id: 'type', label: msg('Typography') }, { id: 'layout', label: msg('Spacing and layout') },
+    { id: 'imagery', label: msg('Imagery and icons') }, { id: 'voice', label: msg('Voice') }, { id: 'rules', label: msg('Rules') }, { id: 'examples', label: msg('Examples') }, { id: 'assets', label: msg('Assets') },
+  ] },
+  { label: msg('Write'), tabs: [{ id: 'chapters', label: msg('Chapters') }] },
+  { label: msg('Use'), tabs: [{ id: 'review', label: msg('Suggestions') }, { id: 'files', label: msg('Files using it') }, { id: 'versions', label: msg('Versions') }] },
 ];
+const TABS = GROUPS.flatMap((g) => g.tabs);
+const OLD_TABS: Record<string, Tab> = { health: 'files', brandbook: 'chapters' };
+function tabOf(section: string | undefined): Tab {
+  const id = section ? OLD_TABS[section] ?? section : 'book';
+  return TABS.some((x) => x.id === id) ? id as Tab : 'book';
+}
 
 /** The brand as an open document, read again after each change. */
 function useBrandData(s: Session | null): BrandData | null {
@@ -682,6 +695,29 @@ function Assets({ ctx }: { ctx: Ctx }) {
   );
 }
 
+/** The brand's image treatments: made and changed by agents with image_treatment, shown here with their example pair. */
+function Treatments({ ctx }: { ctx: Ctx }) {
+  const t = useT();
+  return (
+    <Group title={t('Image treatments')} hint={t('How photos turn into the brand\'s colours. Ask an agent to make one with image_treatment and save it here; every photo it is applied to then looks the same.')}>
+      {ctx.data.treatments.length ? (
+        <div className="bp-rows">
+          {ctx.data.treatments.map((tr) => (
+            <div key={tr.id} className="bp-row" data-testid="brand-treatment-row">
+              {tr.before ? <img className="bp-thumb" src={resolveAsset(tr.before)} alt={t('{name}, before', { name: tr.name })} /> : null}
+              {tr.after ? <img className="bp-thumb" src={resolveAsset(tr.after)} alt={t('{name}, after', { name: tr.name })} /> : null}
+              <TextField value={tr.name} onChange={(v) => { if (v.trim()) put(ctx, 'treatments', { id: tr.id, name: v.trim() }); }} />
+              <span className="bp-note" dir="auto">{[tr.mode, tr.inks.join(', ')].filter(Boolean).join(' · ')}</span>
+              {tr.suggested ? <Suggested ctx={ctx} id={tr.id} source={tr.source} /> : null}
+              <Remove ctx={ctx} id={tr.id} what={tr.name} />
+            </div>
+          ))}
+        </div>
+      ) : <p className="bp-note" data-testid="brand-treatments-empty">{t('No treatment yet.')}</p>}
+    </Group>
+  );
+}
+
 function changeLine(t: Translate, c: BrandChange): string {
   if (c.kind !== 'changed') return c.kind === 'added' ? t('Added {section}: {name}', { section: c.section, name: c.name }) : t('Removed {section}: {name}', { section: c.section, name: c.name });
   const fields = (c.fields ?? []).map((f) => t('{field}: {from} to {to}', { field: f.field, from: JSON.stringify(f.from), to: JSON.stringify(f.to) })).join(', ');
@@ -780,40 +816,150 @@ function Versions({ ctx, full, reload }: { ctx: Ctx; full: BrandFull | null; rel
 
 // ---------------------------------------------------------------- the page
 
-const SHEET_WIDTH = 1200;
+/** The book's width as the server lays it out: 1280 pages on a 32px desk (brand-book-html.ts). */
+const SHEET_WIDTH = 1344;
+/** Under this the book reflows into one column, as on a phone, rather than being scaled down to unreadable. */
+const REFLOW = 760;
 
-function Preview({ brandId, data }: { brandId: string; data: BrandData }) {
-  // A sheet is generated on the server, so it waits for a quiet moment.
-  const [stamp, setStamp] = useState(0);
+/**
+ * The book in a frame: scaled to fit a wide place, reflowed in a narrow one. It is made on the server from the data.
+ * A new version loads behind the one on screen and takes its place once it is in, so an edit never blanks the book;
+ * the first one fades in over a quiet placeholder in the editor's own colours.
+ */
+function BookFrame({ brandId, data, testId, title }: { brandId: string; data: BrandData; testId: string; title: string }) {
+  const t = useT();
+  // What the book is made from: a refetch that brings the same data does not make it again.
+  const key = useMemo(() => JSON.stringify(data), [data]);
+  // A book is generated on the server, so a change waits for a quiet moment.
+  const [next, setNext] = useState<number | null>(null);
+  const [shown, setShown] = useState<number | null>(null);
+  // Only the first book fades in; a later one replaces the one on screen in place.
+  const [fade, setFade] = useState(true);
   const [box, setBox] = useState({ w: SHEET_WIDTH, h: 800 });
   const holder = useRef<HTMLDivElement>(null);
-  const t = useT();
+  const first = useRef(true);
+  const [forBrand, setForBrand] = useState(brandId);
+  if (forBrand !== brandId) { setForBrand(brandId); setShown(null); first.current = true; }
   useEffect(() => {
-    const timer = window.setTimeout(() => setStamp(Date.now()), 500);
+    const timer = window.setTimeout(() => setNext(Date.now()), first.current ? 0 : 500);
+    first.current = false;
     return () => clearTimeout(timer);
-  }, [data]);
+  }, [key, brandId]);
   useEffect(() => {
     if (!holder.current) return;
     const seen = new ResizeObserver(([e]) => { if (e) setBox({ w: e.contentRect.width, h: e.contentRect.height }); });
     seen.observe(holder.current);
     return () => seen.disconnect();
   }, []);
-  // The sheet has one width, so the frame shows all of it, scaled to the panel.
-  const scale = Math.min(1, box.w / SHEET_WIDTH);
+  const narrow = box.w < REFLOW;
+  const scale = narrow ? 1 : Math.min(1, box.w / SHEET_WIDTH);
+  const style = narrow ? { width: box.w, height: box.h } : { width: SHEET_WIDTH, height: box.h / scale, transform: `scale(${scale})` };
+  // No scripts, no same-origin: brands can come from other devices. Named for screen readers with aria-label, since a
+  // title on a frame shows as a tooltip wherever the pointer rests on it.
+  const frame = (stamp: number, live: boolean) => (
+    <iframe key={stamp} aria-label={title} sandbox="" src={`/api/brands/${brandId}/sheet.html?v=${stamp}`}
+      className={live ? `bp-book-frame is-shown${fade ? ' fade' : ''}` : 'bp-book-frame is-loading'} aria-hidden={live ? undefined : true} tabIndex={live ? undefined : -1}
+      data-testid={live ? testId : `${testId}-next`} style={style}
+      onLoad={live ? undefined : () => { setFade(shown === null); setShown(stamp); setNext((n) => (n === stamp ? null : n)); }} />
+  );
+  return (
+    <div className="bp-preview-frame" ref={holder} aria-busy={next !== null || undefined}>
+      {shown === null ? (
+        <div className="bp-book-wait" data-testid={`${testId}-wait`} role="status">
+          <span className="bp-book-wait-page" aria-hidden="true"><i /><i /><i /></span>
+          <span className="bp-book-wait-label">{t('Loading')}</span>
+        </div>
+      ) : null}
+      {/* One list, so that the frame that loaded behind stays the same element when it comes forward. */}
+      {[shown, next].filter((s, i, all): s is number => s !== null && all.indexOf(s) === i).map((s) => frame(s, s === shown))}
+    </div>
+  );
+}
+
+function Preview({ brandId, data }: { brandId: string; data: BrandData }) {
+  const t = useT();
   return (
     <aside className="bp-preview" data-testid="brand-preview">
-      <div className="bp-preview-head"><span>{t('Brand sheet, generated from the data')}</span></div>
-      <div className="bp-preview-frame" ref={holder}>
-        {/* No scripts, no same-origin: brands can come from other devices. */}
-        <iframe title={t('Brand sheet')} sandbox="" src={`/api/brands/${brandId}/sheet.html?v=${stamp}`} data-testid="brand-sheet" style={{ width: SHEET_WIDTH, height: box.h / scale, transform: `scale(${scale})` }} />
-      </div>
+      <div className="bp-preview-head"><span>{t('Brand book, made from the data')}</span><a href={`#/brand/${brandId}`}>{t('Open')}</a></div>
+      <BookFrame brandId={brandId} data={data} testId="brand-sheet" title={t('Brand book')} />
     </aside>
   );
 }
 
-export function BrandPage({ brandId }: { brandId: string }) {
+/** The brand book as the brand page opens: the guidelines as pages, to read, download or share. */
+function BookView({ brandId, data, name, by, onDownload }: { brandId: string; data: BrandData; name: string; by: string; onDownload: (ext: 'md' | 'pdf') => void }) {
+  const t = useT();
+  return (
+    <section className="bp-book" aria-label={t('Brand book')} data-testid="brand-book-view">
+      <div className="bp-book-bar">
+        <p>{t('The guidelines as pages, made from what the brand holds now. Edit a section on the left and the book follows.')}</p>
+        <button type="button" className="btn" onClick={() => onDownload('pdf')} data-testid="brand-book-pdf"><Download size={14} /> {t('PDF')}</button>
+        <button type="button" className="btn btn-quiet" onClick={() => onDownload('md')} data-testid="brand-book-md">{t('Markdown')}</button>
+      </div>
+      <BrandEdition brandId={brandId} brandName={name} data={data} by={by} />
+      <BookFrame brandId={brandId} data={data} testId="brand-book-frame" title={t('Brand book')} />
+    </section>
+  );
+}
+
+/** The brand's name in the page head: renamed on Enter or when the field is left, put back with Escape. */
+function BrandName({ value, onChange }: { value: string; onChange: (name: string) => void }) {
+  const t = useT();
+  const [text, setText] = useState<string | null>(null);
+  const commit = () => {
+    const next = text?.trim();
+    if (next && next !== value) onChange(next);
+    setText(null);
+  };
+  return (
+    <input
+      className="field-input bp-name"
+      value={text ?? value}
+      aria-label={t('Brand name')}
+      spellCheck={false}
+      dir="auto"
+      data-testid="brand-title"
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') { setText(null); e.currentTarget.blur(); }
+      }}
+    />
+  );
+}
+
+/** The brand guide as Markdown or PDF, and the brand itself as a .bogen file, in one menu. */
+function DownloadMenu({ brandId, onDownload }: { brandId: string; onDownload: (ext: 'md' | 'pdf') => void }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <button ref={ref} type="button" className={`btn btn-quiet${open ? ' is-active' : ''}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} data-testid="brand-download"><Download size={14} /> {t('Download')}<ChevronDown size={12} /></button>
+      {open ? (
+        <Popover anchor={ref.current} side="below" width={232} onClose={() => setOpen(false)} focus>
+          <div role="menu" aria-label={t('Download')}>
+            <button type="button" role="menuitem" className="menu-item" onClick={() => { setOpen(false); onDownload('md'); }} data-testid="brand-export-md"><span className="menu-with-icon"><Download size={13} /> {t('Brand guide as Markdown')}</span></button>
+            <button type="button" role="menuitem" className="menu-item" onClick={() => { setOpen(false); onDownload('pdf'); }} data-testid="brand-export-pdf"><span className="menu-with-icon"><Download size={13} /> {t('Brand guide as PDF')}</span></button>
+            <a role="menuitem" className="menu-item" href={`/api/files/${brandId}/download`} download onClick={() => setOpen(false)} data-testid="brand-export-bogen"><span className="menu-with-icon"><Download size={13} /> {t('The brand as a {extension} file', { extension: '.bogen' })}</span></a>
+          </div>
+        </Popover>
+      ) : null}
+    </>
+  );
+}
+
+export function BrandPage({ brandId, section }: { brandId: string; section?: string | undefined }) {
   const [session, setS] = useState<Session | null>(null);
-  const [tab, setTab] = useState<Tab>('book');
+  const tab = tabOf(section);
+  // A section is an address, so that it can be linked, kept on reload and gone back to.
+  const setTab = (next: Tab) => { location.hash = next === 'book' ? `#/brand/${brandId}` : `#/brand/${brandId}/${next}`; };
+  useEffect(() => {
+    // An old name, or one that is no more, is shown as its new address.
+    if (section && section !== tab) history.replaceState(null, '', tab === 'book' ? `#/brand/${brandId}` : `#/brand/${brandId}/${tab}`);
+  }, [section, tab, brandId]);
   const [full, setFull] = useState<BrandFull | null>(null);
   const [synced, setSynced] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -870,11 +1016,12 @@ export function BrandPage({ brandId }: { brandId: string }) {
   const count = (tab: Tab): number => {
     switch (tab) {
       case 'review': return suggestions;
+      case 'chapters': return 0;
       case 'logos': return data.logos.length;
       case 'colors': return data.colors.length;
       case 'type': return data.families.length + data.typeScale.length;
       case 'layout': return data.spacing.length + data.radius.length;
-      case 'imagery': return data.rules.filter((r) => r.topic === 'imagery' || r.topic === 'iconography').length;
+      case 'imagery': return data.rules.filter((r) => r.topic === 'imagery' || r.topic === 'iconography').length + data.treatments.length;
       case 'voice': return data.words.length + data.voiceExamples.length;
       case 'rules': return data.rules.filter((r) => !['imagery', 'iconography', 'layout', 'voice'].includes(r.topic)).length;
       case 'examples': return data.artboards.length;
@@ -899,50 +1046,60 @@ export function BrandPage({ brandId }: { brandId: string }) {
     brandApi.systemFile(brandId).then((out) => { location.hash = `#/file/${out.file_id}`; }).catch((e: Error) => setNotice(e.message));
   };
   return (
-    <div className={`bp${tab === 'book' ? ' bp-book-open' : ''}`} data-testid="brand-page">
+    <div className={`bp${tab === 'chapters' ? ' bp-book-open' : ''}${tab === 'book' ? ' bp-book-view' : ''}`} data-testid="brand-page">
       <header className="bp-head">
-        <a className="icon-btn" href="#/" title={t('Back to the files')} aria-label={t('Back to the files')} data-testid="brand-back"><ArrowLeft size={14} /></a>
-        <TextField value={full?.name ?? data.fields.name} onChange={(v) => { if (v.trim()) void brandApi.rename(brandId, v.trim()).then(reload); }} testId="brand-title" />
-        <span className="bp-note">{full?.versions.length ? (full.draftChanges ? t.n(full.draftChanges, 'Version {version}, {count} change since', 'Version {version}, {count} changes since', { version: full.versions.length }) : t('Version {version}', { version: full.versions.length })) : t('Not published yet')}</span>
+        <a className="icon-btn" href="#/brands" title={t('All brands')} aria-label={t('All brands')} data-testid="brand-back"><ArrowLeft size={14} /></a>
+        <BrandName value={full?.name ?? data.fields.name} onChange={(v) => void brandApi.rename(brandId, v).then(reload)} />
+        <span className="bp-note">{full?.versions.length ? (full.draftChanges ? t.n(full.draftChanges, '{count} change since version {version}', '{count} changes since version {version}', { version: full.versions.length }) : t('Version {version}', { version: full.versions.length })) : t('Not published yet')}</span>
         {full?.duplicatedFrom ? <span className="bp-note" dir="auto" data-testid="brand-duplicated-from">{t('Duplicated from {name}, version {version}', { name: full.duplicatedFrom.name, version: full.duplicatedFrom.version })}</span> : null}
         <span className="bp-spacer" />
-        {suggestions && tab !== 'review' ? <button type="button" className="btn" onClick={() => setTab('review')} data-testid="brand-review-open" title={t('Each suggestion next to what binds now, to confirm or dismiss one by one or all at once')}>{t.n(suggestions, 'Review {count} suggestion', 'Review {count} suggestions')}</button> : null}
-        {suggestions ? <button type="button" className="btn btn-quiet" onClick={() => session.tx(() => confirmBrandItems(session.doc, null))} data-testid="brand-confirm-all">{t('Confirm all')}</button> : null}
-        <label className="check" title={t('A write that adds a hard violation is refused, with the fix')}><input type="checkbox" checked={ctx.bound.strict} onChange={(e) => setField(ctx, 'strict', e.target.checked)} data-testid="brand-strict" /><span>{t('Strict')}</span></label>
-        <Proposed ctx={ctx} field="strict" />
-        <IconButton icon={<Undo2 size={14} />} title={t('Undo')} onClick={() => session.undo.undo()} testId="brand-undo" />
-        <IconButton icon={<Redo2 size={14} />} title={t('Redo')} onClick={() => session.undo.redo()} testId="brand-redo" />
-        <button type="button" className="btn btn-quiet" title={t('Brand system file')} onClick={openSystemFile} data-testid="brand-template-system"><FilePlus2 size={14} /> {t('Brand system file')}</button>
-        <button type="button" className="btn btn-quiet" onClick={() => void download('md')} data-testid="brand-export-md"><Download size={14} /> {t('Markdown')}</button>
-        <button type="button" className="btn btn-quiet" onClick={() => void download('pdf')} data-testid="brand-export-pdf"><Download size={14} /> PDF</button>
-        <a className="btn btn-quiet" href={`/api/files/${brandId}/download`} download data-testid="brand-export-bogen"><Download size={14} /> .bogen</a>
+        <div className="bp-head-group" role="group" aria-label={t('Suggestions')}>
+          {suggestions && tab !== 'review' ? <button type="button" className="btn btn-primary" onClick={() => setTab('review')} data-testid="brand-review-open" title={t('Each suggestion next to what binds now, to confirm or dismiss one by one or all at once')}>{t.n(suggestions, 'Review {count} suggestion', 'Review {count} suggestions')}</button> : null}
+          {suggestions ? <button type="button" className="btn btn-quiet" onClick={() => session.tx(() => confirmBrandItems(session.doc, null))} data-testid="brand-confirm-all">{t('Confirm all')}</button> : null}
+          <label className="check bp-strict" title={t('A write that adds a hard violation is refused, with the fix')}><input type="checkbox" checked={ctx.bound.strict} onChange={(e) => setField(ctx, 'strict', e.target.checked)} data-testid="brand-strict" /><span>{t('Strict')}</span></label>
+          <Proposed ctx={ctx} field="strict" />
+        </div>
+        <div className="bp-head-group" role="group" aria-label={t('History')}>
+          <IconButton icon={<Undo2 size={14} />} title={t('Undo')} onClick={() => session.undo.undo()} testId="brand-undo" />
+          <IconButton icon={<Redo2 size={14} />} title={t('Redo')} onClick={() => session.undo.redo()} testId="brand-redo" />
+        </div>
+        <div className="bp-head-group">
+          <button type="button" className="btn btn-quiet" title={t('Open the file that lays this brand out as pages: colours, type, logos and examples')} onClick={openSystemFile} data-testid="brand-template-system"><FilePlus2 size={14} /> {t('Brand system file')}</button>
+          <DownloadMenu brandId={brandId} onDownload={(ext) => void download(ext)} />
+        </div>
         {notice ? <div className="error" role="alert" dir="auto" style={{ flexBasis: '100%' }} data-testid="brand-page-error">{notice}</div> : null}
       </header>
       <div className="bp-body">
         <nav className="bp-nav" aria-label={t('Brand sections')}>
-          {TABS.filter((item) => item.id !== 'review' || suggestions || tab === 'review').map((item) => (
-            <button key={item.id} type="button" className={item.id === tab ? 'is-active' : ''} onClick={() => setTab(item.id)} data-testid={`brand-tab-${item.id}`}>
-              <span>{t(item.label)}</span>{count(item.id) ? <span className="bp-nav-count">{count(item.id)}</span> : null}
-            </button>
+          {GROUPS.map((group, gi) => (
+            <div key={gi} className="bp-nav-group" role="group" aria-label={group.label ? t(group.label) : t('Brand book')}>
+              {group.label ? <span className="bp-nav-head" aria-hidden="true">{t(group.label)}</span> : null}
+              {group.tabs.map((item) => (
+                <a key={item.id} href={item.id === 'book' ? `#/brand/${brandId}` : `#/brand/${brandId}/${item.id}`} className={item.id === tab ? 'is-active' : ''} aria-current={item.id === tab ? 'page' : undefined} data-testid={`brand-tab-${item.id}`}>
+                  <span>{t(item.label)}</span>{count(item.id) ? <span className="bp-nav-count">{count(item.id)}</span> : null}
+                </a>
+              ))}
+            </div>
           ))}
         </nav>
         <main className="bp-main" data-testid={`brand-section-${tab}`}>
-          {tab === 'book' ? <BrandBook brandId={brandId} data={data} by={session.user.name} session={session} /> : null}
+          {tab === 'book' ? <BookView brandId={brandId} data={data} name={full?.name ?? data.fields.name} by={session.user.name} onDownload={(ext) => void download(ext)} /> : null}
+          {tab === 'chapters' ? <BrandBook brandId={brandId} data={data} by={session.user.name} session={session} /> : null}
           {tab === 'review' ? <BrandReview s={session} data={data} onOpenSection={(section) => setTab(TAB_OF_SECTION[section] ?? 'identity')} /> : null}
-          {tab === 'health' ? <BrandHealth brandId={brandId} by={session.user.name} /> : null}
+          {tab === 'files' ? <BrandHealth brandId={brandId} by={session.user.name} /> : null}
           {tab === 'identity' ? <Identity ctx={ctx} /> : null}
           {tab === 'logos' ? <Logos ctx={ctx} /> : null}
           {tab === 'colors' ? <Colours ctx={ctx} /> : null}
           {tab === 'type' ? <Typography ctx={ctx} /> : null}
           {tab === 'layout' ? <Layout ctx={ctx} /> : null}
-          {tab === 'imagery' ? <><RuleList ctx={ctx} title={t('Imagery')} hint={t('What pictures show and how. Agents judge these by eye.')} topics={['imagery']} /><RuleList ctx={ctx} title={t('Iconography')} topics={['iconography']} /></> : null}
+          {tab === 'imagery' ? <><RuleList ctx={ctx} title={t('Imagery')} hint={t('What pictures show and how. Agents judge these by eye.')} topics={['imagery']} /><Treatments ctx={ctx} /><RuleList ctx={ctx} title={t('Iconography')} topics={['iconography']} /></> : null}
           {tab === 'voice' ? <Voice ctx={ctx} /> : null}
           {tab === 'rules' ? <><RuleList ctx={ctx} title={t('Rules')} hint={t('Must is a requirement for agents. Should is a default. A rule with a check is checked by machine, and the rest are judged by eye.')} topics={['general', 'color', 'type', 'logo']} topicForNew="general" /><section className="bp-group"><MemorySuggestions brandId={ctx.brandId} /></section></> : null}
           {tab === 'examples' ? <Examples ctx={ctx} /> : null}
           {tab === 'assets' ? <Assets ctx={ctx} /> : null}
           {tab === 'versions' ? <Versions ctx={ctx} full={full} reload={reload} /> : null}
         </main>
-        {tab !== 'book' ? <Preview brandId={brandId} data={data} /> : null}
+        {tab !== 'book' && tab !== 'chapters' ? <Preview brandId={brandId} data={data} /> : null}
       </div>
     </div>
   );

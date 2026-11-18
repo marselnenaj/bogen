@@ -6,10 +6,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * Where each group starts. The CLI bundle leaves puppeteer-core and esbuild external (packages/server/scripts/build.mjs),
- * and scripts/release-npm.mjs makes them and tailwindcss the published package's only dependencies.
+ * Where each group starts. The CLI bundle leaves puppeteer-core, esbuild, and the voice call's ONNX Runtime and
+ * eSpeak NG (they load their own WebAssembly files) external (packages/server/scripts/build.mjs), and
+ * scripts/release-npm.mjs makes them and tailwindcss the published package's only dependencies.
  */
-export const RUNTIME = ['puppeteer-core', 'esbuild', 'tailwindcss'];
+export const RUNTIME = ['puppeteer-core', 'esbuild', 'tailwindcss', 'onnxruntime-web', 'espeak-ng', 'node-llama-cpp', '@fugood/whisper.node', 'sherpa-onnx-node'];
 export const ORDER = ['cli', 'shaders', 'editor', 'npm'];
 /**
  * Optional dependencies that a bundled package only probes for at runtime and works without. The bundle leaves them

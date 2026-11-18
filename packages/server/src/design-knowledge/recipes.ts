@@ -1,4 +1,5 @@
 import type { DesignRecipe } from './types.ts';
+import { BRAND_GUIDELINES_RECIPES } from './brand-guidelines.ts';
 
 function recipe(id: string, discipline: string, name: string, useWhen: string, sequence: string[], requiredContent: string[], avoid: string[], template?: string): DesignRecipe {
   return { id, discipline, name, useWhen, sequence, requiredContent, avoid, sources: [], evidence: 'synthesis', ...(template ? { template } : {}) };
@@ -39,4 +40,5 @@ export const DESIGN_RECIPES: readonly DesignRecipe[] = [
   recipe('theme-surface-review', 'themes', 'Theme surface review', 'Check whether artwork and UI belong to the same theme.', ['App and launcher', 'Panel and notification', 'Busy-background text', 'Landscape and portrait comparison', 'Unverified runtime boundaries'], ['Representative real screens', 'Theme palette', 'Artwork'], ['Changing an unrelated integration to hide a missing contract']),
   recipe('extensible-widget', 'widgets', 'A composable sidebar widget', 'Design a widget another person can configure and extend.', ['Host sizing contract', 'Main value and local action', 'Loading and missing data', 'Offline and stale data', 'Configuration', 'A neighboring widget'], ['Host width', 'Input schema', 'Real or visibly labeled sample data'], ['Hard-coded host assumptions', 'Fake live numbers']),
   recipe('widget-collection', 'widgets', 'A coherent widget collection', 'Make several content types work in the same panel.', ['Shared type and spacing roles', 'Distinct content bodies', 'Compact variants', 'Consistent loading and error states', 'Add and configure flow'], ['Widget types', 'Panel constraints', 'Configuration rules'], ['Identical cards regardless of task', 'Unreachable overflow actions']),
+  ...BRAND_GUIDELINES_RECIPES,
 ];

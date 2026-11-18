@@ -217,7 +217,7 @@ Panel {
     var args = ["omarchy-notification-send", "--app-name=Bogen", "-i", "bogen", "-u", "normal",
                 String(item.title || "Bogen"),
                 String(item.body || item.fileName || "Bogen")]
-    if (item.fileId) args = args.concat(["--exec", "omarchy-launch-webapp", fileUrl(item.fileId)])
+    if (item.fileId) args = args.concat(["--exec"]).concat(showFileArgv(item.fileId))
     Util.execArgv(args)
   }
 
@@ -298,7 +298,7 @@ Panel {
     var args = ["omarchy-notification-send", "--app-name=Bogen", "-i", "bogen", "-u", "normal",
                 String(agent.name || "Agent") + " finished",
                 String(agent.fileName || "Bogen")]
-    if (agent.fileId) args = args.concat(["--exec", "omarchy-launch-webapp", fileUrl(agent.fileId)])
+    if (agent.fileId) args = args.concat(["--exec"]).concat(showFileArgv(agent.fileId))
     Util.execArgv(args)
   }
 
@@ -315,8 +315,15 @@ Panel {
 
   function fileUrl(id) { return baseUrl + "/#/file/" + encodeURIComponent(String(id)) }
 
+  // One window per file: bogen-launch --file shows it in the Bogen window that has it, if there is one, and opens a
+  // window otherwise. Without bogen-launch on the PATH, a window opens as before.
+  function showFileArgv(id) {
+    return ["sh", "-c", "if command -v bogen-launch >/dev/null 2>&1; then exec bogen-launch --file \"$1\"; else exec omarchy-launch-webapp \"$2\"; fi",
+            "bogen-show", String(id), fileUrl(id)]
+  }
+
   function openFile(id) {
-    Util.execArgv(["omarchy-launch-webapp", fileUrl(id)])
+    Util.execArgv(showFileArgv(id))
     close()
   }
 

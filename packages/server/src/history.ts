@@ -9,6 +9,8 @@ import { atomicWrite, errorMessage } from './util.ts';
 
 const zip = promisify(gzip);
 const unzip = promisify(gunzip);
+/** A commit another device sends is inflated up to this much, so a small packet cannot fill the memory. */
+const MAX_RECEIVED_COMMIT = 512 * 1024 * 1024;
 
 /**
  * Commits of a file under `$BOGEN_HOME/history/<id>/`: one gzipped plain copy of the design per commit,
@@ -256,7 +258,7 @@ export class History {
     if (!COMMIT_ID.test(info.id) || info.kind === 'auto') return false;
     let parsed: CommitContent;
     try {
-      parsed = JSON.parse((await unzip(packed)).toString('utf8')) as CommitContent;
+      parsed = JSON.parse((await unzip(packed, { maxOutputLength: MAX_RECEIVED_COMMIT })).toString('utf8')) as CommitContent;
     } catch {
       return false;
     }

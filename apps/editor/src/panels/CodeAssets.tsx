@@ -85,7 +85,7 @@ export function CodeAssets({ query }: { query: string }) {
       </div>
       {!link ? (
         <form className="code-assets-link" onSubmit={(e) => { e.preventDefault(); void connect(); }}>
-          <input className="token-input" placeholder={t('Project folder, such as {example}', { example: '~/code/app' })} value={dir} onChange={(e) => setDir(e.target.value)} onKeyDown={(e) => e.stopPropagation()} spellCheck={false} data-testid="code-link-dir" />
+          <input className="token-input" aria-label={t('Project folder')} placeholder={t('Project folder, such as {example}', { example: '~/code/app' })} value={dir} onChange={(e) => setDir(e.target.value)} onKeyDown={(e) => e.stopPropagation()} spellCheck={false} data-testid="code-link-dir" />
           <button type="submit" className="btn" disabled={busy || !dir.trim()} data-testid="code-link">{t('Link')}</button>
         </form>
       ) : null}

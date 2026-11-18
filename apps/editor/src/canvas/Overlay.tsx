@@ -25,6 +25,7 @@ import { readableOn } from '../lib/readable.ts';
 import { CommentInput } from '../panels/CommentInput.tsx';
 import { GradientHandles } from './GradientHandles.tsx';
 import { CropHandles } from './CropHandles.tsx';
+import { MockupHandles } from './MockupHandles.tsx';
 import { useUi } from '../state/ui.ts';
 import { msg } from '../i18n/core.ts';
 import { useT } from '../i18n/react.ts';
@@ -87,7 +88,7 @@ function FrameLabelsOn({ pageId }: { pageId: string }) {
         if (!r) return null;
         const selected = selection.includes(n.id);
         return (
-          <div key={n.id} className={`ov-frame-label${selected ? ' is-selected' : ''}`} style={{ ...anchored(r.x, r.y), '--ww': r.w, ...(renaming === n.id ? { maxWidth: 'none' } : {}) } as CSSProperties} data-frame-label={n.id}>
+          <div key={n.id} className={`ov-frame-label${selected ? ' is-selected' : ''}`} translate="no" title={renaming === n.id ? undefined : n.name} style={{ ...anchored(r.x, r.y), '--ww': r.w, ...(renaming === n.id ? { maxWidth: 'none' } : {}) } as CSSProperties} data-frame-label={n.id}>
             {renaming === n.id ? (
               <input
                 data-ui
@@ -584,6 +585,7 @@ export function Overlay({ rootRef, previewRef }: { rootRef: RefObject<HTMLDivEle
       <SpacingHandles />
       <GradientHandles />
       <CropHandles />
+      <MockupHandles />
       <PathEditOverlay />
       <PenOverlay />
       <GestureLayer />

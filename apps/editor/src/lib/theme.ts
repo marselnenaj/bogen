@@ -6,7 +6,7 @@ const MONOSPACED = /mono|code|consol|courier|menlo|terminal|fixed|hack\b|iosevka
 
 let systemTheme: Theme | null = null;
 const FIXED = {
-  light: { '--ui-bg':'#ffffff','--ui-bg-2':'#f6f6f5','--ui-bg-3':'#ecebea','--ui-fg':'#1d1d1c','--ui-fg-2':'#6d6c69','--ui-border':'#e4e3e1','--ui-accent':'#2f6fed','--ui-accent-fg':'#ffffff','--ui-danger':'#b3261e' },
+  light: { '--ui-bg':'#ffffff','--ui-bg-2':'#f6f6f5','--ui-bg-3':'#ecebea','--ui-fg':'#1d1d1c','--ui-fg-2':'#6d6c69','--ui-border':'#e4e3e1','--ui-accent':'#2560d8','--ui-accent-fg':'#ffffff','--ui-danger':'#b3261e' },
   dark: { '--ui-bg':'#1c1c1b','--ui-bg-2':'#232322','--ui-bg-3':'#2d2d2c','--ui-fg':'#e8e7e4','--ui-fg-2':'#b4b3ae','--ui-border':'#3d3d38','--ui-accent':'#8bb4ff','--ui-accent-fg':'#10213d','--ui-danger':'#f28b82' },
 };
 let applied: string[] = [];

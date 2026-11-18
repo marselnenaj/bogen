@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, X } from 'lucide-react';
 import {
   deleteVariable, getVariables, readProtoState, setVariable, variantAxes,
   type BogenNode, type ConditionOp, type FileVariable, type LayerProto, type ProtoAction, type ProtoActionType, type ProtoCondition, type ProtoInteraction, type ProtoTransition, type ProtoTrigger, type VariableType, type VariableValue,
@@ -29,7 +29,8 @@ export function useVariables(): FileVariable[] {
   return vars;
 }
 
-const GLYPH: Record<VariableType, string> = { boolean: 'B', number: '#', text: 'T' };
+/** The kind of a variable, said in words in front of its value. */
+const KIND: Record<VariableType, string> = { boolean: msg('Boolean'), number: msg('Number'), text: msg('Text') };
 const FIRST_NAME: Record<VariableType, string> = { boolean: 'isOpen', number: 'count', text: 'text' };
 
 function tryWrite(fn: () => void): void {
@@ -77,24 +78,25 @@ export function VariablesSection() {
   };
   return (
     <Section title={t('Variables')} note={vars.length ? String(vars.length) : undefined}>
-      <div className="hint">{t('Prototype state. Preview and a prototype export start from these values.')}</div>
+      <div className="hint">{t('Preview and a prototype export start from these values.')}</div>
       {vars.map((v) => {
         const n = users.get(v.name) ?? 0;
         return (
           <div key={v.name} className="var-item" data-testid={`variable-${v.name}`}>
             <div className="var-row">
-              <span className="var-type" title={v.type}>{GLYPH[v.type]}</span>
-              <TextField className="list-row-grow" value={v.name} title={t('Name')} testId={`variable-name-${v.name}`} onChange={(name) => tryWrite(() => setVariable(session().doc, { name: v.name, rename: name }))} />
-              <div className="var-value"><ValueField type={v.type} value={v.value} testId={`variable-value-${v.name}`} onChange={(value) => tryWrite(() => setVariable(session().doc, { name: v.name, value }))} /></div>
-              <IconButton icon={<Minus size={13} />} title={t('Delete {name}', { name: v.name })} testId={`variable-delete-${v.name}`} onClick={() => tryWrite(() => deleteVariable(session().doc, v.name))} />
+              <TextField className="list-row-grow" value={v.name} title={v.name} name={t('Name')} testId={`variable-name-${v.name}`} onChange={(name) => tryWrite(() => setVariable(session().doc, { name: v.name, rename: name }))} />
+              <IconButton icon={<X size={14} />} title={t('Delete {name}', { name: v.name })} testId={`variable-delete-${v.name}`} onClick={() => tryWrite(() => deleteVariable(session().doc, v.name))} />
             </div>
-            <div className="var-use">{n ? t.n(n, '{count} layer uses it', '{count} layers use it') : t('No layer uses it yet')}</div>
+            <div className="var-row">
+              <div className="var-value"><ValueField type={v.type} label={t(KIND[v.type])} value={v.value} testId={`variable-value-${v.name}`} onChange={(value) => tryWrite(() => setVariable(session().doc, { name: v.name, value }))} /></div>
+              <span className="var-use">{n ? t.n(n, '{count} layer uses it', '{count} layers use it') : t('No layer uses it yet')}</span>
+            </div>
           </div>
         );
       })}
-      <div className="param-label">{t('New variable')}</div>
+      <div className="param-label var-new-label">{t('Add a variable')}</div>
       <div className="var-new">
-        {(['boolean', 'number', 'text'] as const).map((type) => <button key={type} type="button" className="btn" onClick={() => add(type)} data-testid={`variable-add-${type}`}>{type === 'boolean' ? t('Boolean') : type === 'number' ? t('Number') : t('Text')}</button>)}
+        {(['boolean', 'number', 'text'] as const).map((type) => <button key={type} type="button" className="btn btn-outline" onClick={() => add(type)} data-testid={`variable-add-${type}`}>{type === 'boolean' ? t('Boolean') : type === 'number' ? t('Number') : t('Text')}</button>)}
       </div>
     </Section>
   );

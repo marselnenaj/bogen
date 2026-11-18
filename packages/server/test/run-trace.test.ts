@@ -100,7 +100,10 @@ describe('the trace of a run', () => {
   it('comes from MCP, listed or saved, and from the command line', async () => {
     const listed = await call(agent, 'trace_get', { file_id: fileId });
     expect(listed.runs[0].run_id).toBe(runId);
-    const trace = await call(agent, 'trace_get', { run_id: runId });
+    const summary = await call(agent, 'trace_get', { run_id: runId });
+    expect(summary.calls).toBe(3);
+    expect(summary.prompt).toBeUndefined();
+    const trace = await call(agent, 'trace_get', { run_id: runId, detail: 'full' });
     expect(trace.calls).toHaveLength(3);
     const saved = await call(agent, 'trace_get', { run_id: runId, save: true });
     expect(saved.saved.startsWith(join(h.home, 'exports'))).toBe(true);

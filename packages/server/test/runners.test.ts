@@ -227,7 +227,7 @@ describe('the OpenCode adapter', () => {
     expect(Object.keys(cmd.env)).toEqual(['OPENCODE_CONFIG_CONTENT']);
     const config = JSON.parse(cmd.env.OPENCODE_CONFIG_CONTENT!);
     expect(Object.keys(config.mcp)).toEqual(['bogen_run_Run42ab']);
-    expect(config.mcp.bogen_run_Run42ab).toEqual({ type: 'remote', url: endpoint.url, headers: { 'X-Bogen-Agent': 'opencode', 'X-Bogen-File': 'file1', 'X-Bogen-Run': 'Run42ab', Authorization: 'Bearer tok-secret-123' }, enabled: true, oauth: false });
+    expect(config.mcp.bogen_run_Run42ab).toEqual({ type: 'remote', url: endpoint.url, headers: { 'X-Bogen-Tools': 'grouped', 'X-Bogen-Agent': 'opencode', 'X-Bogen-File': 'file1', 'X-Bogen-Run': 'Run42ab', Authorization: 'Bearer tok-secret-123' }, enabled: true, oauth: false });
     // Ordered rules, deny first, then the one allow: last match wins in OpenCode's permissions.
     expect(Object.entries(config.agent['bogen-run-Run42ab'].permission)).toEqual([['*', 'deny'], ['bogen_run_Run42ab_*', 'allow']]);
     expect(config.agent['bogen-run-Run42ab'].mode).toBe('primary');

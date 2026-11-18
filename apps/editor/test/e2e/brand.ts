@@ -210,11 +210,13 @@ async function main(): Promise<void> {
     const downloads = await page.target().createCDPSession();
     await downloads.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: join(home, 'downloads') });
     const gotMd = page.waitForResponse((r) => r.url().endsWith('/guide.md') && r.status() === 200, { timeout: 8000 });
+    await clickOn(page, 'brand-download');
     await clickOn(page, 'brand-export-md');
     await gotMd;
     const md = await (await fetch(`${base}/api/brands/${brandId}/guide.md`)).text();
     check('Markdown export', md.includes('# Harbour brand guide') && md.includes('Navy'), md.slice(0, 200));
     const gotPdf = page.waitForResponse((r) => r.url().endsWith('/guide.pdf') && r.status() === 200, { timeout: 30000 });
+    await clickOn(page, 'brand-download');
     await clickOn(page, 'brand-export-pdf');
     check('PDF export', ((await gotPdf).headers()['content-type'] ?? '') === 'application/pdf');
     await shot(page, 'brand-page');
@@ -242,8 +244,11 @@ async function main(): Promise<void> {
     check('the Brand tab says what is off', await until(async () => (await count(page, 'brand-violation')) > 0, 20000));
     const score = await page.$eval(t('brand-score'), (el) => el.textContent ?? '');
     check('with a score', /^\d+/.test(score), score);
-    const why = await page.$eval(t('brand-score-why'), (el) => el.textContent ?? '');
-    check('and how the score came about', /colour \d+/.test(why), why);
+    // The score explains itself (ScoreParts): the sum in words, and its parts behind a toggle.
+    const sum = await page.$eval(t('brand-score-sum'), (el) => el.textContent ?? '');
+    check('and how the score came about', /Conformance \d+|conformance \d+/.test(sum), sum);
+    await clickOn(page, 'brand-score-parts-toggle');
+    check('with the colour part among its parts', await until(async () => (await page.$$(`${t('brand-score-category')}[data-category="colour"]`)).length === 1));
     check('rules no machine can check are listed apart', (await count(page, 'brand-checklist')) === 1);
     check('quiet markers on the canvas', await until(async () => (await count(page, 'brand-marker')) > 0));
     await shot(page, 'file-brand-panel');

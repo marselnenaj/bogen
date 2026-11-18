@@ -40,9 +40,33 @@ export function phoneManifest(json: string, shell: PhoneShell): string {
   return JSON.stringify({ ...manifest, name: `Bogen on ${name}`, short_name: `Bogen ${name}` });
 }
 
+/**
+ * The editor's policy. Scripts come only from the editor itself, and the editor talks only to this server; a design on
+ * the canvas is HTML and CSS from anywhere, so its pictures, fonts, styles and media may come from the web. Code
+ * components and Sizes previews render in frames that inherit this policy or bring their own (code-build.ts). Live site
+ * mode shows the person's dev server through a proxy on another port of this computer. Forms never navigate: the
+ * editor handles each submit itself.
+ */
+export const EDITOR_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https:",
+  "img-src 'self' data: blob: https: http:",
+  "font-src 'self' data: blob: https:",
+  "media-src 'self' data: blob: https:",
+  "connect-src 'self'",
+  "frame-src 'self' blob: data: https: http://127.0.0.1:* http://localhost:*",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 export async function serveEditor(pathname: string, res: ServerResponse, phone?: PhoneShell): Promise<void> {
   const root = editorRoot();
-  res.setHeader('Content-Security-Policy', "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+  res.setHeader('Content-Security-Policy', EDITOR_CSP);
   res.setHeader('Referrer-Policy', 'no-referrer');
   if (!root) {
     if (extname(pathname)) res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');

@@ -59,7 +59,7 @@ Say what you reused, and what you had to add.`));
 1. Find the theme with your own file tools${theme_path ? `, starting at ${theme_path}` : ': global CSS with custom properties, a Tailwind config or @theme block, or a tokens file'}.
 2. Call tokens_from_css with dry_run true on its text, check what was recognized and what was skipped, then call it again to apply. Read guide_get tokens first.
 3. Read guide_get design and guide_get layout, and write the direction (audience and job, the idea with two references, type, colour, a layout sentence per screen) before you draw. Make an artboard with artboard_create and write one section at a time with html_write, using var(--name) for every colour, size and space. Check each section with canvas_screenshot.
-4. Finish with design_lint, design_review and responsive_check. For mobile viewport-height sections or sticky cards, include viewport_heights [664,760,600] and inspect viewport_stability while preserving the intended scroll effect. Fix the problems, and show the result with view_focus.
+4. Finish with design_lint, design_review and responsive_check, then at most one design_critique round. Fix its objective defects without re-reviewing; scores never block completion. Only loop on the person's explicit request, quoted as loop_request. For mobile viewport-height sections or sticky cards, include viewport_heights [664,760,600] and inspect viewport_stability while preserving the intended scroll effect. Fix the problems, and show the result with view_focus.
 
 ${brief ? `Design this: ${brief}` : 'Ask what to design if the person has not said, by way of comment_add or your own chat.'}`));
 }

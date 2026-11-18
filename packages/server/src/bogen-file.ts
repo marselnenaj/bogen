@@ -31,7 +31,8 @@ export interface BogenFileContents {
   assets: { name: string; bytes: Uint8Array }[];
 }
 
-function usedAssets(doc: BogenDoc): string[] {
+/** Every asset a file refers to: layers, fonts, its brand, and branches not checked out. */
+export function usedAssets(doc: BogenDoc): string[] {
   const names = new Set<string>();
   const scan = (value: string | undefined) => {
     for (const m of value?.matchAll(/bogen-asset:([^"')\s]+)/g) ?? []) names.add(m[1]!);

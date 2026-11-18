@@ -281,9 +281,15 @@ into a font the file can use. [Fonts of your own](fonts.md) explains it.
 - **Image placeholder** in the command palette places an empty image of 400 by 300. An image with no
   source shows as a dashed frame with its alt text and size, in the colour and font around it, so a draft
   can hold the space. Select it and choose **Upload image** in the Image section to fill it.
-- Bogen has no image generator. Your agent makes images itself: as inline SVG or CSS, which stay
-  editable, or with its own image tool, such as Codex's built-in image generation or an image MCP server
-  you added. It stores the file with `asset_upload`, which reads it from a path on this computer.
+- **Generate** sits next to **Upload image** in the Image section, in the image fill editor and in the
+  command palette (**Generate image**). Describe the picture, pick a shape and how many takes (up to
+  four), and choose one from the sheet; it goes into the layer, and the others stay in the file's images.
+  It uses the Codex CLI on this computer with your own sign-in, about a minute per picture, two at a time.
+  Without the Codex CLI, or signed out, the dialog says how to set it up; nothing else changes. Agents
+  use the same through `image_generate`.
+- Your agent can also make images itself: as inline SVG or CSS, which stay editable, or with its own
+  image tool, such as an image MCP server you added. It stores the file with `asset_upload`, which reads
+  it from a path on this computer.
   `bogen-gen:` sources from older prompts do nothing; html_write says so and leaves a placeholder.
 
 ## Shaders

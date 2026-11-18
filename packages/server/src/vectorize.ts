@@ -31,7 +31,12 @@ const TIMEOUT_MS = 60_000;
 /** Markup larger than this would make a layer that slows every page it is on. */
 export const MAX_SVG_BYTES = 4 * 1024 * 1024;
 
-export interface VectorizeOptions { colors?: number; detail?: VectorizeDetail }
+export interface VectorizeOptions {
+  colors?: number;
+  detail?: VectorizeDetail;
+  /** Trace to these colours only, such as a brand's palette; a colour with a token is written as var(--token, #hex). */
+  palette?: { color: string; token?: string }[];
+}
 export interface VectorizeResult {
   svg: string;
   /** The image's own size in pixels, which is also the SVG's view box. */
@@ -129,6 +134,11 @@ export async function vectorizeBytes(bytes: Uint8Array, renderer: Renderer | und
   if (!mime) throw new Error('Only PNG, JPEG, WebP, GIF and AVIF images can be vectorized.');
   let job: TraceJob;
   let natural: { width: number; height: number } | undefined;
+  const pal = (options.palette ?? []).map((p) => {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(p.color);
+    if (!m) throw new Error(`${p.color} is not a colour as #rrggbb.`);
+    return { r: parseInt(m[1]!, 16), g: parseInt(m[2]!, 16), b: parseInt(m[3]!, 16), a: 255 };
+  });
   if (mime === 'image/png' && !isInterlacedPng(bytes)) job = { png: bytes, colors, options: detail.options, maxPixels: detail.maxPixels };
   else {
     if (!renderer) throw new Error(`Vectorizing ${mime} needs the renderer.`);
@@ -136,9 +146,21 @@ export async function vectorizeBytes(bytes: Uint8Array, renderer: Renderer | und
     natural = decoded.natural;
     job = { rgba: downscale(decoded.rgba, detail.maxPixels), colors, options: detail.options, maxPixels: detail.maxPixels };
   }
+  if (pal.length) job.palette = pal;
   const traced = await runTrace(job);
   const size = natural ?? { width: traced.width, height: traced.height };
-  const svg = sanitizeSvgMarkup(fitViewBox(traced.svg, traced.traced));
+  let markup = fitViewBox(traced.svg, traced.traced);
+  if (pal.length) {
+    // The tracer writes rgb(r,g,b): back to the palette's own colours, by token where there is one.
+    const byRgb = new Map(pal.map((c, i) => [`${c.r},${c.g},${c.b}`, options.palette![i]!]));
+    markup = markup.replace(/fill="rgb\((\d+),(\d+),(\d+)\)"/g, (all, r: string, g: string, b: string) => {
+      const p = byRgb.get(`${r},${g},${b}`);
+      if (!p) return all;
+      const hex = p.color.slice(0, 7).toLowerCase();
+      return `fill="${p.token ? `var(--${p.token}, ${hex})` : hex}"`;
+    });
+  }
+  const svg = sanitizeSvgMarkup(markup);
   if (!svg || !/<path\b/.test(svg)) throw new Error('Tracing found no shapes in this image.');
   if (svg.length > MAX_SVG_BYTES) throw new Error(`The vector would be ${Math.round(svg.length / 1024)} KB, over the limit of ${MAX_SVG_BYTES / 1024 / 1024} MB. Try less detail or fewer colours.`);
   const fills = new Set([...svg.matchAll(/\bfill="([^"]+)"/g)].map((m) => m[1]));

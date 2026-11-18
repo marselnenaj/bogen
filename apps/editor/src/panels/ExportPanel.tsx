@@ -209,6 +209,7 @@ export function ExportPanel() {
           <IconButton icon={<Plus size={13} />} title={t('Add a size')} onClick={() => setRows([...rows, { format: 'png', scale: 1 }])} testId="export-set-add" />
         </div>
         <div className="export-set-names">
+          <span className="export-set-label">{t('Start from')}</span>
           {SETS.map((s) => <button key={s.label} type="button" className="btn btn-quiet" onClick={() => setRows(s.rows)} data-testid={`export-set-${s.label.toLowerCase()}`}>{t(s.label)}</button>)}
         </div>
         {rows.map((row, i) => (
@@ -229,9 +230,9 @@ export function ExportPanel() {
         <div className="export-set" data-testid="export-publish">
           <div className="export-set-head"><span>{t('As a website')}</span></div>
           <div className="hint">{t('A frozen static copy, on Bogen\'s own site, in a folder or on GitHub Pages. Or a review link for a client.')}</div>
-          <div className="export-set-names">
-            <button type="button" className="btn" onClick={() => ui().set({ publishDialog: 'publish' })} data-testid="export-open-publish">{t('Publish')}</button>
-            <button type="button" className="btn" onClick={() => ui().set({ publishDialog: 'share' })} data-testid="export-open-share">{t('Share for review')}</button>
+          <div className="export-actions">
+            <button type="button" className="btn btn-outline" onClick={() => ui().set({ publishDialog: 'publish' })} data-testid="export-open-publish">{t('Publish')}</button>
+            <button type="button" className="btn btn-outline" onClick={() => ui().set({ publishDialog: 'share' })} data-testid="export-open-share">{t('Share for review')}</button>
           </div>
         </div>
       ) : null}
@@ -240,9 +241,9 @@ export function ExportPanel() {
         <div className="export-set" data-testid="export-app">
           <div className="export-set-head"><span>{t('The app on a device')}</span></div>
           <div className="hint">{t('Put the screen a running app shows beside this artboard, then compare the two.')}</div>
-          <div className="export-set-names">
-            <button type="button" className="btn" onClick={openAppScreenBeside} data-testid="export-app-import">{t('Import an app screen')}</button>
-            <button type="button" className="btn" disabled={!selection.length} onClick={openAppCompare} data-testid="export-app-compare">{t('Design versus app')}</button>
+          <div className="export-actions">
+            <button type="button" className="btn btn-outline" onClick={openAppScreenBeside} data-testid="export-app-import">{t('Import an app screen')}</button>
+            <button type="button" className="btn btn-outline" disabled={!selection.length} onClick={openAppCompare} data-testid="export-app-compare">{t('Design versus app')}</button>
           </div>
           <TomaccoReadiness refresh={appScreenCloses} />
         </div>

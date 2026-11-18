@@ -1,0 +1,54 @@
+/* Dialogs: the scrim, the box, its head. Moved from app.css so that dialog rules live in one place. */
+:root { --scrim: rgb(0 0 0 / 32%); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme-mode='light']) { --scrim: rgb(0 0 0 / 55%); }
+}
+:root[data-theme-mode='dark'] { --scrim: rgb(0 0 0 / 55%); }
+
+/* The page behind is dimmed, so the dialog reads as the one thing to deal with now. */
+.dialog-scrim { position: fixed; inset: 0; z-index: 70; display: grid; place-items: start center; padding-top: calc(2 * var(--space-3xl)); background: var(--scrim); }
+.dialog { width: min(720px, calc(100 * var(--ui-vw) - 32px)); max-height: calc(74 * var(--ui-vh)); display: flex; flex-direction: column; background: var(--ui-bg); border-radius: 8px; box-shadow: var(--shadow); overflow: hidden; }
+.dialog-head { display: flex; align-items: center; gap: var(--space-sm); padding: 0 var(--space-xs) 0 var(--space-md); height: 40px; border-bottom: 1px solid var(--ui-border); color: var(--ui-fg-2); flex: none; }
+/* The close button sits at the right edge, whatever comes before it. */
+.dialog-head > .icon-btn:last-child { margin-inline-start: auto; }
+.dialog-title { margin: 0; font-size: var(--text-xl); font-weight: 600; color: var(--ui-fg); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dialog-search { flex: 1 1 auto; background: transparent; border: 0; outline: none; color: var(--ui-fg); font-size: var(--text-md); height: 100%; }
+.dialog-body { overflow: auto; padding: var(--space-md) var(--space-lg) var(--space-lg); column-count: 2; column-gap: var(--space-xl); scrollbar-width: thin; }
+
+/* Keyboard shortcuts */
+.shortcut-group { break-inside: avoid-column; margin-bottom: var(--space-lg); }
+.shortcut-group h3 { margin: 0 0 var(--space-xs); font-size: var(--text-lg); font-weight: 600; color: var(--ui-fg); min-height: var(--target); display: flex; align-items: center; }
+.shortcut-row { display: flex; justify-content: space-between; align-items: center; min-height: var(--target); font-size: var(--text-md); gap: var(--space-sm); break-inside: avoid; }
+.shortcut-keys { display: inline-flex; align-items: center; gap: var(--space-xs); flex: none; color: var(--fg-3); font-size: var(--text-sm); }
+
+kbd { font-size: var(--text-sm); color: var(--ui-fg-2); }
+/* A key cap: one key of a shortcut. Arrow keys are drawn as icons, never as arrow characters. */
+.keys { display: inline-flex; align-items: center; gap: var(--space-2xs); flex: none; }
+.keys kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 var(--space-xs);
+  border-radius: var(--radius); background: var(--ui-bg-3); color: var(--ui-fg); box-shadow: inset 0 -1px 0 var(--ui-border);
+  font-family: var(--ui-font); font-size: var(--text-sm); line-height: 1;
+}
+
+/* Command palette */
+.dialog.palette { width: min(600px, calc(100 * var(--ui-vw) - 32px)); }
+.palette-search { flex: none; display: flex; align-items: center; gap: var(--space-sm); height: 44px; padding: 0 var(--space-md); border-bottom: 1px solid var(--ui-border); color: var(--ui-fg-2); }
+.palette-search-icon { flex: none; }
+.palette-input { flex: 1 1 auto; min-width: 0; height: 100%; background: transparent; border: 0; outline: none; padding: 0; font-size: var(--text-lg); color: var(--ui-fg); }
+.palette-list { overflow: auto; min-height: 0; flex: 1 1 auto; padding: var(--space-xs); scrollbar-width: thin; max-height: calc(46 * var(--ui-vh)); }
+.palette-row { display: flex; align-items: center; gap: var(--space-sm); height: 32px; padding: 0 var(--space-sm); border-radius: var(--radius); font-size: var(--text-md); min-width: 0; }
+.palette-row.is-active { background: var(--ui-accent); color: var(--ui-accent-fg); }
+.palette-icon { flex: none; width: 14px; color: var(--ui-fg-2); }
+.palette-title { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.palette-title mark { background: none; color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+/* Where it belongs, said quietly at the right, beside its keys. */
+.palette-hint { flex: 0 1 auto; min-width: 0; max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ui-fg-2); font-size: var(--text-sm); }
+.palette-keys { flex: none; min-width: 48px; justify-content: flex-end; }
+.palette-row.is-active .palette-icon, .palette-row.is-active .palette-hint { color: inherit; }
+/* On the chosen row the cap is an outline, so its key keeps the row's full contrast. */
+.palette-row.is-active .keys kbd { background: transparent; color: inherit; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ui-accent-fg) 45%, transparent); }
+.palette-empty { padding: var(--space-lg) var(--space-sm); color: var(--ui-fg-2); font-size: var(--text-md); }
+.palette-foot { display: flex; gap: var(--space-lg); flex: none; min-height: 32px; align-items: center; padding: 0 var(--space-md); border-top: 1px solid var(--ui-border); color: var(--ui-fg-2); font-size: var(--text-sm); white-space: nowrap; overflow: hidden; }
+.palette-foot > span { display: inline-flex; align-items: center; gap: var(--space-xs); }
+
+/* Buttons in dialogs keep to the spacing scale. */

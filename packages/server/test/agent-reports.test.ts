@@ -24,7 +24,7 @@ describe('what agents reported', () => {
   it('screenshots a child layer at the scale asked for, sized by the layer', async () => {
     const board = (await call(agent, 'artboard_create', { name: 'Tall', width: 1200, height: 3000 })).id;
     const chip = (await call(agent, 'html_write', { target_id: board, html: '<div style="height:2600px;flex:none"></div><div data-name="Chip" style="width:200px;height:100px;flex:none;background:#c33"></div>' })).ids[1];
-    const raw = await callRaw(agent, 'canvas_screenshot', { node_id: chip, scale: 2 });
+    const raw = await callRaw(agent, 'canvas_screenshot', { node_id: chip, scale: 2, format: 'png' });
     expect(raw.isError).toBe(false);
     expect(raw.content[1]!.text).toMatch(/^400x200px at scale 2,/);
     const png = await pngStats(Buffer.from(raw.content[0]!.data!, 'base64'));
@@ -34,7 +34,7 @@ describe('what agents reported', () => {
     // So long that the artboard at this density is more than a browser paints at once: the layer alone is.
     const longBoard = (await call(agent, 'artboard_create', { name: 'Long', width: 1200, height: 7000 })).id;
     const low = (await call(agent, 'html_write', { target_id: longBoard, html: '<div style="height:6800px;flex:none;background:#eee"></div><div style="width:200px;height:100px;flex:none;background:#36c"></div>' })).ids[1];
-    const deep = await callRaw(agent, 'canvas_screenshot', { node_id: low, scale: 4 });
+    const deep = await callRaw(agent, 'canvas_screenshot', { node_id: low, scale: 4, format: 'png' });
     expect(deep.content[1]!.text).toMatch(/^800x400px at scale 4,/);
     const deepPng = await pngStats(Buffer.from(deep.content[0]!.data!, 'base64'));
     expect([deepPng.width, deepPng.height, deepPng.distinctColors]).toEqual([800, 400, 1]);

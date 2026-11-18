@@ -1,3 +1,4 @@
+import { agentImage, layoutMap } from '../layout-map.ts';
 import { z } from 'zod';
 import { driftOfFile } from '../drift.ts';
 import { RESTYLE_NOTICE, restyleSite } from '../restyle.ts';
@@ -19,7 +20,8 @@ export function registerDriftTools(define: ToolDefiner): void {
     return {
       content: [
         { type: 'text', text: JSON.stringify({ ...rest, next: report.drifts.length ? 'For each drift, decide with the person which side is right. To change the repository, code_get the layer and edit the element named by live_element.selector. To change the design, use layer_style or layer_text on layer_id.' : 'The design and the page agree.' }, null, 1) },
-        { type: 'image', data: Buffer.from(picture).toString('base64'), mimeType: 'image/png' },
+        await agentImage(ctx.app.renderer, { bytes: picture, mime: 'image/png' }),
+        { type: 'text', text: await layoutMap(room.doc, ctx.app.renderer, { nodeIds: [report.node_id] }, { width }) },
       ],
     };
   });

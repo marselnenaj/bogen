@@ -68,7 +68,7 @@ const CRITIQUE_WRITES = new Set(['comment_add', 'comment_reply']);
 export const OPEN_WORLD_TOOLS = new Set([
   'asset_upload', 'brand_export', 'brand_extract', 'code_project_link', 'data_source_refresh', 'data_source_set',
   'design_md_import', 'drift_check', 'export_file', 'figma_import', 'file_export', 'file_import', 'layer_repeat',
-  'omarchy_theme_export', 'omarchy_theme_install', 'page_capture', 'pdf_import', 'publish_prepare', 'replay_export',
+  'image_search', 'image_generate', 'omarchy_theme_export', 'omarchy_theme_install', 'page_capture', 'pdf_import', 'publish_prepare', 'replay_export',
   'repo_canvas_open', 'trace_get',
   'share_prepare', 'site_capture', 'site_restyle', 'storybook_import', 'tokens_repo_diff', 'tokens_repo_pull', 'tomacco_compare', 'tomacco_import', 'tomacco_status',
 ]);
@@ -149,6 +149,8 @@ export class ToolContext {
   lastRoom: Room | undefined;
   /** Inside a `batch` with `dry_run`: nothing may cost money or reach the network. */
   readonly dryRun: boolean = false;
+  /** The tool changes things: a run held to some files may only reach those through it. */
+  writes = false;
 
   constructor(readonly app: BogenServer, readonly session: Session, readonly tool: string, readonly signal?: AbortSignal) {
     this.agent = session.agent();
@@ -180,6 +182,7 @@ export class ToolContext {
 
   async room(fileId?: string): Promise<Room> {
     const id = this.fileId(fileId);
+    this.mayWrite(id);
     const room = await this.app.rooms.get(id);
     if (!this.rooms.has(room)) {
       this.rooms.add(room);
@@ -190,6 +193,16 @@ export class ToolContext {
     this.lastRoom = room;
     this.branchOf(room);
     return room;
+  }
+
+  /** Refuses a change to a file the run is not held to (a call's run works only in the file the person named). */
+  mayWrite(fileId: string | null): void {
+    if (!this.writes || !this.session.runId) return;
+    const allowed = this.app.runs.allowedFilesOf(this.session.runId);
+    if (!allowed || (fileId && allowed.includes(fileId))) return;
+    // A brand is shared by files and changed on purpose ("the brand colour"), not a design file the run strays into.
+    if (fileId && this.app.storage.get(fileId)?.kind === 'brand') return;
+    throw new Error(`This run may only change ${allowed.length === 1 ? 'the file it was asked to work in' : 'the files it was asked to work in'} (${allowed.join(', ')}). Read other files if you need them, but make no changes there and create no new files; say in your answer if the work needs another file.`);
   }
 
   /** The branch this session works on in a file, pinned the first time it reaches the file. */
@@ -382,6 +395,7 @@ export function toolDefiner(server: McpServer, app: BogenServer, session: Sessio
     const output = OUTPUT_SCHEMAS[name];
     const callback = async (args: unknown, extra?: { signal?: AbortSignal }): Promise<CallToolResult> => {
       const ctx = new ToolContext(app, session, name, extra?.signal);
+      ctx.writes = !meta.readOnly;
       const startedAt = Date.now();
       let result: CallToolResult | undefined;
       try {
@@ -396,10 +410,12 @@ export function toolDefiner(server: McpServer, app: BogenServer, session: Sessio
     const run = async (ctx: ToolContext, args: unknown): Promise<CallToolResult> => {
       try {
         if (session.scope === 'critique' && (args as { fix?: unknown }).fix === true) throw new Error(`This ${session.runId ? 'run is a critique' : 'session is a reviewer'} and fixes nothing. Leave a comment with the fix as its suggestion.`);
+        // A new file is a file outside the ones a held run may change.
+        if (ctx.writes && (name === 'file_create' || name === 'file_import' || name === 'template_use')) ctx.mayWrite(null);
         const guard = meta.readOnly ? null : await brandGuard(ctx, name, args as { file_id?: string });
         const out = meta.readOnly ? await handler(args as never, ctx) : await brandAfterWrite(ctx, name, guard, await handler(args as never, ctx));
         if (isToolResult(out)) return out;
-        const text = typeof out === 'string' ? out : JSON.stringify(out, null, 1);
+        const text = typeof out === 'string' ? out : JSON.stringify(out);
         // A tool with an output schema also returns its result as fields, as the protocol asks of it.
         if (output && typeof out === 'object' && !Array.isArray(out)) return { content: [{ type: 'text', text }], structuredContent: out as Record<string, unknown> };
         return { content: [{ type: 'text', text }] };
@@ -435,11 +451,11 @@ export function assertUnlocked(doc: BogenDoc, ids: string[]): void {
 
 const SIZE_PROPS = ['display', 'flexDirection', 'width', 'height', 'position', 'left', 'top'] as const;
 
-function nodeLine(node: BogenNode): string {
-  const parts = [`${node.id} ${node.type} <${node.tag}> "${node.name.replace(/\s+/g, ' ').slice(0, 60)}"`];
-  const facts = SIZE_PROPS.filter((k) => node.style[k]).map((k) => `${k}:${node.style[k]}`);
+function nodeLine(node: BogenNode, compact = false): string {
+  const parts = [`${node.id} ${node.type} <${node.tag}> "${node.name.replace(/\s+/g, ' ').slice(0, compact ? 40 : 60)}"`];
+  const facts = compact ? [] : SIZE_PROPS.filter((k) => node.style[k]).map((k) => `${k}:${node.style[k]}`);
   if (facts.length) parts.push(`[${facts.join(' ')}]`);
-  if (node.type === 'text' && node.text) parts.push(`text=${JSON.stringify(node.text.slice(0, 60))}`);
+  if (node.type === 'text' && node.text && (!compact || node.text !== node.name)) parts.push(`text=${JSON.stringify(node.text.slice(0, compact ? 40 : 60))}`);
   if (node.component) parts.push(`main${node.component.set ? ` of set "${node.component.set}"` : ''}`);
   if (node.instanceOf) parts.push(`instance of ${node.instanceOf}`);
   if (node.virtual && !node.instanceOf) parts.push('inside instance');
@@ -456,6 +472,26 @@ function nodeLine(node: BogenNode): string {
   if (node.hidden) parts.push('hidden');
   if (node.locked) parts.push('locked');
   return parts.join(' ');
+}
+
+/** Page visible nodes, not descendants hidden by depth. Every omitted node can be reached with offset or node_id. */
+export function pagedOutline(doc: BogenDoc, roots: string[], depth: number, limit: number, offset: number, compact: boolean): string {
+  const lines: string[] = [];
+  let total = 0;
+  const walk = (id: string, level: number) => {
+    const node = doc.getNode(id);
+    if (!node) return;
+    const index = total++;
+    const children = doc.getChildren(id);
+    if (index >= offset && index < offset + limit) {
+      lines.push('  '.repeat(level) + nodeLine(node, compact) + (children.length && level + 1 >= depth ? ` (+${doc.descendants(id).length} below; node_id ${id})` : ''));
+    }
+    if (level + 1 < depth) for (const child of children) walk(child.id, level + 1);
+  };
+  for (const id of roots) walk(id, 0);
+  if (total > offset + limit) lines.push(`... ${total - offset - limit} more; layer_tree offset ${offset + limit} with the same scope/depth, or narrow with node_id.`);
+  else if (!lines.length && total) lines.push(`No layers at offset ${offset}; ${total} visible layers. Use offset 0.`);
+  return lines.join('\n');
 }
 
 /** A compact indented outline. Below the depth limit it counts what it leaves out. */

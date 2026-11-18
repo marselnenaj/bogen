@@ -328,6 +328,11 @@ export function keyframesCss(doc: BogenDoc): string {
 export const RESET_CSS = '*,*::before,*::after{box-sizing:border-box}body,h1,h2,h3,h4,h5,h6,p,ul,ol,li,figure,blockquote,dl,dd{margin:0;padding:0}ul,ol{list-style:none}button{font:inherit;color:inherit;background:none;border:0;padding:0}a{color:inherit;text-decoration:none}img,svg,video{display:block}';
 
 export function fontLinks(doc: BogenDoc): string[] {
+  // Every layer is read: kept until the file changes, as each render, check and export asks again.
+  return [...doc.memo('fontLinks', () => readFontLinks(doc))];
+}
+
+function readFontLinks(doc: BogenDoc): string[] {
   const families = new Set<string>();
   const visit = (n: BogenNode) => {
     const f = n.style.fontFamily;

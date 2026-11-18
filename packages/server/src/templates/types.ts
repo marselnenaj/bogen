@@ -26,6 +26,8 @@ export interface BoardPlan {
   color: string;
   font: string;
   steps: BoardStep[];
+  /** Stored on the board, not rendered: such as what kind of slide it is, for the checks. */
+  attrs?: Record<string, string>;
 }
 
 export interface TemplatePlan {

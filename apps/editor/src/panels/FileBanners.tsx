@@ -32,9 +32,15 @@ export function startFileTitle(fileId: string): () => void {
   });
 }
 
-/** Says once what happened to the file while nobody had it open, also after a laptop slept through it. */
-export function AwayBanner() {
-  useT();
+export interface Away {
+  note: AwayNote | null;
+  /** Texts both devices edited while apart, of which one side's words were kept. */
+  texts: number;
+  dismiss: () => void;
+}
+
+/** What happened to the file while nobody had it open, also after a laptop slept through it. The server says it once. */
+export function useAwayNote(): Away {
   const fileId = useEditor((s) => s.fileId);
   const connection = useEditor((s) => s.connection);
   const [note, setNote] = useState<AwayNote | null>(null);
@@ -49,13 +55,37 @@ export function AwayBanner() {
     }, () => {});
     return () => { live = false; };
   }, [fileId, connection]);
-  if (!note) return null;
+  return { note, texts, dismiss: () => setNote(null) };
+}
+
+/** The notice in the recent-changes strip: who changed the file while it was closed, and the way to what changed. */
+export function AwayNotice({ away, onReview }: { away: Away; onReview: () => void }) {
+  const t = useT();
+  if (!away.note || away.texts) return null;
+  const text = t('{who} changed this file {ago}, while it was closed.', { who: formatList(Object.keys(away.note.from)), ago: ago(away.note.lastAt) });
+  return (
+    <div className="recent-notice" role="status" data-testid="away-banner">
+      <span className="recent-notice-text" title={text} dir="auto">{text}</span>
+      <button type="button" className="recent-review" onClick={onReview} data-testid="away-review">{t('Review changes')}</button>
+      <button type="button" className="icon-btn recent-dismiss" title={t('Dismiss')} aria-label={t('Dismiss')} onClick={away.dismiss} data-testid="away-dismiss"><X size={13} /></button>
+    </div>
+  );
+}
+
+/**
+ * The same as a row of its own: when texts were edited on both devices, which is a warning that needs its words, and
+ * when the strip is not there to hold the notice.
+ */
+export function AwayBanner({ away, strip }: { away: Away; strip: boolean }) {
+  useT();
+  const { note, texts } = away;
+  if (!note || (strip && !texts)) return null;
   const who = formatList(Object.keys(note.from));
   const when = ago(note.lastAt);
   return (
     <div className="banner banner-info" role="status" data-testid="away-banner">
-      <span>{texts ? t.n(texts, '{who} changed this file while nobody had it open, the last time {ago}. One text was edited on both devices while apart, and one side\'s words were kept: Sync in the Agents tab has both.', '{who} changed this file while nobody had it open, the last time {ago}. {count} texts were edited on both devices while apart, and one side\'s words were kept: Sync in the Agents tab has both.', { who, ago: when }) : t('{who} changed this file while nobody had it open, the last time {ago}.', { who, ago: when })}</span>
-      <button type="button" className="banner-close" title={t('Dismiss')} onClick={() => setNote(null)} data-testid="away-dismiss"><X size={13} /></button>
+      <span>{texts ? t.n(texts, '{who} changed this file while nobody had it open, the last time {ago}. One text was edited on both devices while apart, and one side\'s words were kept: Sync in the Agents tab has both.', '{who} changed this file while nobody had it open, the last time {ago}. {count} texts were edited on both devices while apart, and one side\'s words were kept: Sync in the Agents tab has both.', { who, ago: when }) : t('{who} changed this file {ago}, while it was closed.', { who, ago: when })}</span>
+      <button type="button" className="banner-close" title={t('Dismiss')} aria-label={t('Dismiss')} onClick={away.dismiss} data-testid="away-dismiss"><X size={13} /></button>
     </div>
   );
 }

@@ -1,30 +1,31 @@
 import { camelCss, cssValueContains, listOverrides, matchingLayers, type NodeType } from '@bogen/core';
 import { z } from 'zod';
+import { agentCapture } from '../layout-map.ts';
 import { handoffCode } from '../code-handoff.ts';
-import { fileIdArg, outline, pageIdArg, type ToolDefiner } from './kit.ts';
+import { fileIdArg, pagedOutline, pageIdArg, type ToolDefiner } from './kit.ts';
 
 const NODE_TYPES = ['frame', 'text', 'image', 'svg', 'shader', 'video', 'embed'] as const satisfies readonly NodeType[];
-/** About 3.7 MB once in base64, under what MCP clients accept for one image. */
-const MCP_IMAGE_BYTES = 2_800_000;
-const MCP_IMAGE_DIMENSION = 2000;
 
 export function registerReadTools(define: ToolDefiner): void {
-  define('layer_tree', { description: 'An indented outline of a page or layer: id, type, tag, name, main layout styles, a text snippet, and which pseudo-element and condition blocks a layer has (rules {…}). Use a small depth first and drill into what matters with node_id. This is how you find layer ids.', readOnly: true }, {
+  define('layer_tree', { description: 'A paged outline of layer ids, types, short names and flags. Start shallow and drill into node_id; detail full adds layout styles and longer text. Reuse ids you already read until an edit changes them.', readOnly: true }, {
     node_id: z.string().optional().describe('Show the tree under this layer. Leave out for the whole page.'),
     page_id: pageIdArg,
-    depth: z.number().int().min(1).max(20).default(3).describe('Levels to show. Deeper levels are counted, not listed.'),
+    depth: z.number().int().min(1).max(20).default(2).describe('Levels to show. Deeper levels are counted, not listed.'),
+    detail: z.enum(['compact', 'full']).default('compact'),
+    limit: z.number().int().min(1).max(400).default(80),
+    offset: z.number().int().min(0).default(0).describe('Skip visible layers; keep the same scope and depth when paging.'),
     file_id: fileIdArg,
-  }, async ({ node_id, page_id, depth, file_id }, ctx) => {
+  }, async ({ node_id, page_id, depth, detail, limit, offset, file_id }, ctx) => {
     const room = await ctx.room(file_id);
     const doc = room.doc;
     if (node_id) {
       if (!doc.getNode(node_id)) throw new Error(`No layer with id ${node_id}. Leave node_id out for the whole page, or call layer_find for the ids that exist.`);
-      return outline(doc, [node_id], depth);
+      return pagedOutline(doc, [node_id], depth, limit, offset, detail === 'compact');
     }
     const pageId = ctx.page(room, page_id);
     const roots = doc.getChildren(pageId).map((n) => n.id);
     const name = doc.getPages().find((p) => p.id === pageId)?.name;
-    return `Page "${name}" (${pageId})\n${roots.length ? outline(doc, roots, depth) : '(empty)'}`;
+    return `Page "${name}" (${pageId})\n${roots.length ? pagedOutline(doc, roots, depth, limit, offset, detail === 'compact') : '(empty)'}`;
   });
 
   define('layer_get', { description: 'The full data of one layer: its style (camelCase CSS), text, source, attributes, parent and child ids, and rules: its pseudo-elements and conditional blocks, such as "::before" or "@container (max-width: 560px)", each with its declarations. Read this before editing a layer you did not write. It shows what is stored; for the values the browser ends up with (sizes, inherited fonts, tokens resolved) use layer_styles_computed, and for many layers at once layer_tree.', readOnly: true }, {
@@ -78,26 +79,28 @@ export function registerReadTools(define: ToolDefiner): void {
     return ctx.app.renderer.computed(doc, node_ids, properties, { ...(width ? { width } : {}), ...(pseudo ? { pseudo } : {}) });
   });
 
-  define('canvas_screenshot', { description: 'Render a layer or a whole page to an image and look at it. Use it after every section you write, and check spacing, hierarchy, contrast and whether anything overflowed. Works with no editor open. Images are limited to 2000px on the long side. To measure a difference against another layer or a reference picture use visual_diff, and to save a file for the person use export_file.', readOnly: true }, {
+  define('canvas_screenshot', { description: 'Render a layer or page as a layout map plus a small JPEG (768px, quality 75). Measure from the map; judge the impression from the picture. detail full or max_dimension requests a larger picture; map_only omits it. Check edits with map_only (or design_lint); take a picture for the first and the final look. Use visual_diff to compare and export_file to save.', readOnly: true }, {
     node_id: z.string().optional().describe('The layer to capture. Leave out for the whole page.'),
     page_id: pageIdArg,
-    scale: z.number().min(0.1).max(4).default(1).describe('Pixel density. 1 is enough to review a page; use 2 to inspect details on a small layer.'),
-    format: z.enum(['png', 'jpg', 'webp']).default('png'),
+    scale: z.number().min(0.1).max(4).optional().describe('Pixel density. 1 is enough to review a page; use 2 to inspect details on a small layer.'),
+    format: z.enum(['png', 'jpg', 'webp']).optional(),
+    detail: z.enum(['compact', 'full']).default('compact'),
+    map_only: z.boolean().default(false),
+    max_dimension: z.number().int().min(256).max(2000).optional(),
     file_id: fileIdArg,
-  }, async ({ node_id, page_id, scale, format, file_id }, ctx) => {
+  }, async ({ node_id, page_id, scale, format, detail, map_only, max_dimension, file_id }, ctx) => {
     const room = await ctx.room(file_id);
     const target = node_id ? { nodeIds: [node_id] } : { pageId: ctx.page(room, page_id) };
     if (node_id) ctx.touch([node_id]);
     const captureIds = node_id ? [node_id] : [ctx.page(room, page_id)];
     const captured = ctx.app.designQuality.capture(room.doc, captureIds);
-    const shot = await ctx.app.renderer.screenshot(room.doc, target, { scale, format, maxDimension: MCP_IMAGE_DIMENSION, maxBytes: MCP_IMAGE_BYTES });
-    ctx.app.designQuality.seen(room.id, room.doc, captureIds, ctx.session.runId, captured);
-    return {
-      content: [
-        { type: 'image', data: Buffer.from(shot.bytes).toString('base64'), mimeType: shot.mime },
-        { type: 'text', text: `${shot.width}x${shot.height}px at scale ${Math.round(shot.scale * 100) / 100}, ${shot.format}.` },
-      ],
-    };
+    const result = await agentCapture(room.doc, ctx.app.renderer, target, {
+      scale: scale ?? 1, format: format ?? 'jpg', quality: format ? 80 : 75,
+      maxDimension: max_dimension ?? (detail === 'full' || format || scale !== undefined ? 1280 : 768), mapOnly: map_only,
+    });
+    // A map alone is measurement evidence; it cannot attest that the maker saw the picture.
+    if (!map_only) ctx.app.designQuality.seen(room.id, room.doc, captureIds, ctx.session.runId, captured);
+    return result;
   });
 
   define('code_get', { description: 'Turn a layer into code to hand off: html with inline styles, react-inline, or react-tailwind; or, experimental, exact: a minimal Exact app (github.com/expo/exact) whose view is written in its Contract language, as app.contract, app.ts, app.json, app.test.contract and app.tamber for the tokens, with a list of what Contract could not say. vue (single-file components, script setup in TypeScript), svelte (Svelte 5 with runes) and swiftui (iOS 17 and macOS 14) come out as files under a line that names each: a component per file with its props and variant axes, the page or screen that uses them, bogen.css or Tokens.swift with the tokens in light and dark, and a list of what the format could not say. In React, Vue, Svelte and SwiftUI a component comes out as a real component with typed props, and instances as usages of it; a kit that is markup (daisyUI, USWDS, Pico CSS, Web Awesome) stays its markup in Vue and Svelte, and a kit of a React library is written from its drawing there and in SwiftUI. Returns the CSS for any tokens and text styles the code uses. Motion (keyframes, animation, transition) comes out as clean CSS by default: @keyframes, and animation and transition on a class per moving layer, only under prefers-reduced-motion: no-preference. motion framer writes Framer Motion props for React instead, inline keeps it in the style. Treat it as an exact specification, and adapt it to the target codebase.', readOnly: true }, {

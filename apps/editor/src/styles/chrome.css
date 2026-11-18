@@ -10,43 +10,47 @@
 /* The toolbar's level comes from a width budget (fitToolbar in state/chrome-layout.ts) that counts every control at
    the widths drawn here: the parts that come and go are capped per level, and the file name takes what is left,
    never less than FILE_NAME_MIN. Keep these numbers and the budget together. */
-/* Wide windows keep the centred tools as they were. */
+/* The full toolbar keeps its tools in the middle: both sides get the same room, and the budget counts the wider one
+   twice. Below it the tools follow the left side. */
 .editor > .toolbar:not([data-level="full"]) { grid-template-columns: minmax(0, 1fr) auto auto; }
 .editor > .toolbar .toolbar-left { min-width: 0; }
-/* The file name gives way first; the branch button keeps its capped size. */
+/* The file name gives way first; the branch button and the sync state keep their capped sizes. */
+.editor > .toolbar .toolbar-title { flex: 0 1 auto; }
 .editor > .toolbar .file-name { min-width: 0; flex: 0 1 auto; }
+/* Tool groups stand closer where the toolbar is shorter. */
+.editor > .toolbar[data-level="tight"] .toolbar-center .toolbar-sep { margin: 0 var(--space-2xs); }
 /* Renaming, the field takes the name's place and no more: up to 220 px, never beyond what the budget left it. */
 .editor > .toolbar .file-rename { flex: 0 1 220px; width: 0; min-width: 0; }
 .editor > .toolbar .db-trigger { flex: none; max-width: 190px; }
 .editor > .toolbar[data-level="tight"] .db-trigger { max-width: 150px; }
 .editor > .toolbar .toolbar-right { min-width: 0; flex-wrap: nowrap; }
 .editor > .toolbar .panel-toggle { flex: none; }
-.editor > .toolbar .sync-status { max-width: 200px; }
+.editor > .toolbar .sync-status { flex: none; max-width: 260px; margin-left: var(--space-xs); }
 .editor > .toolbar .sync-status .sync-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .editor > .toolbar .follow-pill { flex: none; min-width: 0; max-width: 180px; overflow: hidden; white-space: nowrap; }
 .editor > .toolbar .follow-pill svg { flex: none; }
 .editor > .toolbar .follow-pill .follow-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
-.editor > .toolbar[data-level="tight"] .sync-status { max-width: 140px; }
+.editor > .toolbar[data-level="tight"] .sync-status { max-width: 220px; margin-left: 0; }
 .editor > .toolbar[data-level="tight"] .follow-pill { max-width: 160px; }
-.editor > .toolbar[data-level="compact"] .sync-status { max-width: 110px; }
+.editor > .toolbar[data-level="compact"] .sync-status { max-width: 110px; margin-left: 0; }
 .editor > .toolbar[data-level="compact"] .follow-pill { max-width: 120px; }
 .editor > .toolbar[data-level="compact"] .sync-here,
 .editor > .toolbar[data-level="compact"] .sync-update { display: none; }
 /* Smallest: the sync state is its dot, with the words in its title; the toolbar is a little tighter. */
-.editor > .toolbar:is([data-level="mini"], [data-level="micro"]) { gap: 4px; padding: 0 4px; }
-.editor > .toolbar:is([data-level="mini"], [data-level="micro"]) .sync-status { padding: 0 4px; max-width: 18px; margin-right: 0; }
+.editor > .toolbar:is([data-level="mini"], [data-level="micro"]) { gap: var(--space-xs); padding: 0 var(--space-xs); }
+.editor > .toolbar:is([data-level="mini"], [data-level="micro"]) .sync-status { justify-content: center; padding: 0; width: var(--target); max-width: var(--target); margin-left: 0; }
 .editor > .toolbar:is([data-level="mini"], [data-level="micro"]) .sync-name,
 .editor > .toolbar:is([data-level="mini"], [data-level="micro"]) .sync-here,
 .editor > .toolbar:is([data-level="mini"], [data-level="micro"]) .sync-update { display: none; }
 .editor > .toolbar[data-level="mini"] .follow-pill { max-width: 96px; }
 /* Following at the smallest level: Stop following is the first item of More, whose button takes the colour followed. */
 .editor > .toolbar [data-testid="toolbar-more"].is-following { box-shadow: inset 0 -2px 0 currentColor; }
-.editor > .toolbar:is([data-level="mini"], [data-level="micro"]) .toolbar-sep { margin: 0 2px; }
+.editor > .toolbar:is([data-level="mini"], [data-level="micro"]) .toolbar-sep { margin: 0 var(--space-2xs); }
 
 /* The file a menu belongs to, at its top, for when the toolbar can only show the start of its name. */
-.popover .menu-file { padding: 4px 8px 6px; margin-bottom: 4px; border-bottom: 1px solid var(--ui-border); font-weight: 500; overflow-wrap: anywhere; color: var(--ui-fg); }
-.popover .menu-file .menu-branch { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-weight: 400; font-size: 12px; color: var(--ui-fg-2); }
+.popover .menu-file { padding: var(--space-xs) var(--space-sm) var(--space-sm); margin-bottom: var(--space-xs); border-bottom: 1px solid var(--ui-border); font-weight: 500; overflow-wrap: anywhere; color: var(--ui-fg); }
+.popover .menu-file .menu-branch { display: flex; align-items: center; gap: var(--space-xs); margin-top: var(--space-2xs); font-weight: 400; font-size: var(--text-sm); color: var(--ui-fg-2); }
 .popover .menu-file .menu-branch svg { flex: none; }
 .popover .menu-me { display: inline-block; width: 13px; height: 13px; border-radius: 50%; flex: none; }
 /* A menu item reached by the keyboard shows it like a hovered one. */
@@ -84,11 +88,11 @@
 .dialog-scrim:not(.bogen-world .dialog-scrim) > .dialog > .settings-body,
 .dialog-scrim:not(.bogen-world .dialog-scrim) > .dialog > .dialog-body { flex: 1 1 auto; min-height: 0; }
 @media (max-height: 720px) {
-  .dialog-scrim:not(.bogen-world .dialog-scrim) { padding-top: min(calc(6 * var(--ui-vh)), 40px); padding-bottom: 8px; }
+  .dialog-scrim:not(.bogen-world .dialog-scrim) { padding-top: min(calc(6 * var(--ui-vh)), 40px); padding-bottom: var(--space-sm); }
   .dialog-scrim:not(.bogen-world .dialog-scrim) > .dialog { max-height: calc(100 * var(--ui-vh) - min(calc(6 * var(--ui-vh)), 40px) - 8px); }
 }
 /* The same when the UI scale, not the window, leaves little height. */
-.editor[data-short] .dialog-scrim:not(.bogen-world .dialog-scrim) { padding-top: 8px; padding-bottom: 8px; }
+.editor[data-short] .dialog-scrim:not(.bogen-world .dialog-scrim) { padding-top: var(--space-sm); padding-bottom: var(--space-sm); }
 .editor[data-short] .dialog-scrim:not(.bogen-world .dialog-scrim) > .dialog { max-height: calc(100 * var(--ui-vh) - 16px); }
 @media (max-width: 560px) {
   .dialog-scrim:not(.bogen-world .dialog-scrim) > .dialog > .dialog-body { column-count: 1; }
@@ -105,7 +109,7 @@
 .home > .home-head > * { flex: none; white-space: nowrap; }
 .home > .home-head > .home-search { flex: 1 1 auto; min-width: 160px; }
 .home > .home-head > .home-search input { width: 0; }
-.home > .home-head:not([data-level="full"]) { gap: 8px; }
+.home > .home-head:not([data-level="full"]) { gap: var(--space-sm); }
 .home > .home-head[data-level="menu"] > .home-search { min-width: 120px; }
 .home > .home-head[data-level="tight"] > .home-search { min-width: 100px; }
 .home > .home-head .home-new-icon { width: 28px; padding: 0; }
@@ -121,12 +125,12 @@
 
 /* ---------------------------------------------------------------- Home: kinds beside folders */
 
-.home .home-kinds-head { margin-top: 8px; }
-.home .kind-row .folder-open { padding-left: 2px; }
-.home .file-kind { display: block; font-size: 11.5px; color: var(--ui-fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.home .home-scope { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; padding: 4px 4px 4px 10px; border-radius: var(--radius); background: var(--accent-soft, var(--ui-bg-2)); font-size: 12.5px; color: var(--ui-fg); }
+.home .home-kinds-head { margin-top: var(--space-sm); }
+.home .kind-row .folder-open { padding-left: var(--space-2xs); }
+.home .file-kind { display: block; font-size: var(--text-sm); color: var(--ui-fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home .home-scope { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin: 0 0 var(--space-sm); padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-sm); border-radius: var(--radius); background: var(--accent-soft, var(--ui-bg-2)); font-size: var(--text-sm); color: var(--ui-fg); }
 .home .home-scope-clear { margin-left: auto; }
-.popover .project-menu { display: flex; flex-direction: column; gap: 6px; }
-.popover .project-menu .project-from { padding: 2px 8px 4px; }
-.popover .project-platforms { border: 0; margin: 0; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--ui-border); }
-.popover .project-actions { display: flex; justify-content: space-between; gap: 8px; padding: 4px 4px 2px; border-top: 1px solid var(--ui-border); }
+.popover .project-menu { display: flex; flex-direction: column; gap: var(--space-sm); }
+.popover .project-menu .project-from { padding: var(--space-2xs) var(--space-sm) var(--space-xs); }
+.popover .project-platforms { border: 0; margin: 0; padding: var(--space-xs) var(--space-sm); display: flex; flex-direction: column; gap: var(--space-xs); border-top: 1px solid var(--ui-border); }
+.popover .project-actions { display: flex; justify-content: space-between; gap: var(--space-sm); padding: var(--space-xs) var(--space-xs) var(--space-2xs); border-top: 1px solid var(--ui-border); }

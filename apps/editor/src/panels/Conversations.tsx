@@ -184,7 +184,7 @@ export function CommentsPanel() {
   return (
     <div className="comments conversations" data-testid="comments-panel">
       <div className="comments-head">
-        <TextField label={<Search size={14} />} value={query} onChange={search} placeholder={t('Search comments')} live testId="comments-search" />
+        <TextField label={<Search size={14} />} name={t('Search comments')} value={query} onChange={search} placeholder={t('Search comments')} live testId="comments-search" />
         <SelectField<ThreadFilter> value={filter} onChange={choose} options={[{ value: 'open', label: t('Open') }, { value: 'resolved', label: t('Resolved') }, { value: 'page', label: t('This page') }, { value: 'all', label: t('All') }]} testId="comments-filter" title={t('Filter')} />
       </div>
       {!threads.length ? <Empty title={t('No comments yet')} hint={t('Press {key} and click anywhere on the canvas. Mention @claude or @codex to ask that agent, on your own plan. Replies then go to the same agent.', { key: 'C' })} /> : null}
@@ -236,7 +236,7 @@ function Conversation({ thread, open, outside, target, fileId, onToggle }: { thr
           data-testid="thread-head"
         >
           <ChevronRight size={13} className="conv-caret" aria-hidden="true" />
-          <span className="conv-title" dir="auto" data-testid="thread-title">{conversationTitle(thread)}</span>
+          <span className="conv-title" dir="auto" data-testid="thread-title" title={conversationTitle(thread)}>{conversationTitle(thread)}</span>
           <span className="conv-meta">
             {unread ? <span className="conv-unread" data-testid="thread-unread"><span className="conv-dot" aria-hidden="true" />{t('New')}</span> : null}
             {status ? <span className={`conv-state is-${run!.status}`} data-testid="thread-state">{status}</span> : null}
@@ -244,8 +244,8 @@ function Conversation({ thread, open, outside, target, fileId, onToggle }: { thr
             {thread.resolved ? <span className="conv-resolved">{t('Resolved')}</span> : null}
             <span className="conv-time">{last ? timeAgo(last.at) : ''}</span>
           </span>
-          {target ? <span className="conv-target" data-testid="thread-target">{targetLabel(target, names)}</span> : null}
-          {!open && last ? <span className="conv-preview" dir="auto" data-testid="thread-preview">{t.rich('{author}: {message}', { author: <b>{last.author === me ? t('You') : last.author}</b>, message: last.text })}</span> : null}
+          {target ? <span className="conv-target" data-testid="thread-target" translate="no" title={targetLabel(target, names)}>{targetLabel(target, names)}</span> : null}
+          {!open && last ? <span className="conv-preview" dir="auto" data-testid="thread-preview" title={`${last.author === me ? t('You') : last.author}: ${last.text}`}>{t.rich('{author}: {message}', { author: <b>{last.author === me ? t('You') : last.author}</b>, message: last.text })}</span> : null}
         </button>
       </h3>
       {outside ? <p className="conv-outside" data-testid="thread-outside">{t('Opened directly. Your search or filter would hide it otherwise.')}</p> : null}

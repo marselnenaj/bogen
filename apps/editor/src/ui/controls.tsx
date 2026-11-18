@@ -147,6 +147,7 @@ export function NumberField({ label, value, display, onChange, onRaw, min, max, 
         ref={inputRef}
         className="field-input"
         data-testid={testId}
+        aria-label={typeof label === 'string' ? undefined : title}
         value={text ?? shown}
         placeholder={value === MIXED ? t('Mixed') : placeholder}
         disabled={disabled}
@@ -171,11 +172,13 @@ interface TextFieldProps {
   mixed?: boolean;
   title?: string;
   testId?: string;
+  /** What a screen reader calls the field when it shows no label of its own. */
+  name?: string;
   /** Commit on every keystroke rather than on enter and blur. */
   live?: boolean;
 }
 
-export function TextField({ value, onChange, placeholder, disabled, label, className, mixed, title, testId, live }: TextFieldProps) {
+export function TextField({ value, onChange, placeholder, disabled, label, className, mixed, title, testId, name, live }: TextFieldProps) {
   const t = useT();
   const [text, setText] = useState<string | null>(null);
   const commit = () => {
@@ -188,6 +191,7 @@ export function TextField({ value, onChange, placeholder, disabled, label, class
       <input
         className="field-input"
         data-testid={testId}
+        aria-label={name ?? (typeof label === 'string' ? undefined : title)}
         value={text ?? (mixed ? '' : value)}
         placeholder={mixed ? t('Mixed') : placeholder}
         disabled={disabled}
@@ -236,6 +240,7 @@ export function SelectField<T extends string>({ value, options, onChange, label,
       <select
         className="field-input"
         data-testid={testId}
+        aria-label={typeof label === 'string' ? undefined : title}
         value={value === MIXED ? '__mixed' : (value ?? '')}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value as T)}
@@ -278,7 +283,7 @@ export function Section({ title, note, children, actions, collapsible, defaultOp
         {collapsible ? (
           <button type="button" className="section-toggle" onClick={() => setOpen(!open)} aria-expanded={open}>
             {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            <span>{title}</span>{note ? <span className="section-note">{note}</span> : null}
+            <span>{title}</span>{note ? <span className="section-note" title={note}>{note}</span> : null}
           </button>
         ) : <span className="section-title">{title}</span>}
         <span className="section-actions">{actions}</span>
@@ -313,7 +318,7 @@ function focusables(root: HTMLElement): HTMLElement[] {
  * it opens, the arrow keys, Home and End move through a menu's items, and Tab past its last control (or Shift+Tab
  * before its first) closes it and goes on from its button.
  */
-export function Popover({ anchor, onClose, children, width = 240, side = 'left', className, focus = false }: { anchor: HTMLElement | null; onClose: () => void; children: ReactNode; width?: number; side?: 'left' | 'below'; className?: string; focus?: boolean }) {
+export function Popover({ anchor, onClose, children, width = 240, side = 'left', align = 'start', className, focus = false }: { anchor: HTMLElement | null; onClose: () => void; children: ReactNode; width?: number; side?: 'left' | 'below'; align?: 'start' | 'end'; className?: string; focus?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
   useLayoutEffect(() => {
@@ -328,13 +333,15 @@ export function Popover({ anchor, onClose, children, width = 240, side = 'left',
       const vh = window.innerHeight;
       const w = Math.max(0, Math.min(width * z, vw - 16));
       const h = el.getBoundingClientRect().height;
-      let left = side === 'left' ? a.left - w - 8 : a.left;
+      // align end: the popover's end edge on its button's, and above the button when there is no room below.
+      let left = side === 'left' ? a.left - w - 8 : align === 'end' ? a.right - w : a.left;
       left = Math.max(8, Math.min(vw - w - 8, left));
       let top: number;
       if (side === 'below') {
         // Below its button while there is a usable room there; else as high in the window as it needs.
         top = a.bottom + 4;
-        if (vh - top - 8 < Math.min(h, 160)) top = Math.max(8, vh - h - 8);
+        if (align === 'end' && vh - top - 8 < h && a.top - h - 4 >= 8) top = a.top - h - 4;
+        else if (vh - top - 8 < Math.min(h, 160)) top = Math.max(8, vh - h - 8);
       } else top = Math.max(8, Math.min(vh - h - 8, a.top - 8));
       const next = { left: left / z, top: top / z, width: w / z, maxHeight: Math.max(0, vh - top - 8) / z };
       setPos((p) => (p && p.left === next.left && p.top === next.top && p.width === next.width && p.maxHeight === next.maxHeight ? p : next));
@@ -347,7 +354,7 @@ export function Popover({ anchor, onClose, children, width = 240, side = 'left',
       ro.disconnect();
       window.removeEventListener('resize', place);
     };
-  }, [anchor, side, width]);
+  }, [anchor, side, align, width]);
   useEffect(() => {
     const down = (e: PointerEvent) => {
       const t = e.target as HTMLElement;

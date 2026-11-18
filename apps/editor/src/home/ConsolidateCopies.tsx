@@ -76,7 +76,7 @@ export function ConsolidateCopies({ copies, onDone, onClose }: { copies: ThemePr
                 <label key={c.file_id} className={`tl-pick-row${state.target === c.file_id ? ' is-on' : ''}`} data-testid="theme-consolidate-pick" data-file-id={c.file_id}>
                   <input type="radio" name={radio} value={c.file_id} checked={state.target === c.file_id} onChange={() => setState({ step: 'pick', target: c.file_id })} />
                   <span className="tl-pick-text">
-                    <span className="tl-name" dir="auto">{c.file_name || c.name}</span>
+                    <span className="tl-name" dir="auto" translate="no">{c.file_name || c.name}</span>
                     <span className="brand-facts"><code>{c.file_id}</code> · {t('Last edited {date}', { date: formatDate(c.updatedAt, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) })}{f ? ` · ${counts(f)}` : ''}</span>
                   </span>
                   {f?.active ? <span className="tl-chip is-in-use" data-testid="theme-consolidate-active">{t('In use right now')}</span> : null}
@@ -98,7 +98,7 @@ export function ConsolidateCopies({ copies, onDone, onClose }: { copies: ThemePr
               <ul className="tl-plan" data-testid="theme-consolidate-plan">
                 {state.plan.sources.map((s) => (
                   <li key={s.file_id} className="tl-plan-row" data-action={s.action} data-file-id={s.file_id}>
-                    <span className="tl-name" dir="auto">{s.name || nameOf(s.file_id)}</span>
+                    <span className="tl-name" dir="auto" translate="no">{s.name || nameOf(s.file_id)}</span>
                     <span className="brand-facts" dir="auto">
                       <code>{s.file_id}</code>{' · '}
                       {s.action === 'import' ? t('Becomes the branch "{branch}"', { branch: s.branchName ?? s.name }) : s.action === 'comments' ? t('Its design is a branch already; its newer comments come along') : s.reason ? t('Skipped: {reason}', { reason: s.reason }) : t('Skipped')}

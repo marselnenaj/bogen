@@ -266,12 +266,8 @@ export async function storeFonts(scan: SheetScan, resources: PageResources, stor
 export function fontFetcher(allowLocal: boolean, isLoopback: (host: string) => boolean): (url: string) => Promise<Uint8Array> {
   return async (url) => {
     const parsed = new URL(url);
-    if (allowLocal && isLoopback(parsed.hostname)) {
-      const res = await fetch(parsed);
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      return new Uint8Array(await res.arrayBuffer());
-    }
-    return (await fetchPublic(url, { timeoutMs: 15_000, maxBytes: MAX_FONT_BYTES })).bytes;
+    const onlyLoopback = allowLocal && isLoopback(parsed.hostname);
+    return (await fetchPublic(url, { timeoutMs: 15_000, maxBytes: MAX_FONT_BYTES, onlyLoopback })).bytes;
   };
 }
 

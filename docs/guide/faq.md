@@ -25,13 +25,14 @@ how to run.
 
 ## Do I need an API key?
 
-No. Bogen calls no model itself, and has no image generator. The chat and comment runs use
-your logged-in `claude` or `codex` CLI.
+No. Bogen holds no keys. The chat and comment runs use your logged-in `claude` or `codex` CLI, and
+Generate image uses your logged-in `codex` CLI, if you have it.
 
 ## Where do images come from?
 
-From your agent. It draws them as inline SVG or CSS, or makes them with its own image tool, such as
-Codex's built-in image generation or an image MCP server you added, and stores the file with
+From you or your agent. **Generate** next to **Upload image** describes one and makes it with the Codex
+CLI on your computer, if you have it signed in; agents do the same with `image_generate`. An agent can
+also draw them as inline SVG or CSS, or make them with its own image tool, and store the file with
 `asset_upload`. You can also place, paste or drop your own. For a draft, an image with no source
 shows as a placeholder frame with its size. See [Images and media](canvas.md#images-and-media).
 

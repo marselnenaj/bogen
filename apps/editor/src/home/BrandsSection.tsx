@@ -5,6 +5,7 @@ import { onServerEvent } from '../lib/events.ts';
 import { Popover } from '../ui/controls.tsx';
 import { useT } from '../i18n/react.ts';
 import { BrandTemplates } from './BrandTemplates.tsx';
+import { FromWebsite } from './Composer.tsx';
 
 function BrandRow({ brand, onChanged }: { brand: BrandListItem; onChanged: () => void }) {
   const t = useT();
@@ -23,17 +24,24 @@ function BrandRow({ brand, onChanged }: { brand: BrandListItem; onChanged: () =>
     setFailed(null);
     void brandApi.useTemplate(brand.id, template).then((out) => { location.hash = `#/file/${out.file_id}`; }).catch((e: Error) => setFailed(e.message)).finally(() => setMaking(null));
   };
+  // Two short lines on the card: what uses the brand and where it stands, then what waits for the person.
+  const changes = brand.changes ?? (brand.draft ? 1 : 0);
+  const state = !brand.version ? t('Not published yet')
+    : changes ? t.n(changes, '{count} change since version {version}', '{count} changes since version {version}', { version: brand.version })
+    : t('Version {version}', { version: brand.version });
   const facts = [
     brand.isDefault ? t('Default for new files') : '',
     brand.linkedFiles ? t.n(brand.linkedFiles, '{count} file', '{count} files') : t('No files'),
-    brand.version ? (brand.draft ? t('Version {version}, edited since', { version: brand.version }) : t('Version {version}', { version: brand.version })) : '',
-    brand.suggestions ? t.n(brand.suggestions, '{count} to confirm', '{count} to confirm') : '',
-  ].filter(Boolean).join('. ');
+    state,
+  ].filter(Boolean).join(' · ');
   return (
-    <div className="brand-row" data-testid="brand-row" data-brand-id={brand.id} data-brand-name={brand.name}>
-      <button type="button" className="brand-swatches" onClick={open} aria-label={t('Open {name}', { name: brand.name })} data-testid="brand-open">
+    // One click target for the whole card: the name's button stretches over it (home.css), and the menu and the
+    // rename field sit above that, so nothing interactive is nested in anything else.
+    <div className="brand-row" role="listitem" data-testid="brand-row" data-brand-id={brand.id} data-brand-name={brand.name}>
+      <span className="brand-swatches" aria-hidden="true">
         {brand.colors.length ? brand.colors.slice(0, 6).map((c) => <span key={c} style={{ background: c }} />) : <span className="brand-swatch-empty" />}
-      </button>
+      </span>
+      <div className="brand-card-head">
       {renaming ? (
         <input
           autoFocus
@@ -51,9 +59,11 @@ function BrandRow({ brand, onChanged }: { brand: BrandListItem; onChanged: () =>
             if (e.key === 'Escape') { e.currentTarget.value = brand.name; e.currentTarget.blur(); }
           }}
         />
-      ) : <button type="button" className="brand-name" onClick={open} title={brand.name} dir="auto">{brand.name}</button>}
+      ) : <button type="button" className="brand-name brand-open" onClick={open} data-title-if-cut="" aria-label={t('Open {name}', { name: brand.name })} dir="auto" data-testid="brand-open">{brand.name}</button>}
+        <button ref={menuRef} type="button" className="icon-btn" title={t('More')} aria-label={t('More for {name}', { name: brand.name })} onClick={() => setMenu(!menu)} data-testid="brand-menu"><MoreHorizontal size={14} /></button>
+      </div>
       <span className="brand-facts" data-testid="brand-facts">{making ? t('Laying out a new file…') : failed ?? facts}</span>
-      <button ref={menuRef} type="button" className="icon-btn" title={t('More')} aria-label={t('More')} onClick={() => setMenu(!menu)} data-testid="brand-menu"><MoreHorizontal size={14} /></button>
+      {brand.suggestions && !making && !failed ? <span className="brand-todo" data-testid="brand-todo">{t.n(brand.suggestions, '{count} suggestion to confirm', '{count} suggestions to confirm')}</span> : null}
       {templates ? <BrandTemplates brandId={brand.id} onClose={() => setTemplates(false)} /> : null}
       {menu ? (
         <Popover anchor={menuRef.current} side="below" width={208} onClose={() => { setMenu(false); setConfirming(false); }}>
@@ -77,12 +87,30 @@ function BrandRow({ brand, onChanged }: { brand: BrandListItem; onChanged: () =>
   );
 }
 
+/** The narrowest a brand card gets, and the gap between cards (home.css). */
+const CARD = 232;
+const CARD_GAP = 12;
+
 /** The brands on this device, above the files. Takes no room when there are none, beyond one quiet line. */
-export function BrandsSection() {
+export function BrandsSection({ place = false }: { /** The Brands place (#/brands): every brand, and taking one from a website. */ place?: boolean } = {}) {
   const t = useT();
   const [brands, setBrands] = useState<BrandListItem[] | null>(null);
+  const all = place;
+  // Two full rows of cards at the width there is; the rest is one click away.
+  const listRef = useRef<HTMLDivElement>(null);
+  const [few, setFew] = useState(8);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const measure = () => setFew((place ? 2 : 1) * Math.max(1, Math.floor((el.clientWidth + CARD_GAP) / (CARD + CARD_GAP))));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [brands !== null]);
   const load = useCallback(() => {
-    brandApi.list().then(setBrands).catch(() => setBrands([]));
+    // The ones worked on last come first, so the two rows that show are the ones in use.
+    brandApi.list().then((list) => setBrands([...list].sort((a, b) => b.updatedAt - a.updatedAt))).catch(() => setBrands([]));
   }, []);
   useEffect(() => {
     load();
@@ -90,19 +118,23 @@ export function BrandsSection() {
   }, [load]);
   const create = async () => {
     const brand = await brandApi.create('New brand');
-    location.hash = `#/brand/${brand.id}`;
+    // An empty brand has no book to show yet: it opens where it is filled in.
+    location.hash = `#/brand/${brand.id}/identity`;
   };
   if (!brands) return null;
+  const Title = place ? 'h1' : 'h2';
   return (
-    <section className="brands" data-testid="brands">
+    <section className={`brands${place ? ' is-place' : ''}`} data-testid="brands" aria-labelledby="home-brands-title">
       <div className="brands-head">
-        <span className="brands-title">{t('Brands')}</span>
+        <Title className="brands-title" id="home-brands-title">{t('Brands')}{brands.length ? <span className="home-count">{brands.length}</span> : null}</Title>
         <button type="button" className="btn btn-quiet" onClick={() => void create()} data-testid="brand-new"><Plus size={14} /> {t('New brand')}</button>
       </div>
+      {place ? <section className="composer-box brands-from-website" aria-label={t('Brand from a website')}><FromWebsite brands={brands} onDone={load} /></section> : null}
       {!brands.length ? <div className="hint">{t('A brand keeps your logos, colours, type and rules in one place, so that your agents stay within them. One per client works well.')}</div> : null}
-      <div className="brand-list">
-        {brands.map((b) => <BrandRow key={b.id} brand={b} onChanged={load} />)}
+      <div ref={listRef} className="brand-list" role="list" aria-labelledby="home-brands-title">
+        {(all ? brands : brands.slice(0, few)).map((b) => <BrandRow key={b.id} brand={b} onChanged={load} />)}
       </div>
+      {!place && brands.length > few ? <a className="home-more" href="#/brands" data-testid="brands-all">{t('All {count} brands', { count: brands.length })}</a> : null}
     </section>
   );
 }

@@ -1,25 +1,33 @@
-.recent-changes { display: flex; align-items: center; gap: 10px; flex: none; min-height: 32px; padding: 2px 10px; border-bottom: 1px solid var(--ui-border); color: var(--ui-fg); background: var(--ui-bg); font-size: 12px; }
-.recent-toggle { display: inline-flex; flex: none; align-items: center; gap: 5px; min-height: 28px; color: var(--ui-fg-2); }
+.recent-changes { display: flex; align-items: center; gap: var(--space-sm); flex: none; min-height: 32px; padding: var(--space-2xs) var(--space-md); border-bottom: 1px solid var(--ui-border); color: var(--ui-fg); background: var(--ui-bg); font-size: var(--text-sm); }
+.recent-toggle { display: inline-flex; flex: none; align-items: center; gap: var(--space-xs); min-height: 28px; color: var(--ui-fg-2); }
 .recent-toggle:hover, .recent-latest:hover { color: var(--ui-fg); text-decoration: underline; }
-.recent-latest { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: start; }
-.recent-time { margin-inline-start: auto; flex: none; color: var(--ui-fg-2); font-size: 11px; }
+.recent-latest { min-width: 0; height: var(--target); line-height: var(--target); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: start; }
+.recent-time { margin-inline-start: auto; flex: none; color: var(--ui-fg-2); font-size: var(--text-sm); }
+/* What changed while the file was closed, in the strip: the sentence, the way to the changes, and its dismissal. The latest change steps back beside it. */
+.recent-notice { display: flex; align-items: center; gap: var(--space-sm); flex: 0 1 auto; min-width: 0; padding-inline-start: var(--space-md); border-inline-start: 1px solid var(--ui-border); }
+.recent-notice-text { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--text-md); }
+.recent-review { flex: none; height: var(--target); padding: 0 var(--space-sm); border-radius: var(--radius); box-shadow: inset 0 0 0 1px var(--ui-border); font-weight: 500; white-space: nowrap; }
+.recent-review:hover { background: var(--hover); }
+.recent-dismiss { width: var(--target); height: var(--target); margin-inline-start: calc(-1 * var(--space-xs)); }
+.recent-changes.has-notice .recent-latest { flex-shrink: 999; color: var(--ui-fg-2); }
+@media (max-width: 900px) { .recent-changes.has-notice .recent-latest { display: none; } }
 .recent-popover { overscroll-behavior: contain; }
-.recent-list-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; }
-.recent-entry { padding: 9px 8px; border-top: 1px solid var(--ui-border); }
+.recent-list-head { display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) var(--space-sm); }
+.recent-entry { padding: var(--space-sm) var(--space-sm); border-top: 1px solid var(--ui-border); }
 .recent-entry p { margin: 0; }
-.recent-summary { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
-.recent-meta { color: var(--ui-fg-2); font-size: 11px; margin-top: 3px !important; }
-.recent-locations { display: flex; flex-wrap: wrap; gap: 3px 10px; }
-.recent-location { text-align: start; text-decoration: underline; font-size: 12px; min-height: 28px; overflow-wrap: anywhere; }
+.recent-summary { font-size: var(--text-sm); line-height: 1.4; overflow-wrap: anywhere; }
+.recent-meta { color: var(--ui-fg-2); font-size: var(--text-sm); margin-top: var(--space-xs) !important; }
+.recent-locations { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-sm); }
+.recent-location { text-align: start; text-decoration: underline; font-size: var(--text-sm); min-height: 28px; overflow-wrap: anywhere; }
 .recent-location:disabled { opacity: .5; text-decoration: none; cursor: default; }
-.page-edit-time { flex: none; margin-inline-start: 6px; color: var(--ui-fg-2); font-size: 10px; font-weight: 400; }
-.file-recent { grid-column: 1; min-width: 0; font-size: 11px; color: var(--ui-fg-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.page-edit-time { flex: none; margin-inline-start: var(--space-xs); color: var(--ui-fg-2); font-size: var(--text-sm); font-weight: 400; }
+.file-recent { grid-column: 1; min-width: 0; font-size: var(--text-sm); color: var(--ui-fg-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 a.file-recent:hover { text-decoration: underline; color: var(--ui-fg); }
-.file-list .file:has(.file-recent) { height: auto; min-height: 54px; padding-block: 5px; }
+.file-list .file:has(.file-recent) { height: auto; min-height: 54px; padding-block: var(--space-xs); }
 .file-list .file-recent { grid-column: 1 / 4; grid-row: 2; }
-.history-location { display: block; color: var(--ui-fg-2); font-size: 11px; overflow-wrap: anywhere; }
+.history-location { display: block; color: var(--ui-fg-2); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .pf .recent-changes { font-family: var(--p-sans); }
-.pf-page-row:has(.page-edit-time) { flex-wrap: wrap; gap: 2px 10px; padding-block: 8px; }
+.pf-page-row:has(.page-edit-time) { flex-wrap: wrap; gap: var(--space-2xs) var(--space-sm); padding-block: var(--space-sm); }
 .pf-page-row .page-edit-time { order: 3; flex-basis: 100%; margin-inline-start: 0; }
 @media(pointer:coarse) { .recent-toggle, .recent-latest, .recent-location { min-height: 44px; } }
-@media(max-width:540px) { .recent-changes { gap: 7px; padding-inline: 8px; flex-wrap: wrap; } .recent-toggle { font-size: 11px; } .recent-latest { flex: 1; } .recent-time { display: none; } }
+@media(max-width:540px) { .recent-changes { gap: var(--space-sm); padding-inline: var(--space-sm); flex-wrap: wrap; } .recent-toggle { font-size: var(--text-sm); } .recent-latest { flex: 1; } .recent-time { display: none; } }

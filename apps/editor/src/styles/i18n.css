@@ -48,9 +48,9 @@ code {
 }
 
 /* Controls drawn with physical sides in app.css, mirrored for right-to-left. */
-:root[dir='rtl'] .field-select { padding-right: 0; padding-left: 16px; }
+:root[dir='rtl'] .field-select { padding-right: 0; padding-left: var(--space-lg); }
 :root[dir='rtl'] .field-chevron { right: auto; left: 4px; }
-:root[dir='rtl'] .field-label { padding: 0 7px 0 2px; }
-:root[dir='rtl'] .field-suffix { padding-right: 0; padding-left: 6px; }
+:root[dir='rtl'] .field-label { padding: 0 var(--space-sm) 0 var(--space-2xs); }
+:root[dir='rtl'] .field-suffix { padding-right: 0; padding-left: var(--space-sm); }
 
 .language-select { flex: 0 1 220px; }

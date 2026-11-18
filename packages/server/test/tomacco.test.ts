@@ -212,6 +212,8 @@ describe.skipIf(!hasBrowser)('app screens on the canvas', () => {
     const raw = await callRaw(agent, 'tomacco_compare', { node_id: board.id, bundle: android, file_id: fileId });
     expect(raw.isError).toBe(false);
     expect(raw.content[1]!.type).toBe('image');
+    expect(raw.content[1]!.mimeType).toBe('image/jpeg');
+    expect(raw.content[2]!.text).toContain('Layout map 360x780');
     const diff = JSON.parse(raw.content[0]!.text!);
     expect(diff.different_percent).toBeGreaterThan(same.different_percent);
     const by = (label: string) => diff.matched.find((m: { label: string }) => m.label === label);

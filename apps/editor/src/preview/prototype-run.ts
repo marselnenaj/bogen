@@ -107,6 +107,7 @@ export function usePrototype(session: Session, version: number, screen: string |
   }, [model, step, go]);
 
   const names = Object.keys(model.variables);
-  const summary = names.map((n) => `${n} ${JSON.stringify(state.vars[n])}`).join(', ');
-  return { click, submit, hover, field, restart, summary, stateful: names.length > 0 || Object.values(model.layers).some((l) => l.on && Object.keys(l.on).some((t) => t !== 'click') || l.showWhen || l.bind || l.variant) };
+  // One variable to a line, for the title of the count in the bar.
+  const summary = names.map((n) => `${n} = ${JSON.stringify(state.vars[n])}`).join('\n');
+  return { click, submit, hover, field, restart, summary, variables: names.length, stateful: names.length > 0 || Object.values(model.layers).some((l) => l.on && Object.keys(l.on).some((t) => t !== 'click') || l.showWhen || l.bind || l.variant) };
 }

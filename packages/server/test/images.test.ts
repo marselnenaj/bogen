@@ -254,3 +254,24 @@ describe('image tools', () => {
     await agent.close();
   }, 60_000);
 });
+
+describe('a PNG that inflates past its size', () => {
+  it('is refused instead of filling the memory', () => {
+    const chunk = (type: string, data: Buffer) => {
+      const head = Buffer.alloc(4);
+      head.writeUInt32BE(data.length);
+      const crc = Buffer.alloc(4);
+      crc.writeUInt32BE(crc32(Buffer.concat([Buffer.from(type, 'latin1'), data])));
+      return Buffer.concat([head, Buffer.from(type, 'latin1'), data, crc]);
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(4, 0);
+    ihdr.writeUInt32BE(4, 4);
+    ihdr[8] = 8;
+    ihdr[9] = 6;
+    // A 4 x 4 picture needs 68 bytes; this IDAT is about 64 KB that inflates to 64 MB.
+    const bomb = deflateSync(Buffer.alloc(64 * 1024 * 1024), { level: 9 });
+    const file = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', bomb), chunk('IEND', Buffer.alloc(0))]);
+    expect(() => decodePng(file)).toThrow(/damaged|more data/);
+  });
+});

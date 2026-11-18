@@ -12,17 +12,22 @@ import { camera } from '../state/camera.ts';
 import { editor, type Tool } from '../state/store.ts';
 import { ui } from '../state/ui.ts';
 import { pickImage } from '../ops/images.ts';
+import { generateImageCommand } from '../ops/generate-image.ts';
 import { rebuildAsLayers, startPrompt, toggleChat } from '../panels/prompt-actions.ts';
+import { startCall } from '../call/call-session.ts';
 import { askForCommit, setStageView } from '../panels/history-state.ts';
 import { openAppCompare, openAppScreenBeside } from '../panels/AppScreens.tsx';
 import { pullRequestFromSelection } from '../panels/PullRequestDialog.tsx';
 import { startTextEdit } from '../canvas/text-edit.ts';
 import { session } from '../doc/session.ts';
+import { brandApi } from '../lib/brand-api.ts';
+import { placeInMockup } from '../panels/inspector/BrandApps.tsx';
 import { api } from '../lib/api.ts';
 import { CRAFT_COMMANDS, FIGMA_ALIASES } from './craft.ts';
 import { gradientKey } from '../canvas/gradient-drag.ts';
 import { openBulkRename } from '../panels/BulkRename.tsx';
 import { msg } from '../i18n/core.ts';
+import { closeOthers, closeTab, cycleTab, nudgeActive, tabAt, useTabs } from '../tabs/tabs-state.ts';
 
 export interface Command {
   id: string;
@@ -63,12 +68,22 @@ export const COMMANDS: Command[] = [
   { id: 'tool.pencil', title: msg('Pencil'), group: msg('Tools'), keys: ['shift+p'], run: tool('pencil') },
   { id: 'tool.image', title: msg('Place image'), group: msg('Tools'), keys: ['i'], run: () => pickImage() },
   { id: 'tool.imagePlaceholder', title: msg('Image placeholder'), group: msg('Tools'), run: () => { placeImagePlaceholder(); } },
+  { id: 'tool.generateImage', title: msg('Generate image'), group: msg('Tools'), run: () => generateImageCommand() },
   { id: 'tool.comment', title: msg('Comment'), group: msg('Tools'), keys: ['c'], run: tool('comment') },
   { id: 'tool.shader', title: msg('Shader'), group: msg('Tools'), keys: ['s'], run: tool('shader') },
   { id: 'tool.zoom', title: msg('Zoom tool'), group: msg('Tools'), keys: ['z'], run: tool('zoom') },
 
   { id: 'view.zoomIn', title: msg('Zoom in'), group: msg('View'), keys: ['=', '+', 'mod+='], run: () => camera.zoomAt(nextZoomStop(camera.value.z, 1)) },
   { id: 'view.zoomOut', title: msg('Zoom out'), group: msg('View'), keys: ['-', 'mod+-'], run: () => camera.zoomAt(nextZoomStop(camera.value.z, -1)) },
+  // Handled first by tabs/tab-keys.ts everywhere in the window; listed here for the shortcuts and the palette.
+  { id: 'tabs.next', title: msg('Next tab'), group: msg('Tabs'), keys: ['ctrl+tab', 'ctrl+pagedown'], inInput: true, run: () => cycleTab(1) },
+  { id: 'tabs.previous', title: msg('Previous tab'), group: msg('Tabs'), keys: ['ctrl+shift+tab', 'ctrl+pageup'], inInput: true, run: () => cycleTab(-1) },
+  { id: 'tabs.close', title: msg('Close tab'), group: msg('Tabs'), keys: ['mod+w'], inInput: true, run: () => { const id = useTabs.getState().active; if (id) closeTab(id); } },
+  { id: 'tabs.home', title: msg('Go to Home'), group: msg('Tabs'), keys: ['mod+1'], inInput: true, run: () => tabAt(1) },
+  { id: 'tabs.last', title: msg('Go to the last tab'), group: msg('Tabs'), keys: ['mod+9'], inInput: true, run: () => tabAt(9) },
+  { id: 'tabs.moveLeft', title: msg('Move tab left'), group: msg('Tabs'), keys: ['ctrl+shift+pageup'], inInput: true, run: () => nudgeActive(-1) },
+  { id: 'tabs.moveRight', title: msg('Move tab right'), group: msg('Tabs'), keys: ['ctrl+shift+pagedown'], inInput: true, run: () => nudgeActive(1) },
+  { id: 'tabs.closeOthers', title: msg('Close other tabs'), group: msg('Tabs'), run: () => { const id = useTabs.getState().active; if (id) closeOthers(id); } },
   { id: 'view.zoom100', title: msg('Zoom to 100%'), group: msg('View'), keys: ['shift+0', 'mod+0'], run: () => camera.zoomAt(1) },
   { id: 'view.zoomFit', title: msg('All screens: fit every artboard of the page'), group: msg('View'), keys: ['shift+1'], run: () => ops.fitAll() },
   { id: 'view.fitScreen', title: msg('Fit screen: the selected or current artboard, held while the window changes'), group: msg('View'), keys: ['shift+3'], run: () => fitScreen('screen') },
@@ -78,8 +93,12 @@ export const COMMANDS: Command[] = [
   { id: 'view.shortcuts', title: msg('Keyboard shortcuts'), group: msg('View'), keys: ['mod+/'], inInput: true, run: () => editor().set({ shortcutsOpen: !editor().shortcutsOpen }) },
   { id: 'file.appScreen', title: msg('Import an app screen'), group: msg('Edit'), run: openAppScreenBeside },
   { id: 'file.appCompare', title: msg('Design versus app'), group: msg('Edit'), run: openAppCompare },
+  { id: 'go.brands', title: msg('Brands'), group: msg('View'), run: () => { location.hash = '#/brands'; } },
+  { id: 'brand.fromWebsite', title: msg('Brand from a website address'), group: msg('View'), run: () => { location.hash = '#/brands'; } },
+  { id: 'brand.book', title: msg('Brand book of this file\'s brand'), group: msg('View'), run: () => { const { fileId } = editor(); if (fileId) void brandApi.ofFile(fileId).then((b) => { if (b.link) location.hash = `#/brand/${b.link.id}`; }); } },
   { id: 'help.welcome', title: msg('Welcome to Bogen'), group: msg('View'), run: () => void api.welcome().then(({ id }) => { location.hash = `#/file/${id}`; }) },
   { id: 'view.prompt', title: msg('Ask your agent'), group: msg('View'), keys: ['mod+k'], inInput: true, run: () => startPrompt() },
+  { id: 'agent.call', title: msg('Call your agent'), group: msg('View'), run: () => void startCall() },
   { id: 'view.chatPanel', title: msg('Chat with your agent: show or hide'), group: msg('View'), keys: ['mod+alt+3'], inInput: true, run: () => toggleChat() },
   { id: 'view.sizes', title: msg('See the artboard at several widths'), group: msg('View'), run: () => showSizes() },
   { id: 'agent.redoScreen', title: msg('Redo this screen…'), group: msg('Layers'), needsSelection: sel, when: () => Boolean(selectedScreen()), run: redoSelectedScreen },
@@ -94,6 +113,7 @@ export const COMMANDS: Command[] = [
   { id: 'view.code', title: msg('Show code'), group: msg('View'), keys: ['shift+c'], run: () => openTab('right', { rightTab: 'code' }) },
   { id: 'view.design', title: msg('Show design'), group: msg('View'), keys: ['shift+d'], run: () => openTab('right', { rightTab: 'design' }) },
   { id: 'view.checks', title: msg('Design checks'), group: msg('View'), run: () => ui().set({ checksOpen: true }) },
+  { id: 'view.critique', title: msg('Review like a designer'), group: msg('View'), run: () => ui().set({ critiqueOpen: true }) },
   { id: 'view.compliance', title: msg('Accessibility and legal check'), group: msg('View'), run: () => ui().set({ complianceOpen: true }) },
   { id: 'view.export', title: msg('Show export'), group: msg('View'), keys: ['shift+e'], run: () => openTab('right', { rightTab: 'export' }) },
   { id: 'view.drift', title: msg('Compare with the live site (Drift)'), group: msg('View'), run: () => openTab('right', { rightTab: 'drift' }) },
@@ -135,6 +155,7 @@ export const COMMANDS: Command[] = [
   { id: 'component.create', title: msg('Make component'), group: msg('Layers'), keys: ['mod+alt+k'], needsSelection: sel, run: makeComponent },
   { id: 'component.detach', title: msg('Detach instance'), group: msg('Layers'), keys: ['mod+alt+b'], needsSelection: sel, run: detachSelection },
   { id: 'component.main', title: msg('Go to main component'), group: msg('Layers'), needsSelection: sel, run: () => goToMain() },
+  { id: 'layer.mockup', title: msg('Place in a mockup: the selected artboard on a poster, bag, sign or screen'), group: msg('Layers'), needsSelection: sel, run: () => { const id = editor().selection[0]; const node = id ? session().doc.getNode(id) : null; if (node?.type === 'frame') placeInMockup(node); } },
   { id: 'code.pullRequest', title: msg('Open a pull request'), group: msg('Code'), needsSelection: sel, when: linked, run: pullRequestFromSelection },
   { id: 'code.repoTokens', title: msg('Tokens and the repository'), group: msg('Code'), when: linked, run: () => ui().set({ repoTokensOpen: true }) },
   { id: 'layer.group', title: msg('Group'), group: msg('Layers'), keys: ['mod+g'], needsSelection: sel, run: ops.groupSelection },
@@ -142,7 +163,7 @@ export const COMMANDS: Command[] = [
   { id: 'layer.wrap', title: msg('Wrap in frame'), group: msg('Layers'), keys: ['mod+alt+g'], needsSelection: sel, run: ops.wrapInFrame },
   { id: 'layer.flatten', title: msg('Flatten'), group: msg('Layers'), keys: ['mod+e'], needsSelection: sel, run: ops.flattenSelection },
   { id: 'layer.autoLayout', title: msg('Add flex layout'), group: msg('Layers'), keys: ['shift+a'], needsSelection: sel, run: ops.addAutoLayout },
-  { id: 'layer.lock', title: msg('Lock or unlock'), group: msg('Layers'), keys: ['mod+shift+l'], needsSelection: sel, run: ops.toggleLock },
+  { id: 'layer.lock', title: msg('Lock or release'), group: msg('Layers'), keys: ['mod+shift+l'], needsSelection: sel, run: ops.toggleLock },
   { id: 'layer.hide', title: msg('Hide or show'), group: msg('Layers'), keys: ['mod+shift+h'], needsSelection: sel, run: ops.toggleHide },
 
   { id: 'arrange.forward', title: msg('Bring forward'), group: msg('Arrange'), keys: ['mod+]'], needsSelection: sel, run: () => ops.zOrder('forward') },
@@ -195,7 +216,7 @@ export function runCommand(id: string): void {
 
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 
-const KEY_LABELS: Record<string, string> = { arrowleft: '←', arrowright: '→', arrowup: '↑', arrowdown: '↓', escape: 'Esc', enter: 'Enter', tab: 'Tab', delete: 'Del', backspace: 'Backspace' };
+const KEY_LABELS: Record<string, string> = { arrowleft: '←', arrowright: '→', arrowup: '↑', arrowdown: '↓', escape: 'Esc', enter: 'Enter', tab: 'Tab', delete: 'Del', backspace: 'Backspace', pageup: 'Page Up', pagedown: 'Page Down' };
 
 export function displayKey(combo: string): string {
   return combo.split('+').filter(Boolean).map((part) => {
@@ -205,6 +226,20 @@ export function displayKey(combo: string): string {
     if (part === 'shift') return isMac ? '⇧' : 'Shift';
     return KEY_LABELS[part] ?? part.toUpperCase();
   }).join(isMac ? '' : '+') || (combo.endsWith('+') ? '+' : combo);
+}
+
+/** The keys of a combination one by one, for key caps. Arrow keys stay by name (`arrowleft`) so that they can be drawn as icons. */
+export function keyParts(combo: string): string[] {
+  const parts = combo.split('+').filter(Boolean).map((part) => {
+    if (part.startsWith('arrow')) return part;
+    if (part === 'mod') return isMac ? '⌘' : 'Ctrl';
+    if (part === 'ctrl') return 'Ctrl';
+    if (part === 'alt') return isMac ? '⌥' : 'Alt';
+    if (part === 'shift') return isMac ? '⇧' : 'Shift';
+    return KEY_LABELS[part] ?? part.toUpperCase();
+  });
+  if (combo.endsWith('+') && combo !== '+') parts.push('+');
+  return parts.length ? parts : [combo];
 }
 
 export function displayKeys(c: Command): string {
@@ -281,7 +316,7 @@ function keysBelongToFocus(e: KeyboardEvent): boolean {
   const el = e.target as HTMLElement | null;
   if (!el?.matches || e.ctrlKey || e.metaKey || e.altKey) return false;
   if (!el.matches(':focus-visible') || el === document.body) return false;
-  if (!el.closest('.toolbar, .panel, .dialog, .popover, .find-bar, .text-bar') || el.isContentEditable || isTyping(el)) return false;
+  if (!el.closest('.toolbar, .panel, .chat, .dialog, .popover, .find-bar, .text-bar') || el.isContentEditable || isTyping(el)) return false;
   if (e.key === 'Escape') {
     el.blur();
     e.preventDefault();

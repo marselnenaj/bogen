@@ -1,12 +1,13 @@
 import { inspectorStyle, updateScoped } from '../../ops/breakpoints.ts';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BogenNode } from '@bogen/core';
-import { Blend, ChevronDown, ChevronRight, CircleDot, Image as ImageIcon, Minus, Plus, RotateCw, Square, TrendingUp, Upload, X } from 'lucide-react';
+import { Blend, ChevronDown, ChevronRight, CircleDot, Image as ImageIcon, Minus, Plus, RotateCw, Sparkles, Square, TrendingUp, Upload, X } from 'lucide-react';
 import { session } from '../../doc/session.ts';
 import { api, resolveAsset } from '../../lib/api.ts';
 import { FILTER_DEFS, fmt, fmtPx, parseFilters, parseShadows, printFilters, printShadows, printTextShadows, px, splitTopLevel, type FilterFn, type Shadow } from '../../lib/css-values.ts';
 import { DEFAULT_STOPS, fillPreview, interpolatedStop, parseFills, printFillLayer, printFills, type Fill, type GradientStop } from '../../lib/fills.ts';
 import { pickImage } from '../../ops/images.ts';
+import { openGenerateImage } from '../GenerateImage.tsx';
 import { withTokenValues } from '../../lib/token-color.ts';
 import { editor } from '../../state/store.ts';
 import { ColorField, ColorPicker } from '../../ui/ColorPicker.tsx';
@@ -130,14 +131,17 @@ function ImageFillEditor({ fill, onChange }: { fill: Extract<Fill, { kind: 'imag
       <div className="fill-image-preview" style={{ background: fill.url ? `center / contain no-repeat url("${resolveAsset(fill.url)}")` : undefined }}>
         {!fill.url ? <span>{t('No image yet')}</span> : null}
       </div>
-      <button
-        type="button"
-        className="btn"
-        onClick={() => pickImage(async (file) => {
-          const asset = await api.upload(file);
-          onChange({ ...fill, url: asset.src });
-        })}
-      ><Upload size={14} /> {t('Choose image')}</button>
+      <div className="image-actions">
+        <button
+          type="button"
+          className="btn"
+          onClick={() => pickImage(async (file) => {
+            const asset = await api.upload(file);
+            onChange({ ...fill, url: asset.src });
+          })}
+        ><Upload size={14} /> {t('Choose image')}</button>
+        <button type="button" className="btn" onClick={() => openGenerateImage({ onPick: ({ src }) => onChange({ ...fill, url: src }) })} data-testid="fill-generate"><Sparkles size={14} /> {t('Generate')}</button>
+      </div>
       <TextField value={fill.url} placeholder="https://" onChange={(url) => onChange({ ...fill, url })} title={t('Image URL')} />
       <Row>
         <SelectField value={fill.size} onChange={(size) => onChange({ ...fill, size })} options={[{ value: 'cover', label: t('Cover') }, { value: 'contain', label: t('Contain') }, { value: 'auto', label: t('Original') }, { value: '100% 100%', label: t('Stretch') }]} />
@@ -174,7 +178,7 @@ function FillRow({ fill, onChange, onRemove, index, nodeId }: { fill: Fill; onCh
         <span className="swatch-fill" style={{ background: withTokenValues(fillPreview(fill)) }} />
       </button>
       {fill.kind === 'solid' ? (
-        <TextField className="list-row-grow" value={fill.color} onChange={(color) => onChange({ kind: 'solid', color })} testId={`fill-text-${index}`} />
+        <TextField className="list-row-grow" name={t('Fill colour')} value={fill.color} onChange={(color) => onChange({ kind: 'solid', color })} testId={`fill-text-${index}`} />
       ) : (
         <button type="button" className="list-row-grow list-row-label" onClick={() => setOpen(!open)}>{fillLabel(fill)}</button>
       )}

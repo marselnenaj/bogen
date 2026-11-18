@@ -1,11 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BogenDoc, craftFindings, createInstance, findMain, listMains, nodeToHtml, readHandoff, safeUsage, setInstanceProps, SPECIMEN_EXEMPT, toReact, variantAxes } from '@bogen/core';
+import { BogenDoc, contrastRatio, craftFindings, createInstance, effectiveMode, findMain, listMains, nodeToHtml, readHandoff, safeUsage, setInstanceProps, SPECIMEN_EXEMPT, tokenValueIn, tokensCss, toReact, variantAxes, type BogenNode } from '@bogen/core';
 import { copyIssues } from '../src/mcp/copy-check.ts';
 import { afterEach, describe, expect, it } from 'vitest';
 import { call, connectAgent, startServer, type Harness } from './helpers.ts';
-import { allKits, brandTheme, applyKitTheme, findKit, kitSummary, membersOf, registerKit, unregisterKit, writeKitBoards, writeKitTokens, type Kit } from '../src/kits/index.ts';
+import { allKits, brandTheme, applyKitTheme, quoteFamilies, findKit, kitSummary, membersOf, registerKit, unregisterKit, writeKitBoards, writeKitTokens, type Kit } from '../src/kits/index.ts';
 
 function build(kit: Kit) {
   const doc = new BogenDoc();
@@ -88,6 +88,8 @@ describe('kits', () => {
             expect(code, `${kit.name} ${c.name}`).toContain(`<${c.handoff.element}`);
             continue;
           }
+          // What the system draws on a device (a status bar, a home indicator) is written as nothing.
+          if (c.handoff.usage === '<></>') continue;
           expect(code).toContain(`from "${c.handoff.from}"`);
           const tag = c.handoff.usage ? /<([A-Z][\w.]*)/.exec(c.handoff.usage)![1]! : c.handoff.name;
           expect(code, `${kit.name} ${c.name}`).toContain(`<${tag}`);
@@ -226,6 +228,188 @@ describe('kits', () => {
     expect(code).toContain('<Button variant="outlined">Button</Button>');
   });
 
+  describe('phone kit gaps', () => {
+    function layer(doc: BogenDoc, root: string, name: string): BogenNode {
+      const node = doc.descendants(root).find((n) => n.name === name);
+      expect(node, name).toBeDefined();
+      return node!;
+    }
+
+    // Start from the default and change one axis at a time, like prop-* in html_write.
+    // Checking only two different HTML strings missed wrong-member selections in the past.
+    for (const [id, names] of [
+      ['material-3', ['Text field', 'Bottom sheet', 'Menu', 'Menu item']],
+      ['ionic-ios', ['Button', 'Stepper', 'Date picker']],
+    ] as const) {
+      it(`${id}: every new member resolves exactly, in light and dark, and all its text is editable`, () => {
+        const kit = findKit(id);
+        const { doc, page, boards } = build(kit);
+        for (const name of names) {
+          const component = kit.components.find((c) => c.name === name)!;
+          const expectedCount = Object.values(component.axes ?? {}).reduce((n, values) => n * values.length, 1);
+          expect(membersOf(component)).toHaveLength(expectedCount);
+          for (const mode of ['light', 'dark']) {
+            const parent = mode === 'dark' ? boards[1]! : page;
+            for (const variant of membersOf(component)) {
+              const main = findMain(doc.source, name, variant)!;
+              const instance = createInstance(doc, findMain(doc.source, name, membersOf(component)[0])!.id, parent);
+              for (const [axis, value] of Object.entries(variant)) setInstanceProps(doc, instance, { [axis]: value });
+              expect(doc.getNode(instance)!.instanceOf, JSON.stringify(variant)).toBe(main.id);
+              expect(nodeToHtml(doc, instance)).toBe(nodeToHtml(doc, createInstance(doc, main.id, parent)));
+              expect(nodeToHtml(doc, instance)).not.toMatch(/undefined|NaN|\[object/);
+              if (mode === 'dark') expect(effectiveMode(doc, instance)).toBe('dark');
+              const textLayers = doc.descendants(instance).filter((n) => n.type === 'text' && n.text);
+              const targets = (component.props ?? []).filter((p) => p.type === 'text').map((p) => p.target);
+              expect(textLayers.map((n) => n.name).filter((n) => !targets.includes(n))).toEqual([]);
+              const copy = Object.fromEntries((component.props ?? []).filter((p) => p.type === 'text').map((p) => [p.name, `Edited ${p.name}`]));
+              setInstanceProps(doc, instance, copy);
+              for (const prop of component.props ?? []) if (prop.type === 'text') expect(layer(doc, instance, prop.target).text).toBe(copy[prop.name]);
+            }
+          }
+        }
+        for (const token of kit.tokens.filter((t) => t.dark !== undefined)) {
+          expect(tokenValueIn(doc.getTokens().find((t) => t.name === token.name)!, 'dark')).toBe(token.dark);
+          expect(tokensCss(doc)).toContain(`--${token.name}:${token.dark}`);
+        }
+      });
+    }
+
+    it('Material: all eight field members have the right 56dp container, line, label, supporting text and flags', () => {
+      const { doc, page } = build(findKit('material-3'));
+      for (const variant of ['filled', 'outlined']) for (const state of ['enabled', 'focused', 'error', 'disabled']) {
+        const instance = createInstance(doc, findMain(doc.source, 'Text field', { variant, state })!.id, page);
+        const field = layer(doc, instance, 'Field');
+        const accent = `var(--md-sys-color-${state === 'error' ? 'error' : state === 'focused' ? 'primary' : 'on-surface-variant'})`;
+        const lineColor = state === 'error' || state === 'focused' ? accent : variant === 'filled' ? 'var(--md-sys-color-on-surface-variant)' : 'var(--md-sys-color-outline)';
+        expect(field.style.height).toBe('56px');
+        expect(field.style.boxSizing).toBe('border-box');
+        expect(field.style[variant === 'filled' ? 'borderBottom' : 'border']).toBe(`${state === 'focused' ? 2 : 1}px solid ${lineColor}`);
+        expect(field.style.background).toBe(variant === 'filled' ? 'var(--md-sys-color-surface-container-highest)' : 'transparent');
+        expect(layer(doc, instance, 'Label').style.color).toBe(accent);
+        expect(layer(doc, instance, 'Label').style.position).toBe(variant === 'filled' ? undefined : 'absolute');
+        expect(layer(doc, instance, 'Supporting').style.color).toBe(`var(--md-sys-color-${state === 'error' ? 'error' : 'on-surface-variant'})`);
+        expect(layer(doc, instance, 'Error icon').style.display).toBe(state === 'error' ? 'flex' : 'none');
+        expect(field.style.opacity).toBe(state === 'disabled' ? '0.38' : undefined);
+        const code = toReact(doc, instance);
+        expect(code).toContain(`variant="${variant}"`);
+        expect(code).not.toMatch(/state=|enabled=|helper=/);
+        for (const flag of ['focused', 'error', 'disabled']) expect(code.includes(` ${flag}`)).toBe(state === flag);
+      }
+    });
+
+    it('Material: modal surface, menu items and divider keep platform sizes and usable slots', () => {
+      const { doc, page } = build(findKit('material-3'));
+      const sheet = createInstance(doc, findMain(doc.source, 'Bottom sheet')!.id, page);
+      expect(doc.getNode(sheet)!.style.background).toContain('var(--md-sys-color-scrim)');
+      expect(layer(doc, sheet, 'Sheet').style).toMatchObject({ width: '100%', maxWidth: '640px', borderRadius: '28px 28px 0 0' });
+      expect(layer(doc, sheet, 'Sheet').attrs).toMatchObject({ role: 'dialog', 'aria-modal': 'true' });
+      expect(layer(doc, sheet, 'Handle target').style.minHeight).toBe('48px');
+      expect(layer(doc, sheet, 'Drag handle').style).toMatchObject({ width: '32px', height: '4px' });
+      expect(layer(doc, sheet, 'Content').slotName).toBe('content');
+      const fill = doc.insert(sheet, { type: 'text', tag: 'p', text: 'Sheet content', slot: 'content', style: {} });
+      expect(nodeToHtml(doc, sheet)).toContain('Sheet content');
+      expect(toReact(doc, sheet)).toContain('Sheet content');
+      expect(doc.getNode(fill)).toBeDefined();
+      expect(toReact(doc, sheet)).toContain('<Drawer anchor="bottom" open');
+      const menu = createInstance(doc, findMain(doc.source, 'Menu')!.id, page);
+      expect(doc.getNode(menu)!.style).toMatchObject({ width: '100%', maxWidth: '280px', padding: '8px 0' });
+      expect(layer(doc, menu, 'Items').slotName).toBe('items');
+      expect(layer(doc, menu, 'Divider').attrs?.role).toBe('separator');
+      for (let i = 1; i <= 3; i++) {
+        expect(layer(doc, menu, `Item ${i}`).style.minHeight).toBe('48px');
+        expect(layer(doc, menu, `Item ${i} leading`).type).toBe('frame');
+      }
+      for (const state of ['enabled', 'disabled']) {
+        const item = createInstance(doc, findMain(doc.source, 'Menu item', { state })!.id, menu);
+        expect(layer(doc, item, 'Item leading').slotName).toBe('leading');
+        expect(doc.getNode(item)!.style.minHeight).toBe('48px');
+        expect(doc.getNode(item)!.style.opacity).toBe(state === 'disabled' ? '0.38' : undefined);
+        expect(toReact(doc, item).includes(' disabled')).toBe(state === 'disabled');
+      }
+      const code = toReact(doc, menu);
+      expect(code).toContain('<Menu open');
+      expect(code).toContain('<Divider />');
+      expect(code).toContain('<ListItemIcon>');
+    });
+
+    it('Ionic: all 32 button combinations keep their intended fill, size, width and disabled state', () => {
+      const kit = findKit('ionic-ios');
+      const { doc, page } = build(kit);
+      for (const variant of membersOf(kit.components.find((c) => c.name === 'Button')!)) {
+        const instance = createInstance(doc, findMain(doc.source, 'Button', variant)!.id, page);
+        const root = doc.getNode(instance)!;
+        const filled = variant.fill === 'solid' || variant.fill === 'tinted';
+        expect(root.style.background).toBe(filled ? `var(--ion-color-${variant.fill === 'solid' ? 'primary' : 'light'})` : 'transparent');
+        expect(root.style.color).toBe(filled ? `var(--ion-color-${variant.fill === 'solid' ? 'primary' : 'light'}-contrast)` : 'var(--ion-color-primary)');
+        expect(root.style.border).toBe(variant.fill === 'outline' ? '1px solid var(--ion-color-primary)' : '0');
+        expect(root.style.height).toBe(variant.size === 'large' ? '50px' : '44px');
+        expect(root.style.minHeight).toBe('44px');
+        expect(root.style.width).toBe(variant.width === 'full' ? '100%' : undefined);
+        expect(root.style.opacity).toBe(variant.state === 'disabled' ? '0.5' : undefined);
+        expect(root.attrs?.disabled !== undefined).toBe(variant.state === 'disabled');
+        const code = toReact(doc, instance);
+        expect(code.includes(' disabled')).toBe(variant.state === 'disabled');
+        expect(code.includes('expand="block"')).toBe(variant.width === 'full');
+        expect(code.includes('size="large"')).toBe(variant.size === 'large');
+        expect(code.includes('color="light"')).toBe(variant.fill === 'tinted');
+        if (variant.fill !== 'solid') expect(code).toContain(`fill="${variant.fill === 'tinted' ? 'solid' : variant.fill}"`);
+        expect(code).not.toMatch(/width=|state=|fill="tinted"|size="default"/);
+        expect((code.match(/size="large"/g) ?? []).length).toBe(variant.size === 'large' ? 1 : 0);
+      }
+    });
+
+    it('Ionic: stepper and inline date wheels use native metrics and composed Ionic handoffs', () => {
+      const { doc, page } = build(findKit('ionic-ios'));
+      for (const state of ['enabled', 'disabled']) {
+        const stepper = createInstance(doc, findMain(doc.source, 'Stepper', { state })!.id, page);
+        expect(layer(doc, stepper, 'Stepper').style).toMatchObject({ width: '94px', height: '44px', maxWidth: '100%' });
+        expect(layer(doc, stepper, 'Track').style).toMatchObject({ height: '32px', top: '6px' });
+        for (const name of ['Decrease', 'Increase']) {
+          expect(layer(doc, stepper, name).style).toMatchObject({ height: '44px', minWidth: '44px' });
+          expect(layer(doc, stepper, name).attrs?.disabled !== undefined).toBe(state === 'disabled');
+        }
+        const stepperCode = toReact(doc, stepper);
+        expect(stepperCode).toContain('<IonButtons');
+        expect(stepperCode).not.toContain('IonStepper');
+        expect((stepperCode.match(/ disabled/g) ?? []).length).toBe(state === 'disabled' ? 2 : 0);
+        const date = createInstance(doc, findMain(doc.source, 'Date picker', { state })!.id, page);
+        expect(layer(doc, date, 'Wheels').style).toMatchObject({ height: '200px', padding: '0 16px' });
+        expect(layer(doc, date, 'Selection').style).toMatchObject({ height: '34px', top: '83px' });
+        expect(layer(doc, date, 'Wheels').style.opacity).toBe(state === 'disabled' ? '0.5' : undefined);
+        for (const column of ['Month', 'Day', 'Year']) {
+          expect(layer(doc, date, column).style.minWidth).toBe('44px');
+          expect(layer(doc, date, `${column} selected`).style).toMatchObject({ fontSize: '22px', lineHeight: '34px' });
+        }
+        setInstanceProps(doc, date, { value: '2027-05-09' });
+        const dateCode = toReact(doc, date);
+        expect(dateCode).toContain('<IonDatetime mode="ios" presentation="date" preferWheel size="cover"');
+        expect(dateCode).toContain('value="2027-05-09"');
+        expect(dateCode.includes(' disabled')).toBe(state === 'disabled');
+        expect(dateCode).not.toMatch(/monthSelected|daySelected|yearSelected|state=/);
+      }
+    });
+
+    it('keeps active text colours at WCAG AA in light and dark (disabled controls are exempt)', () => {
+      const pairs = {
+        'material-3': [
+          ['on-surface', 'surface-container-low'], ['on-surface-variant', 'surface-container-low'],
+          ['on-surface', 'surface-container'], ['on-surface-variant', 'surface-container'],
+          ...['surface', 'surface-container-highest'].flatMap((bg) => ['on-surface', 'on-surface-variant', 'primary', 'error'].map((fg) => [fg, bg])),
+        ],
+        'ionic-ios': [['color-primary-contrast', 'color-primary'], ['color-light-contrast', 'color-light'], ['text-color', 'item-background'], ['color-medium', 'item-background'], ['color-primary', 'background-color'], ['color-primary', 'item-background']],
+      };
+      for (const [id, colours] of Object.entries(pairs)) {
+        const kit = findKit(id);
+        const { doc } = build(kit);
+        const prefix = id === 'material-3' ? 'md-sys-color-' : 'ion-';
+        for (const mode of ['light', 'dark']) for (const [fg, bg] of colours) {
+          const resolve = (name: string) => tokenValueIn(doc.getTokens().find((t) => t.name === prefix + name)!, mode);
+          expect(contrastRatio(resolve(fg!), resolve(bg!)), `${id} ${mode}: ${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+  });
+
   it('maps a brand and a theme onto a kit\'s own token names', () => {
     const kit = findKit('shadcn');
     const brand = { colors: [{ name: 'Blue', role: 'primary', value: '#2b3df2', token: 'brand-blue' }, { name: 'Paper', role: 'background', value: '#f4f2ec' }], families: [{ role: 'body', family: 'Archivo', fallback: 'sans-serif' }], radius: [{ value: 0 }] } as never;
@@ -330,4 +514,11 @@ describe('kit tools', () => {
     expect(text).toContain('<ActionButton>Send</ActionButton>');
     await expect(call(client, 'component_update', { file_id: file.id, component: 'Action', handoff: { from: '../../etc', name: 'X' } })).rejects.toThrow(/handoff is not valid/);
   }, 60_000);
+
+  it('quotes a theme\'s family names that CSS only reads in quotes', () => {
+    expect(quoteFamilies('Source Sans 3, sans-serif')).toBe('"Source Sans 3", sans-serif');
+    expect(quoteFamilies("'Alegreya Sans', serif")).toBe("'Alegreya Sans', serif");
+    expect(quoteFamilies('Lato, system-ui')).toBe('Lato, system-ui');
+    expect(quoteFamilies('var(--font-body)')).toBe('var(--font-body)');
+  });
 });

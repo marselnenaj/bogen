@@ -247,7 +247,7 @@ describe('Bogen server', () => {
   });
 
   it('returns a real PNG screenshot with pixels in it', async () => {
-    const result = await callRaw(agent, 'canvas_screenshot', { node_id: artboard });
+    const result = await callRaw(agent, 'canvas_screenshot', { node_id: artboard, format: 'png' });
     const image = result.content.find((c) => c.type === 'image')!;
     expect(image.mimeType).toBe('image/png');
     const stats = await pngStats(Buffer.from(image.data!, 'base64'));
@@ -259,7 +259,7 @@ describe('Bogen server', () => {
     const big = await call(agent, 'artboard_create', { name: 'Big', width: 3000, height: 3000, background: '#102030' });
     const result = await callRaw(agent, 'canvas_screenshot', { node_id: big.id, scale: 4, format: 'jpg' });
     const text = result.content.find((c) => c.type === 'text')!.text!;
-    expect(text).toMatch(/^2000x2000px/);
+    expect(text).toMatch(/^1280x1280px/);
     await call(agent, 'layer_delete', { node_ids: [big.id] });
   });
 
@@ -269,7 +269,7 @@ describe('Bogen server', () => {
     const { ids: [inner] } = await call(agent, 'html_write', { target_id: board, html: '<div style="margin:20px;width:100px;height:50px;background:#ff0000"></div>' });
     const whole = await callRaw(agent, 'canvas_screenshot', { page_id: pageId });
     expect(whole.content.find((c) => c.type === 'text')!.text).toMatch(/^300x200px/);
-    const part = await callRaw(agent, 'canvas_screenshot', { node_id: inner });
+    const part = await callRaw(agent, 'canvas_screenshot', { node_id: inner, format: 'png' });
     expect(part.content.find((c) => c.type === 'text')!.text).toMatch(/^100x50px/);
     const stats = await pngStats(Buffer.from(part.content.find((c) => c.type === 'image')!.data!, 'base64'));
     expect(stats.distinctColors).toBe(1);
@@ -284,7 +284,7 @@ describe('Bogen server', () => {
     const pageId = (await call(agent, 'page_create', { name: 'Shader' })).id;
     const board = (await call(agent, 'artboard_create', { name: 'FX', width: 200, height: 200, page_id: pageId })).id;
     await call(agent, 'html_write', { target_id: board, html: '<x-shader type="mesh-gradient" colors="#ff0000,#00ff00,#0000ff" style="width:200px;height:200px"></x-shader>' });
-    const shot = await callRaw(agent, 'canvas_screenshot', { node_id: board });
+    const shot = await callRaw(agent, 'canvas_screenshot', { node_id: board, format: 'png' });
     const stats = await pngStats(Buffer.from(shot.content.find((c) => c.type === 'image')!.data!, 'base64'));
     expect(stats.distinctColors).toBeGreaterThan(20);
     const manyBoard = (await call(agent, 'artboard_create', { name: 'Many', width: 400, height: 400, x: 6000, y: 3000, background: '#000000', page_id: pageId })).id;
@@ -293,7 +293,7 @@ describe('Bogen server', () => {
     const { ids } = await call(agent, 'html_write', { target_id: manyBoard, html: `<div style="display:grid;grid-template-columns:repeat(5,20px)">${cell.repeat(20)}</div>` });
     const room = await h.server.rooms.get(file);
     const first = room.doc.getChildren(ids[0])[0]!.id;
-    const firstShot = await callRaw(agent, 'canvas_screenshot', { node_id: first });
+    const firstShot = await callRaw(agent, 'canvas_screenshot', { node_id: first, format: 'png' });
     expect((await pngStats(Buffer.from(firstShot.content.find((c) => c.type === 'image')!.data!, 'base64'))).distinctColors).toBeGreaterThan(3);
     await call(agent, 'page_delete', { page_id: pageId });
   }, 30_000);
@@ -344,13 +344,13 @@ describe('Bogen server', () => {
     await call(agent, 'page_delete', { page_id: pageId });
   }, 30_000);
 
-  it('lists fonts and guides, generates no images, and says so for bogen-gen:', async () => {
+  it('lists fonts and guides, makes images only through the optional image_generate, and says so for bogen-gen:', async () => {
     const fonts = await call(agent, 'fonts_list', { query: 'inter', source: 'google' });
     expect(fonts.google).toContain('Inter');
     for (const topic of ['design', 'layout', 'tokens', 'shaders', 'code']) expect((await call<string>(agent, 'guide_get', { topic })).length).toBeGreaterThan(300);
     const { tools } = await agent.listTools();
-    expect(tools.some((t) => t.name === 'image_generate')).toBe(false);
-    expect(tools.find((t) => t.name === 'asset_upload')!.description).toMatch(/no image generator/);
+    expect(tools.find((t) => t.name === 'image_generate')!.description).toMatch(/Optional: it works only when the person has the Codex CLI/);
+    expect(tools.find((t) => t.name === 'asset_upload')!.description).toMatch(/no image model of its own/);
     const write = await call(agent, 'html_write', { target_id: artboard, html: '<div style="background-image:url(bogen-gen:a dot);height:4px"><img src="bogen-gen:a cat" alt="Cat" style="width:120px;height:80px"></div>' });
     expect(write.warnings.join(' ')).toMatch(/bogen-gen: does nothing.*asset_upload/);
     const room = await h.server.rooms.get(file);

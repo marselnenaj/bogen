@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { Facts } from '../ui/Facts.tsx';
 import { ChevronDown, ChevronRight, GitBranch, Plus } from 'lucide-react';
 import { agentApi, type InstalledTheme } from '../lib/agent-api.ts';
 import { onServerEvent } from '../lib/events.ts';
@@ -47,12 +48,12 @@ function targetWord(target: 'desktop' | 'mobile'): string {
 }
 
 /** Target and branches of a project, in a few words. */
-function projectFacts(p: ThemeProject): string {
+function projectFacts(p: ThemeProject): string[] {
   const parts = [targetWord(p.target)];
   const n = branchCount(p);
   if (p.branch.current !== 'main') parts.push(t('On {branch}', { branch: p.branch.current_name ?? p.branch.current }));
   if (n) parts.push(t.n(n, '{count} branch', '{count} branches'));
-  return parts.join(' · ');
+  return parts;
 }
 
 function Swatches({ colors }: { colors?: string[] }) {
@@ -84,8 +85,8 @@ export function ChooseTheme({ candidates, message, busy, onOpen, onNew, onCancel
       <ul className="tl-choose-list">
         {candidates.map((c) => (
           <li key={c.file_id} className="tl-choose-row" data-testid="theme-candidate" data-file-id={c.file_id}>
-            <span className="tl-name" dir="auto">{c.name}</span>
-            <span className="brand-facts">{[targetWord(c.target), c.folder, formatDate(c.updatedAt, { month: 'short', day: 'numeric' })].filter(Boolean).join(' · ')}</span>
+            <span className="tl-name" dir="auto" translate="no" data-title-if-cut="">{c.name}</span>
+            <Facts className="brand-facts" items={[targetWord(c.target), c.folder, formatDate(c.updatedAt, { month: 'short', day: 'numeric' })]} cutTitle />
             <button type="button" className="btn" onClick={() => onOpen(c.file_id)} disabled={busy} data-testid="theme-candidate-open">{t('Open')}</button>
           </li>
         ))}
@@ -111,11 +112,11 @@ function ProjectRow({ row, colors, expanded, onToggle, allCopies, onConsolidated
     return (
       <div role="listitem" className="tl-item" data-testid="theme-project" data-file-id={lead.file_id} data-copies={1}>
         <div className="tl-row">
-          <button type="button" className="tl-open" onClick={() => openFile(lead.file_id)} title={lead.file_name} data-testid="theme-project-open">
+          <button type="button" className="tl-open" onClick={() => openFile(lead.file_id)} title={lead.file_name && lead.file_name !== lead.name ? lead.file_name : undefined} data-testid="theme-project-open">
             <ProjectMark project={lead} colors={colors} />
-            <span className="tl-name" dir="auto">{lead.name}</span>
+            <span className="tl-name" dir="auto" translate="no" data-title-if-cut="">{lead.name}</span>
             <StatusChip status={row.status} />
-            <span className="brand-facts">{projectFacts(lead)}</span>
+            <Facts className="brand-facts" items={projectFacts(lead)} cutTitle />
           </button>
         </div>
         {lead.merged_copies?.length ? (
@@ -134,7 +135,7 @@ function ProjectRow({ row, colors, expanded, onToggle, allCopies, onConsolidated
                 </p>
                 {lead.merged_copies.map((c) => (
                   <div key={c.file_id} className="tl-copy" data-testid="theme-kept-copy" data-file-id={c.file_id}>
-                    <span className="tl-name" dir="auto">{c.name}</span>
+                    <span className="tl-name" dir="auto" translate="no" data-title-if-cut="">{c.name}</span>
                     {c.changed_after ? <span className="tl-chip is-copies">{t('Changed since')}</span> : null}
                     <button type="button" className="btn btn-quiet" onClick={() => openFile(c.file_id)} aria-label={t('Open the kept copy {name}', { name: c.name })} data-testid="theme-kept-copy-open">{t('Open')}</button>
                   </div>
@@ -152,7 +153,7 @@ function ProjectRow({ row, colors, expanded, onToggle, allCopies, onConsolidated
       <div className="tl-row">
         <button type="button" className="tl-open" onClick={onToggle} aria-expanded={expanded} aria-controls={copiesId} title={expanded ? t('Hide the copies of {name}', { name: label }) : t('Show the copies of {name}', { name: label })} data-testid="theme-copies-toggle">
           <ProjectMark project={lead} colors={colors} />
-          <span className="tl-name" dir="auto">{t.n(row.copies.length, '{name} · {count} copy', '{name} · {count} copies', { name: label })}</span>
+          <span className="tl-name" dir="auto" translate="no" data-title-if-cut="">{t.n(row.copies.length, '{name} · {count} copy', '{name} · {count} copies', { name: label })}</span>
           <span className="tl-chip is-copies">{t('Not consolidated')}</span>
           <span className="brand-facts">{targetWord(lead.target)}</span>
           <span className="tl-expand" aria-hidden="true">{expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>
@@ -163,9 +164,9 @@ function ProjectRow({ row, colors, expanded, onToggle, allCopies, onConsolidated
           <p className="tl-note">{t('These files are copies of one theme. None of them counts as the theme itself until you bring them together into one theme with branches; all of them are kept until then.')}</p>
           {bringing ? <ConsolidateCopies copies={allCopies} onDone={onConsolidated} onClose={() => setBringing(false)} /> : row.copies.map((c) => (
             <div key={c.file_id} className="tl-copy" data-testid="theme-copy" data-file-id={c.file_id}>
-              <span className="tl-name" dir="auto">{c.file_name || c.name}</span>
+              <span className="tl-name" dir="auto" translate="no" data-title-if-cut="">{c.file_name || c.name}</span>
               <StatusChip status={c.status} />
-              <span className="brand-facts" dir="auto">{[projectFacts(c), c.folder, formatDate(c.updatedAt, { month: 'short', day: 'numeric' })].filter(Boolean).join(' · ')}</span>
+              <Facts className="brand-facts" items={[...projectFacts(c), c.folder, formatDate(c.updatedAt, { month: 'short', day: 'numeric' })]} cutTitle />
               <button type="button" className="btn" onClick={() => openFile(c.file_id)} aria-label={t('Open {name}', { name: c.file_name || c.name })} data-testid="theme-copy-open">{t('Open')}</button>
             </div>
           ))}
@@ -265,10 +266,12 @@ function ThemeLibrarySection({ lib, folder, query, platform, onChanged }: { lib:
   return (
     <section className="examples omarchy-themes theme-library" data-testid="omarchy-themes" aria-label={t('Themes')}>
       <div className="brands-head tl-head">
-        <button type="button" className="examples-toggle" onClick={toggle} aria-expanded={open} data-testid="omarchy-themes-toggle">
-          {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-          <span className="brands-title">{t('Themes')}</span>
-        </button>
+        <h2 className="brands-title">
+          <button type="button" className="examples-toggle" onClick={toggle} aria-expanded={open} data-testid="omarchy-themes-toggle">
+            {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            {t('Themes')}
+          </button>
+        </h2>
         {lib.onOmarchy ? (
           <div className="tl-actions">
             {open && desktop ? <button type="button" className="btn btn-quiet" onClick={() => void start('new', { target: 'desktop', new_project: true })} disabled={busy !== null} data-testid="omarchy-theme-new" title={t('A palette of its own, backgrounds still to design')}>
@@ -304,7 +307,7 @@ function ThemeLibrarySection({ lib, folder, query, platform, onChanged }: { lib:
                   <div key={theme.name} role="listitem" className="tl-item">
                     <button type="button" className="tl-open" onClick={() => fromInstalled(theme)} disabled={busy !== null} title={theme.project_file_ids.length ? t('{theme}: opens your Bogen project of it', { theme: theme.title }) : t('{theme}: starts a project from its colours, backgrounds and portrait compositions', { theme: theme.title })} data-testid="omarchy-theme-from" data-theme={theme.name}>
                       <Swatches colors={theme.swatches} />
-                      <span className="tl-name" dir="auto">{theme.title}</span>
+                      <span className="tl-name" dir="auto" translate="no" data-title-if-cut="">{theme.title}</span>
                       {theme.current ? <span className="omarchy-in-use">{t('In use')}</span> : null}
                       <span className="brand-facts">{busy === theme.name ? t('Copying its colours and backgrounds…') : facts(theme)}</span>
                       {theme.project_file_ids.length ? <span className="tl-has" title={t('Has a Bogen project')}><GitBranch size={12} aria-hidden="true" /> {t('Your project')}</span> : null}

@@ -11,7 +11,10 @@ for (const [net, bits] of [
   ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4],
 ] as const) blocked.addSubnet(net, bits, 'ipv4');
 for (const [net, bits] of [
-  ['::', 128], ['::1', 128], ['64:ff9b::', 96], ['100::', 64], ['2001:db8::', 32], ['2002::', 16], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8],
+  // ::/96 holds the IPv4-compatible addresses (::127.0.0.1), 64:ff9b:1::/48 the local-use NAT64 prefix, 2001::/23 the
+  // IETF protocol assignments (Teredo among them), 3fff::/20 documentation and 5f00::/16 SRv6 segment identifiers.
+  ['::', 96], ['::1', 128], ['64:ff9b::', 96], ['64:ff9b:1::', 48], ['100::', 64], ['2001::', 23], ['2001:db8::', 32], ['2002::', 16],
+  ['3fff::', 20], ['5f00::', 16], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8],
 ] as const) blocked.addSubnet(net, bits, 'ipv6');
 
 export function isPrivateAddress(address: string): boolean {
@@ -21,6 +24,22 @@ export function isPrivateAddress(address: string): boolean {
   // BlockList also matches IPv4-mapped IPv6 addresses against the IPv4 rules.
   return blocked.check(bare, family === 4 ? 'ipv4' : 'ipv6');
 }
+
+function isLoopbackAddress(address: string): boolean {
+  const bare = address.replace(/^\[|\]$/g, '');
+  return /^127\./.test(bare) || bare === '::1' || /^::ffff:127\./i.test(bare);
+}
+
+/** Lets only this computer's own addresses through, for a page of this computer the person asked for here. */
+const loopbackLookup: LookupFunction = (hostname, options, callback) => {
+  dnsLookup(hostname, { ...options, all: true }, (err, addresses) => {
+    if (err) return callback(err, '', 0);
+    const list = addresses as LookupAddress[];
+    if (!list.length || list.some((a) => !isLoopbackAddress(a.address))) return callback(Object.assign(new Error(`${hostname} is not this computer.`), { code: 'EPRIVATE' }), '', 0);
+    if (options.all) return (callback as unknown as (e: null, a: LookupAddress[]) => void)(null, list);
+    callback(null, list[0]!.address, list[0]!.family);
+  });
+};
 
 /** Resolves as usual, but refuses at connection time, so a rebinding DNS answer cannot slip through. */
 const guardedLookup: LookupFunction = (hostname, options, callback) => {
@@ -80,6 +99,16 @@ export interface PublicFetchOptions {
    * it for this address (see the data routes); never for an agent or another device. The limits stay.
    */
   allowPrivate?: boolean;
+  /**
+   * Reaches this computer only, on every hop: for a page of this computer that the person captures from here. A
+   * redirect from there to the local network or the internet is refused.
+   */
+  onlyLoopback?: boolean;
+  /**
+   * Hands each piece of the body to this instead of keeping it, for files too large to hold in memory (a model of a
+   * few GB). `bytes` is then empty; size and time limits stay.
+   */
+  sink?: (chunk: Buffer) => void;
 }
 
 /** GET with an SSRF guard: public addresses only, on every redirect, with size and time limits. */
@@ -87,8 +116,13 @@ export async function fetchPublic(raw: string, options: PublicFetchOptions = {})
   const maxBytes = options.maxBytes ?? 25 * 1024 * 1024;
   let current = raw;
   for (let hop = 0; hop < 5; hop++) {
-    const url = parsePublicUrl(current, options.allowPrivate);
-    const result = await requestOnce(url, maxBytes, options.timeoutMs ?? 10_000, options.headers ?? {}, options.allowPrivate ? undefined : guardedLookup);
+    const url = parsePublicUrl(current, options.allowPrivate || options.onlyLoopback);
+    if (options.onlyLoopback) {
+      const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+      if (isIP(host) ? !isLoopbackAddress(host) : host !== 'localhost') throw new Error(`${url.host} is not this computer, so it is not fetched for a page of this computer.`);
+    }
+    const lookup = options.onlyLoopback ? loopbackLookup : options.allowPrivate ? undefined : guardedLookup;
+    const result = await requestOnce(url, maxBytes, options.timeoutMs ?? 10_000, options.headers ?? {}, lookup, options.sink);
     if ('location' in result) {
       current = new URL(result.location, url).toString();
       continue;
@@ -100,7 +134,7 @@ export async function fetchPublic(raw: string, options: PublicFetchOptions = {})
   throw new Error('Too many redirects.');
 }
 
-function requestOnce(url: URL, maxBytes: number, timeoutMs: number, headers: Record<string, string>, lookup: LookupFunction | undefined): Promise<FetchedBytes | { location: string }> {
+function requestOnce(url: URL, maxBytes: number, timeoutMs: number, headers: Record<string, string>, lookup: LookupFunction | undefined, sink?: (chunk: Buffer) => void): Promise<FetchedBytes | { location: string }> {
   return new Promise((resolve, reject) => {
     const client = url.protocol === 'https:' ? https : http;
     const req = client.get(url, { ...(lookup ? { lookup } : {}), headers: { 'user-agent': 'bogen-design', ...headers }, timeout: timeoutMs }, (res) => {
@@ -111,15 +145,26 @@ function requestOnce(url: URL, maxBytes: number, timeoutMs: number, headers: Rec
       }
       const chunks: Buffer[] = [];
       let size = 0;
+      let tooBig: Error | null = null;
       res.on('data', (chunk: Buffer) => {
+        if (tooBig) return;
         size += chunk.length;
         if (size > maxBytes) {
-          req.destroy(new Error(`The response is larger than ${Math.round(maxBytes / 1048576)} MB.`));
+          // The body may already be complete in this one chunk, so `end` can still come: it must not answer with a
+          // cut-off body as if it were the whole file.
+          tooBig = new Error(`The response is larger than ${maxBytes >= 1048576 ? `${Math.round(maxBytes / 1048576)} MB` : `${maxBytes} bytes`}.`);
+          chunks.length = 0;
+          reject(tooBig);
+          req.destroy(tooBig);
           return;
         }
-        chunks.push(chunk);
+        if (sink && status >= 200 && status < 300) sink(chunk);
+        else chunks.push(chunk);
       });
-      res.on('end', () => resolve({ bytes: Buffer.concat(chunks), status, contentType: String(res.headers['content-type'] ?? '') }));
+      res.on('end', () => {
+        if (tooBig) return;
+        resolve({ bytes: Buffer.concat(chunks), status, contentType: String(res.headers['content-type'] ?? '') });
+      });
       res.on('error', reject);
     });
     req.on('timeout', () => req.destroy(new Error(`Timed out fetching ${url.host}.`)));

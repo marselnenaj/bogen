@@ -27,6 +27,32 @@ export function inferKind(name: string, value: string): TokenKind | null {
   return null;
 }
 
+/**
+ * What a length token is for by its name, when that is not space: --radius is a corner, --text-sm a type size, --leading
+ * a line height. Null for a step of space, or a name that does not say.
+ */
+export function lengthKind(name: string): TokenKind | null {
+  const n = name.toLowerCase().replace(/^--/, '');
+  if (/radius|rounded/.test(n)) return 'radius';
+  if (/letter-?spacing|tracking/.test(n)) return 'letter-spacing';
+  if (/line-?height|leading/.test(n)) return 'line-height';
+  if (/font-?size|text-size|^(text|fs|font|type)-(2xs|xs|sm|md|base|lg|xl|\d+xl|display|body|caption|small|large|\d+)$/.test(n)) return 'font-size';
+  if (/space|spacing|gap|gutter|padding|margin|inset|stack/.test(n)) return null;
+  if (/breakpoint|^screen|^bp-/.test(n)) return 'breakpoint';
+  if (/container|max-?w/.test(n)) return 'container';
+  return null;
+}
+
+/**
+ * A length named for the size of a thing, such as --row, --target, --icon-md or --header-height: a control's height,
+ * not a step of the space between things, though the file may file it under spacing.
+ */
+export function sizeTokenName(name: string): boolean {
+  const n = name.toLowerCase().replace(/^--/, '');
+  if (/space|spacing|gap|gutter|padding|margin|inset|stack/.test(n)) return false;
+  return /(^|-)(row|rows|target|targets|control|controls|hit|tap|touch|icon|icons|avatar|button|btn|input|field|toolbar|header|sidebar|panel|bar|height|width|h|w)(-|$)/.test(n);
+}
+
 function declarations(body: string): { name: string; value: string }[] {
   const out: { name: string; value: string }[] = [];
   for (const m of body.matchAll(/(?:^|[;{\s])--([a-zA-Z_][\w-]*)\s*:\s*([^;{}]+?)\s*(?=;|}|$)/g)) out.push({ name: m[1]!, value: m[2]! });

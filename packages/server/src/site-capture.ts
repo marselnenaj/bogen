@@ -69,12 +69,8 @@ export function parseSitemap(xml: string): { urls: string[]; sitemaps: string[] 
 async function fetchText(url: string, allowLocal: boolean): Promise<string | null> {
   try {
     const parsed = new URL(url);
-    if (allowLocal && LOOPBACK.test(parsed.hostname)) {
-      const res = await fetch(parsed, { signal: AbortSignal.timeout(10_000) });
-      if (!res.ok) return null;
-      return (await res.text()).slice(0, MAX_SITEMAP_BYTES);
-    }
-    const got = await fetchPublic(url, { timeoutMs: 10_000, maxBytes: MAX_SITEMAP_BYTES });
+    const onlyLoopback = allowLocal && LOOPBACK.test(parsed.hostname);
+    const got = await fetchPublic(url, { timeoutMs: 10_000, maxBytes: MAX_SITEMAP_BYTES, onlyLoopback });
     return Buffer.from(got.bytes).toString('utf8');
   } catch {
     return null;

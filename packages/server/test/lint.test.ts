@@ -116,11 +116,124 @@ describe('design_lint rhythm and hierarchy', () => {
       <span style="color:#ffffff;font-size:16px;opacity:0.3">Faded</span></div>`;
     const ids = (await call(agent, 'html_write', { file_id: file, target_id: board, html: `${row.repeat(30)}
       <div style="background-image:linear-gradient(#000,#fff);padding:8px"><span style="color:#808080">On a gradient</span></div>` })).ids as string[];
-    const issues = (await lint(board)).issues as Issue[];
+    const issues = (await call(agent, 'design_lint', { file_id: file, node_id: board, limit: 100 })).issues as Issue[];
     const contrast = of(issues, 'contrast');
     const kids = await Promise.all(ids.slice(0, 30).map(async (id) => (await call(agent, 'layer_get', { file_id: file, node_id: id })).children as { id: string; name: string }[]));
     const named = (name: string) => kids.map((k) => k.find((c) => c.name === name)!.id);
     expect(contrast.map((i) => i.nodeId).sort()).toEqual([...named('Grey'), ...named('Faded')].sort());
     expect(contrast[0]!.message).toMatch(/^Text contrast is \d\.\d\d:1, under WCAG AA 4.5:1/);
+  }, 60_000);
+});
+
+/** What a captured app brings: tokens of every kind filed as spacing, scroll lists, a canvas, screen-reader labels, controls that are off. */
+describe('design_lint on an app view', () => {
+  let h: Harness;
+  let agent: Client;
+  let file: string;
+
+  beforeAll(async () => {
+    h = await startServer();
+    agent = await connectAgent(h.base, 'app-linter');
+    file = (await call(agent, 'file_create', { name: 'App lint' })).id;
+    // As older captures filed them: every length as spacing, the corner first.
+    await call(agent, 'tokens_set', { file_id: file, tokens: [
+      { name: 'radius', kind: 'spacing', value: '4px' },
+      { name: 'space-xs', kind: 'spacing', value: '4px' },
+      { name: 'space-sm', kind: 'spacing', value: '8px' },
+      { name: 'text-sm', kind: 'spacing', value: '12px' },
+      { name: 'row', kind: 'spacing', value: '26px' },
+      { name: 'corner', kind: 'spacing', value: '6px' },
+    ] });
+  });
+  afterAll(async () => {
+    await agent.close();
+    await h.cleanup();
+  });
+
+  const lint = async (node_id: string) => call(agent, 'design_lint', { file_id: file, node_id });
+  const of = (issues: Issue[], rule: string, id?: string) => issues.filter((i) => i.rule === rule && (!id || i.nodeId === id));
+
+  it('offers only steps of space for space: not a corner, a type size or the size of a control', async () => {
+    const board = (await call(agent, 'artboard_create', { file_id: file, name: 'Scale', width: 600 })).id;
+    const [row, chip, tight] = (await call(agent, 'html_write', { file_id: file, target_id: board, html: `
+      <div style="display:flex;gap:6px;padding:12px">One</div>
+      <div style="margin-right:4px;border-radius:var(--corner)">Two</div>
+      <div style="padding:26px">Three</div>` })).ids;
+    const issues = (await lint(board)).issues as Issue[];
+    const gap = of(issues, 'spacing', row).find((i) => i.message.startsWith('gap'))!;
+    expect(gap.message).toBe("gap is 6px, off the file's spacing scale (--space-xs 4px, --space-sm 8px). Use var(--space-xs).");
+    expect(of(issues, 'spacing', row).find((i) => i.message.startsWith('padding'))!.message).toContain('Use var(--space-sm)');
+    expect(of(issues, 'token', chip).map((i) => i.message)).toEqual(['marginRight is 4px, which equals the token --space-xs. Use var(--space-xs).']);
+    expect(issues.filter((i) => /--(radius|text-sm|row|corner)\b/.test(i.message))).toEqual([]);
+    expect(of(issues, 'token', tight)).toEqual([]);
+  }, 60_000);
+
+  it('leaves out what a scroll list or a canvas hides, and still finds what is cut', async () => {
+    const board = (await call(agent, 'artboard_create', { file_id: file, name: 'Clip', width: 600 })).id;
+    const ids = (await call(agent, 'html_write', { file_id: file, target_id: board, html: `
+      <div style="height:60px;overflow:auto">${'<div style="height:24px">Row</div>'.repeat(10)}</div>
+      <div style="position:relative;width:200px;height:100px;overflow:hidden">
+        <div style="position:absolute;left:2000px;top:0;width:300px;height:300px">Far away</div>
+        <div style="position:absolute;left:150px;top:0;width:900px;height:50px">Half in view</div>
+      </div>
+      <div style="position:relative;width:100px;height:100px;overflow:hidden">
+        <div style="position:absolute;left:-300px;top:0;width:40px;height:40px">Out of view</div>
+        <div style="position:absolute;left:80px;top:0;width:60px;height:40px">Cut</div>
+      </div>` })).ids as string[];
+    const kids = async (id: string) => ((await call(agent, 'layer_get', { file_id: file, node_id: id })).children as { id: string }[]).map((c) => c.id);
+    const [list, canvas, card] = ids;
+    const report = await lint(board);
+    const overflow = of(report.issues, 'overflow');
+    const rows = await kids(list!);
+    const [, cut] = await kids(card!);
+    const inCanvas = await kids(canvas!);
+    expect(overflow.filter((i) => rows.includes(i.nodeId) || inCanvas.includes(i.nodeId))).toEqual([]);
+    expect(overflow.map((i) => i.nodeId)).toEqual([cut]);
+    expect(overflow[0]).toMatchObject({ message: 'Clipped by its parent by 40px on the right.', severity: 'hard' });
+  }, 60_000);
+
+  it('takes up to 2px of an inline run past its line as a glyph overhang', async () => {
+    const board = (await call(agent, 'artboard_create', { file_id: file, name: 'Overhang', width: 600, background: '#000000' })).id;
+    const [hang, past] = (await call(agent, 'html_write', { file_id: file, target_id: board, html: `
+      <p style="width:max-content;color:#fff"><span style="position:relative;left:2px">Quoted words</span></p>
+      <p style="width:max-content;color:#fff"><span style="position:relative;left:8px">Quoted words</span></p>` })).ids as string[];
+    const issues = of((await lint(board)).issues as Issue[], 'overflow');
+    const inner = async (id: string) => ((await call(agent, 'layer_get', { file_id: file, node_id: id })).children as { id: string }[])[0]!.id;
+    const [a, b] = [await inner(hang!), await inner(past!)];
+    expect(issues.filter((i) => i.nodeId === a)).toEqual([]);
+    expect(issues.filter((i) => i.nodeId === b).map((i) => i.message)).toEqual(['Overflows its parent by 8px on the right.']);
+  }, 60_000);
+
+  it('takes an ellipsis as shortened on purpose only where the whole text can be read', async () => {
+    const board = (await call(agent, 'artboard_create', { file_id: file, name: 'Shortened', width: 600, background: '#000000' })).id;
+    const [titled, named, bare] = (await call(agent, 'html_write', { file_id: file, target_id: board, html: `
+      <p title="A long layer name that does not fit" style="width:60px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#fff">A long layer name that does not fit</p>
+      <button aria-label="Another long name that does not fit" style="width:80px;height:28px;color:#fff;background:#000"><span style="display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Another long name that does not fit</span></button>
+      <p style="width:60px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#fff">A third long name that does not fit</p>` })).ids as string[];
+    const issues = of((await lint(board)).issues as Issue[], 'overflow');
+    const inside = ((await call(agent, 'layer_get', { file_id: file, node_id: named })).children as { id: string }[])[0]!.id;
+    expect(issues.filter((i) => i.nodeId === titled || i.nodeId === inside)).toEqual([]);
+    expect(issues.filter((i) => i.nodeId === bare).map((i) => i.message)).toEqual(['The text ends in an ellipsis, and nothing gives the rest: set its whole text as the title of the layer or of the control it is in.']);
+  }, 60_000);
+
+  it('skips text for screen readers and the contrast of controls that are off', async () => {
+    const board = (await call(agent, 'artboard_create', { file_id: file, name: 'Quiet', width: 600, background: '#000000' })).id;
+    const [close, cut, off, ariaOff, on] = (await call(agent, 'html_write', { file_id: file, target_id: board, html: `
+      <button style="position:relative;width:32px;height:32px;color:#fff"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap">Close the panel</span>X</button>
+      <p style="width:40px;overflow:hidden;white-space:nowrap;color:#fff">A long line that does not fit</p>
+      <button disabled style="width:80px;height:28px;color:#555;background:#333">Ask</button>
+      <div role="button" aria-disabled="true" style="width:80px;height:28px;color:#555;background:#333"><span>Later</span></div>
+      <button style="width:80px;height:28px;color:#555;background:#333">Run</button>` })).ids as string[];
+    const issues = (await lint(board)).issues as Issue[];
+    const label = ((await call(agent, 'layer_get', { file_id: file, node_id: close })).children as { id: string }[])[0]!.id;
+    expect(issues.filter((i) => i.nodeId === label)).toEqual([]);
+    expect(of(issues, 'overflow', cut).map((i) => i.message)).toEqual(['The text is cut off by its own box.']);
+    expect(of(issues, 'contrast').map((i) => i.nodeId)).toEqual([on]);
+    expect(of(issues, 'contrast', off)).toEqual([]);
+    expect(of(issues, 'contrast', ariaOff)).toEqual([]);
+    // The label still names the button for a screen reader.
+    const a11y = await call(agent, 'a11y_audit', { file_id: file, node_id: board });
+    const named = (a11y.layers as { issues: { node_id: string; rule: string }[] }[]).flatMap((l) => l.issues).filter((i) => i.rule === 'name');
+    expect(named.filter((i) => i.node_id === close)).toEqual([]);
   }, 60_000);
 });

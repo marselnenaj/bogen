@@ -420,8 +420,14 @@ export function findMain(src: NodeSource, ref: string, variant?: Record<string, 
   const members = mains.filter((m) => m.component?.set === ref);
   if (members.length) {
     if (variant) {
-      const scored = members.map((m) => ({ m, score: Object.entries(variant).filter(([k, v]) => m.component?.variant?.[k] === v).length }));
-      scored.sort((a, b) => b.score - a.score);
+      // Axes the caller left out take their default (a kit's handoff names it), not whichever member sorts first:
+      // a large full-width Button is the solid one, not the clear one.
+      const scored = members.map((m) => {
+        const own = m.component?.variant ?? {};
+        const defaults = m.component?.handoff?.defaults ?? {};
+        return { m, score: Object.entries(variant).filter(([k, v]) => own[k] === v).length, rest: Object.entries(own).filter(([k, v]) => !(k in variant) && defaults[k] === v).length };
+      });
+      scored.sort((a, b) => b.score - a.score || b.rest - a.rest);
       return scored[0]!.m;
     }
     return members[0];

@@ -441,6 +441,10 @@ export function threadPrompt(doc: BogenDoc, threadId: string, messageId: string,
   if (node) {
     const html = nodeToHtml(doc, node.id, { indent: true, stripRootPosition: true });
     parts.push('', `The thread is pinned to layer ${node.id}, a ${node.type} named "${node.name}" on page ${thread.pageId}. Its HTML:`, html.length > LAYER_HTML_LIMIT ? `${html.slice(0, LAYER_HTML_LIMIT)}\n... cut here, read more with layer_tree and layer_get` : html);
+    const main = node.virtual?.mains.at(-1);
+    if (main && node.virtual!.owner !== node.id) {
+      parts.push('', `That layer sits inside instance ${node.virtual!.owner} of component ${doc.getNode(main)?.name ?? main} (main ${main}); in the main it is layer ${node.virtual!.source}. A change meant for every place the component is used goes into the main; a change for this place only goes into the instance.`);
+    }
   } else parts.push('', `The thread is on page ${thread.pageId}, at x ${thread.x}, y ${thread.y}.`);
   return parts.join('\n');
 }

@@ -104,6 +104,13 @@ export function LiveSitePage({ siteId }: { siteId?: string }) {
   const open = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
+    // The button always answers: an empty field is named and gets the focus, rather than a button that does nothing.
+    const missing = !url.trim() ? 'live-url' : !dir.trim() ? 'live-dir' : null;
+    if (missing) {
+      setError(missing === 'live-url' ? t('Enter the address of your dev server, such as {example}.', { example: 'http://127.0.0.1:5173' }) : t('Enter the folder of the project, where its source files are.'));
+      document.querySelector<HTMLInputElement>(`[data-testid="${missing}"]`)?.focus();
+      return;
+    }
     try {
       const opened = await agentApi.openLive(url.trim(), dir.trim());
       setSite(opened);
@@ -133,18 +140,19 @@ export function LiveSitePage({ siteId }: { siteId?: string }) {
 
   if (!site) {
     return (
-      <div className="live-start" data-testid="live-start">
-        <a className="live-back" href="#/"><ArrowLeft size={13} /> {t('Files')}</a>
+      <main className="live-start" data-testid="live-start">
+        <a className="live-back" href="#/"><ArrowLeft size={14} /> {t('Files')}</a>
         <h1 className="live-title">{t('Open a live site')}</h1>
         <p className="hint">{t('Your dev server opens here with hot reload still working. Pick an element, and your own agent edits the source: only files in the project folder, with no shell.')}</p>
         <form className="live-form" onSubmit={(e) => void open(e)}>
           <label className="live-field"><span>{t('Dev server')}</span><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="http://127.0.0.1:5173" data-testid="live-url" spellCheck={false} /></label>
           <label className="live-field"><span>{t('Project folder')}</span><input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="/home/you/project" data-testid="live-dir" spellCheck={false} /></label>
-          <button type="submit" className="btn btn-primary" disabled={!url.trim() || !dir.trim()} data-testid="live-open">{t('Open')}</button>
+          <button type="submit" className="btn btn-primary" data-testid="live-open">{t('Open')}</button>
         </form>
-        {error ? <div className="error" data-testid="live-error">{error}</div> : null}
+        {error ? <div className="error" role="alert" data-testid="live-error">{error}</div> : null}
         {recent.length ? (
-          <div className="live-recent">
+          <div className="live-recent" role="group" aria-labelledby="live-recent-title">
+            <h2 className="live-sub" id="live-recent-title">{t('Opened before')}</h2>
             {recent.map((r) => (
               <button key={`${r.url}${r.dir}`} type="button" className="feed-row" onClick={() => { setUrl(r.url); setDir(r.dir); }}>
                 <span className="feed-agent">{r.url}</span><span className="feed-tool">{r.dir}</span><span />
@@ -152,14 +160,14 @@ export function LiveSitePage({ siteId }: { siteId?: string }) {
             ))}
           </div>
         ) : null}
-      </div>
+      </main>
     );
   }
 
   const running = runId !== null;
   return (
     <div className="live" data-testid="live">
-      <div className="live-main">
+      <main className="live-main">
         <div className="live-bar">
           <a className="live-back" href="#/" title={t('Back to your files')}><ArrowLeft size={13} /></a>
           <span className="live-target" title={site.dir}>{site.target}</span>
@@ -176,7 +184,7 @@ export function LiveSitePage({ siteId }: { siteId?: string }) {
           sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads"
           referrerPolicy="no-referrer"
         />
-      </div>
+      </main>
       <aside className="panel live-side" data-testid="live-side">
         <div className="section-plain">
           <div className="feed-title">{t('Element')}</div>

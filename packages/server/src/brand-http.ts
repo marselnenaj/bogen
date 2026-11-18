@@ -1,16 +1,22 @@
 import { brandBookOutline, brandBookReadiness } from '@bogen/core';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { join } from 'node:path';
 import { z } from 'zod';
 import { bindingFields, brandBrief, brandCounts, brandLanguages, brandLinkOf, brandOriginOf, brandSummary, brandMarkdown, brandVersionHead, BRAND_NOTICE, diffBrand, markBrandFields, readWaivers, setBrandField, setWaiver, brandVersions, upsertBrandItem } from '@bogen/core';
 import { applySafeFixes, checkRendered, checkStatic, layersIn, type BrandReport, type Scope } from './brand-check.ts';
+import { fastBookHtml, googleBookFonts } from './book-fonts.ts';
 import { exportTarget } from './exporter.ts';
 import type { BogenServer } from './http/server.ts';
 import { readBody, sendJson } from './http/server.ts';
 import { FILE_ID } from './storage.ts';
 import { runTemplate, templateList, TEMPLATE_IDS } from './templates/index.ts';
 import { errorMessage, HttpError } from './util.ts';
+import { RUNNER_IDS } from '@bogen/core';
+import { CLI_DEFAULT, EFFORT_ID, MODEL_ID } from './run-settings.ts';
 
 const JSON_LIMIT = 1024 * 1024;
+
+const FromUrl = z.object({ url: z.string().min(1).max(2000), into: z.string().regex(/^[0-9a-zA-Z_-]{1,64}$/).optional() });
 
 async function bodyOf<S extends z.ZodType>(req: IncomingMessage, schema: S): Promise<z.output<S>> {
   const raw = await readBody(req, JSON_LIMIT);
@@ -35,6 +41,11 @@ const Waive = z.object({ nodeId: z.string().regex(/^[0-9a-z]{1,64}$/i), rule: z.
 const UseTemplate = z.object({ template: z.enum(TEMPLATE_IDS), fileId: z.string().regex(FILE_ID).optional(), only: z.array(z.string().max(40)).max(20).optional(), by: z.string().trim().max(80).optional() });
 const MemoryAction = z.object({ action: z.enum(['add', 'dismiss']), by: z.string().trim().max(80).optional() });
 const Drift = z.object({ by: z.string().trim().max(80).optional(), fileIds: z.array(z.string().regex(FILE_ID)).max(1000).optional() });
+const Edition = z.object({
+  runner: z.enum(RUNNER_IDS), model: z.union([z.literal(CLI_DEFAULT), z.string().regex(MODEL_ID).max(120)]).optional(),
+  effort: z.union([z.literal(CLI_DEFAULT), z.string().regex(EFFORT_ID)]).optional(), by: z.string().trim().max(80).optional(), prompt: z.string().max(2000).optional(),
+  rounds: z.number().int().min(1).max(4).optional(),
+});
 const Unwaive = z.object({ nodeId: z.string().regex(/^[0-9a-z]{1,64}$/i), rule: z.string().min(1).max(120).regex(/^[^|]+$/) });
 
 function personOrigin(by: string | undefined): string {
@@ -75,7 +86,7 @@ function spokenLanguages(data: Parameters<typeof brandLanguages>[0]): string[] {
 const systemFileJobs = new WeakMap<BogenServer, Map<string, Promise<{ file_id: string }>>>();
 
 /** `/api/brands/*` and `/api/files/:id/brand/*`. Reached only from this machine: see `isLocalOnlyPath`. */
-export async function handleBrandRoute(app: BogenServer, req: IncomingMessage, res: ServerResponse, url: URL, parts: string[], local: boolean): Promise<void> {
+export async function handleBrandRoute(app: BogenServer, req: IncomingMessage, res: ServerResponse, url: URL, parts: string[], local: boolean, thisDevice = false): Promise<void> {
   const method = req.method ?? 'GET';
   const [a, b, c, d] = parts;
   if (a === 'files') return fileRoute(app, req, res, b!, d, method, local);
@@ -97,6 +108,22 @@ export async function handleBrandRoute(app: BogenServer, req: IncomingMessage, r
       return sendJson(res, 200, { brandId });
     }
     throw new HttpError(405, 'Method not allowed.');
+  }
+  // A brand from a website address, made in the background: start it, ask how it goes, or cancel it.
+  if (b === 'from-url' && !c && method === 'POST') {
+    const { url: address, into } = await bodyOf(req, FromUrl);
+    try {
+      // A page on this computer, such as a dev server, only for a person at this computer, as with a capture.
+      return sendJson(res, 202, await app.brandsFromUrl.start(address, into, thisDevice));
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  }
+  if (b === 'jobs' && c) {
+    const job = method === 'DELETE' ? app.brandsFromUrl.cancel(c) : method === 'GET' ? app.brandsFromUrl.get(c) : null;
+    if (job === null) throw new HttpError(405, 'Method not allowed.');
+    if (!job) throw new HttpError(404, 'No such job. It may have ended more than half an hour ago.');
+    return sendJson(res, 200, job);
   }
   if (b === 'templates' && !c && method === 'GET') return sendJson(res, 200, templateList().filter((t) => !t.example));
   if (!FILE_ID.test(b)) throw new HttpError(404, 'No such brand.');
@@ -141,6 +168,19 @@ export async function handleBrandRoute(app: BogenServer, req: IncomingMessage, r
     }
     try { return sendJson(res, 200, await job); }
     finally { jobs.delete(b); }
+  }
+  // The designed edition: what there is (GET), a new one made by an agent on the person's plan (POST), or a refresh of
+  // the pages whose part of the brand changed since (POST .../refresh). Starting an agent is for the person only.
+  if (c === 'designed-edition') {
+    if (method === 'GET' && !d) return sendJson(res, 200, { edition: await app.brandEditions.status(b) });
+    if (method === 'POST' && (!d || d === 'refresh')) {
+      if (!local) throw new HttpError(403, 'Only the person at this computer, or on their paired phone, starts an agent on their plan.');
+      const { runner, model, effort, by, prompt, rounds } = await bodyOf(req, Edition);
+      const asked = { runner, ...(model && model !== CLI_DEFAULT ? { model } : {}), ...(effort && effort !== CLI_DEFAULT ? { effort } : {}), ...(by ? { by } : {}), ...(rounds ? { rounds } : {}) };
+      if (d === 'refresh') return sendJson(res, 201, await app.brandEditions.refresh(b, asked));
+      return sendJson(res, 201, await app.brandEditions.create(b, { ...asked, start: true, ...(prompt ? { extra: prompt } : {}) }));
+    }
+    throw new HttpError(405, 'Method not allowed.');
   }
   if (c === 'duplicate' && method === 'POST') {
     const entry = await app.brands.duplicate(b, 'person:editor');
@@ -223,13 +263,14 @@ export async function handleBrandRoute(app: BogenServer, req: IncomingMessage, r
   }
   if (c === 'sheet.html' && method === 'GET') {
     const { room, data } = await app.brands.read(b);
-    const { doc, rootId } = app.brands.sheetDoc(data, room.doc);
+    const { doc, rootId } = await app.brands.sheetDoc(data, room.doc);
     try {
       // With everything inlined: a sandboxed frame has no origin of its own, so it could not load from this server.
       const html = await exportTarget(doc, app.renderer, app.storage, { nodeIds: [rootId] }, 'html');
       // It holds what brands say, which may come from another device. Nothing in it may run.
+      const page = await fastBookHtml(Buffer.from(html.bytes).toString('utf8'), googleBookFonts(join(app.storage.home, 'font-cache')));
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; img-src data:; font-src data: https://fonts.gstatic.com; style-src 'unsafe-inline' https://fonts.googleapis.com; sandbox", 'Cache-Control': 'no-store' });
-      res.end(html.bytes);
+      res.end(page);
     } finally {
       doc.y.destroy();
     }
@@ -237,7 +278,7 @@ export async function handleBrandRoute(app: BogenServer, req: IncomingMessage, r
   }
   if (c === 'sheet.png' && method === 'GET') {
     const { room, data } = await app.brands.read(b);
-    const { doc, rootId } = app.brands.sheetDoc(data, room.doc);
+    const { doc, rootId } = await app.brands.sheetDoc(data, room.doc);
     try {
       const shot = await app.renderer.screenshot(doc, { nodeIds: [rootId] }, { format: 'png', scale: 1, maxDimension: 4000 });
       res.writeHead(200, { 'Content-Type': 'image/png', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' });
@@ -256,14 +297,9 @@ export async function handleBrandRoute(app: BogenServer, req: IncomingMessage, r
   }
   if (c === 'guide.pdf' && method === 'GET') {
     const { room, data, entry } = await app.brands.read(b);
-    const { doc, rootId } = app.brands.sheetDoc(data, room.doc);
-    try {
-      const out = await exportTarget(doc, app.renderer, app.storage, { nodeIds: [rootId] }, 'pdf');
-      res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${safeFileName(entry.name)} brand guide.pdf"`, 'X-Content-Type-Options': 'nosniff' });
-      res.end(out.bytes);
-    } finally {
-      doc.y.destroy();
-    }
+    const bytes = await app.brands.bookPdf(data, room.doc);
+    res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${safeFileName(entry.name)} brand guide.pdf"`, 'X-Content-Type-Options': 'nosniff' });
+    res.end(bytes);
     return;
   }
   throw new HttpError(404, `No route for ${method} ${url.pathname}.`);

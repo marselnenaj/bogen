@@ -97,7 +97,7 @@ export class Room {
     this.doc.y.on('update', (update: Uint8Array, origin: unknown) => {
       if (!this.ready) return;
       this.lastUsed = Date.now();
-      this.rooms.docChanged(this);
+      this.rooms.docChanged(this, update);
       this.rooms.docUpdated(this, update, origin);
       const encoder = encoding.createEncoder();
       encoding.writeVarUint(encoder, MSG_SYNC);
@@ -355,11 +355,15 @@ export class Rooms {
 
   private async load(id: string): Promise<Room> {
     if (!this.storage.get(id)) throw new Error(`No file with id ${id}. Call file_list to see what exists.`);
-    const saved = await this.storage.readDoc(id);
+    const saved = await this.storage.loadDoc(id);
     const room = new Room(id, this);
     if (saved) {
       try {
-        Y.applyUpdate(room.doc.y, saved, 'load');
+        // One transaction, so that observers and caches see the loaded file once.
+        room.doc.y.transact(() => {
+          if (saved.base) Y.applyUpdate(room.doc.y, saved.base, 'load');
+          for (const update of saved.updates) Y.applyUpdate(room.doc.y, update, 'load');
+        }, 'load');
       } catch (e) {
         const aside = await this.storage.quarantineDoc(id);
         room.destroy();
@@ -375,8 +379,8 @@ export class Rooms {
   }
 
   /** Called for every change to a loaded doc. */
-  docChanged(room: Room): void {
-    this.storage.scheduleDoc(room.id, () => Y.encodeStateAsUpdate(room.doc.y));
+  docChanged(room: Room, update: Uint8Array): void {
+    this.storage.noteUpdate(room.id, update, () => Y.encodeStateAsUpdate(room.doc.y));
     this.storage.update(room.id, { updatedAt: Date.now() });
     this.options.onChange?.(room.id);
     this.noteFilesChanged();
@@ -420,7 +424,8 @@ export class Rooms {
     const room = this.rooms.get(id);
     if (!room) return;
     this.rooms.delete(id);
-    await this.storage.flushDoc(id);
+    await this.storage.flushDoc(id, { compact: true });
+    this.storage.releaseDoc(id);
     room.destroy();
   }
 

@@ -74,7 +74,8 @@ describe('authored, actionable design playbooks', () => {
     expect(skill).toContain(d.rules[0]!.guidance.slice(1, 40));
     expect(skill).toContain('design_verify');
     expect(skill).not.toMatch(/https?:\/\//);
-    expect(skill.length).toBeLessThan(10700);
+    // Mobile apps carries the platform's numbers (safe areas, targets, the spacing scale, a lead per screen type).
+    expect(skill.length).toBeLessThan(11300);
     // The likely failure, named so that it can be recognised in a screenshot.
     expect(skill).toContain(d.rules[0]!.repair!.split(':')[0]!.slice(1));
   });

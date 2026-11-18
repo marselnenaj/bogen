@@ -93,7 +93,7 @@ export function phoneOpenPath(method: string, pathname: string): boolean {
 export function phoneRefusedPath(pathname: string): boolean {
   if (/^\/api\/phone\/(pair|me|forget|push|push\/test|hosts)$/.test(pathname)) return false;
   return /^\/(mcp|live-mcp|peer)(\/|$)/.test(pathname)
-    || /^\/api\/(peer|peers|phone|live|omarchy|config|code\/pulls|publish|shares)(\/|$)/.test(pathname)
+    || /^\/api\/(open|peer|peers|phone|live|omarchy|config|code\/pulls|publish|shares)(\/|$)/.test(pathname)
     || /^\/api\/code\/[^/]+\/(stories|tokens)(\/|$)/.test(pathname)
     || /^\/api\/files\/[^/]+\/git(\/|$)/.test(pathname);
 }

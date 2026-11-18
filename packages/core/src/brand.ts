@@ -30,8 +30,8 @@ const MAX_LIST = 64;
 const MAX_SVG = 256 * 1024;
 
 export type Severity = 'hard' | 'soft';
-export type BrandSection = 'colors' | 'pairings' | 'logos' | 'families' | 'typeScale' | 'spacing' | 'radius' | 'rules' | 'words' | 'voiceExamples' | 'artboards' | 'assets';
-export const BRAND_SECTIONS: readonly BrandSection[] = ['colors', 'pairings', 'logos', 'families', 'typeScale', 'spacing', 'radius', 'rules', 'words', 'voiceExamples', 'artboards', 'assets'];
+export type BrandSection = 'colors' | 'pairings' | 'logos' | 'families' | 'typeScale' | 'spacing' | 'radius' | 'rules' | 'words' | 'voiceExamples' | 'artboards' | 'assets' | 'treatments' | 'devices';
+export const BRAND_SECTIONS: readonly BrandSection[] = ['colors', 'pairings', 'logos', 'families', 'typeScale', 'spacing', 'radius', 'rules', 'words', 'voiceExamples', 'artboards', 'assets', 'treatments', 'devices'];
 
 /** Every value starts as a suggestion when it was extracted or an agent added it, until a person or an instruction confirms it. */
 export interface BrandItemBase { id: string; suggested?: boolean; source?: string; note?: string }
@@ -61,6 +61,20 @@ export interface BrandWord extends BrandItemBase, BrandItemLanguage { word: stri
 export interface BrandVoiceExample extends BrandItemBase, BrandItemLanguage { good: string; bad: string }
 export interface BrandArtboard extends BrandItemBase { nodeId: string; name: string; verdict: 'good' | 'bad'; template?: boolean }
 export interface BrandAsset extends BrandItemBase { name: string; asset: string; kind: 'image' | 'icon' | 'font' | 'other'; tags: string[]; alt: string }
+/**
+ * An image treatment of the brand: how its photos are turned into its colours (image_treatment), so that every photo
+ * gets the same look. params are the treatment's settings as plain values; the server checks them when it applies
+ * them. inks and ground name brand colours (by id, name, role or token) or are CSS colours. before and after are
+ * an example pair the brand book shows.
+ */
+export interface BrandTreatment extends BrandItemBase {
+  name: string; mode: string; params: Record<string, string | number | boolean>; inks: string[]; ground: string; output: 'svg' | 'raster'; before?: string; after?: string;
+}
+/**
+ * A graphic device: the brand's own motif beyond the logo, such as cells that fill up or stripes of pixels, as a
+ * preset that pattern_set draws. `spec` is a pattern spec (pattern.ts) as JSON; `use` says where it goes.
+ */
+export interface BrandDevice extends BrandItemBase { name: string; kind: 'pattern'; spec: string; use: string }
 
 export interface BrandFields {
   name: string;
@@ -129,6 +143,9 @@ export interface BrandData {
   voiceExamples: BrandVoiceExample[];
   artboards: BrandArtboard[];
   assets: BrandAsset[];
+  treatments: BrandTreatment[];
+  /** Graphic devices. Absent in brands made before they existed, read as none. */
+  devices: BrandDevice[];
 }
 
 export interface BrandVersion { id: string; n: number; at: number; by: string; note: string; data: BrandData }
@@ -367,6 +384,36 @@ export function coerceItem(section: BrandSection, id: string, raw: Record<string
         tags: list(raw.tags).map((t) => text(t, 60)).filter(Boolean), alt: text(raw.alt, 400),
       };
     }
+    case 'treatments': {
+      const name = text(raw.name, MAX_NAME);
+      const mode = text(raw.mode, 40);
+      if (!name || !/^[a-z-]{2,40}$/.test(mode)) return null;
+      const params: Record<string, string | number | boolean> = {};
+      if (raw.params && typeof raw.params === 'object' && !Array.isArray(raw.params)) {
+        for (const [key, value] of Object.entries(raw.params as Record<string, unknown>).slice(0, 40)) {
+          if (!/^[a-zA-Z]{1,40}$/.test(key)) continue;
+          if (typeof value === 'number' && Number.isFinite(value)) params[key] = value;
+          else if (typeof value === 'boolean') params[key] = value;
+          else if (typeof value === 'string' && value.length <= 80) params[key] = value;
+        }
+      }
+      const before = assetRef(raw.before);
+      const after = assetRef(raw.after);
+      return {
+        ...b, name, mode, params, inks: list(raw.inks).map((t) => text(t, 80)).filter(Boolean).slice(0, 8), ground: text(raw.ground, 80),
+        output: oneOf(raw.output, ['svg', 'raster'] as const, 'svg'), ...(before ? { before } : {}), ...(after ? { after } : {}),
+      };
+    }
+    case 'devices': {
+      const spec = typeof raw.spec === 'string' ? raw.spec : raw.spec && typeof raw.spec === 'object' ? JSON.stringify(raw.spec) : '';
+      if (!spec || spec.length > 8000) return null;
+      try {
+        if (!JSON.parse(spec) || typeof JSON.parse(spec) !== 'object') return null;
+      } catch {
+        return null;
+      }
+      return { ...b, name: text(raw.name, MAX_NAME) || 'Graphic device', kind: 'pattern', spec, use: text(raw.use, 400) };
+    }
   }
 }
 
@@ -446,6 +493,10 @@ export function brandAssets(doc: BogenDoc): string[] {
     if (typeof asset === 'string') add(asset);
     const assets = m.get('assets');
     if (Array.isArray(assets)) for (const a of assets) if (typeof a === 'string') add(a);
+    for (const key of ['before', 'after']) {
+      const v = m.get(key);
+      if (typeof v === 'string') add(v);
+    }
   });
   return [...out];
 }
@@ -466,7 +517,7 @@ export function assertBrandShape(doc: BogenDoc): void {
 }
 
 export function emptyBrand(): BrandData {
-  return { fields: { ...BRAND_FIELD_DEFAULTS }, suggestedFields: [], colors: [], pairings: [], logos: [], families: [], typeScale: [], spacing: [], radius: [], rules: [], words: [], voiceExamples: [], artboards: [], assets: [] };
+  return { fields: { ...BRAND_FIELD_DEFAULTS }, suggestedFields: [], colors: [], pairings: [], logos: [], families: [], typeScale: [], spacing: [], radius: [], rules: [], words: [], voiceExamples: [], artboards: [], assets: [], treatments: [], devices: [] };
 }
 
 /** The whole brand as checked, plain values. Cheap enough to call on each change of a small document. */
@@ -616,6 +667,7 @@ export const BRAND_ITEM_CHOICES: Partial<Record<BrandSection, Record<string, rea
   words: { use: ['use', 'avoid'], severity: ['hard', 'soft'] },
   artboards: { verdict: ['good', 'bad'] },
   assets: { kind: ['image', 'icon', 'font', 'other'] },
+  treatments: { mode: ['halftone', 'mosaic', 'dither', 'duotone', 'posterize'], output: ['svg', 'raster'] },
 };
 const RULE_CHECKS = 'no-gradient, no-shadow, no-glow, no-uppercase, forbid-text (with value), require-text (with value), forbid-style (with prop and value), max-families (with value)';
 
@@ -687,7 +739,7 @@ export function upsertBrandItem(doc: BogenDoc, section: BrandSection, patch: Rec
       if (key === 'id' || key === 'flagged') continue;
       if (JSON.stringify(m.get(key)) !== JSON.stringify(value)) m.set(key, value);
     }
-    for (const key of ['suggested', 'source', 'note', 'instead', 'check', 'template', 'svg', 'usage', 'aspect', 'modes', 'lang'] as const) {
+    for (const key of ['suggested', 'source', 'note', 'instead', 'check', 'template', 'svg', 'usage', 'aspect', 'modes', 'lang', 'before', 'after'] as const) {
       if (m.has(key) && !(key in clean)) m.delete(key);
     }
   }, origin);
@@ -698,7 +750,8 @@ function describeRequired(section: BrandSection): string {
   const need: Record<BrandSection, string> = {
     colors: 'value must be a CSS colour.', pairings: 'fg and bg are required: ids of colours.', logos: 'asset (bogen-asset:...) or svg is required.', families: 'family must be a plain font name.',
     typeScale: 'size in px is required.', spacing: 'value in px is required.', radius: 'value in px is required.', rules: 'text is required.', words: 'word is required.', voiceExamples: 'good or bad is required.',
-    artboards: 'nodeId is required.', assets: 'asset (bogen-asset:...) is required.',
+    artboards: 'nodeId is required.', assets: 'asset (bogen-asset:...) is required.', treatments: 'name and mode (halftone, mosaic, dither, duotone or posterize) are required.',
+    devices: 'spec is required: a pattern spec as an object or JSON.',
   };
   return need[section];
 }
@@ -922,17 +975,34 @@ export function familyStack(f: BrandFamily): string {
 
 /** The CSS variables a brand defines. The brand is their one source: linked files receive them from here. */
 export function brandTokens(data: BrandData): Token[] {
+  return tokensOf(data, false);
+}
+
+/**
+ * The tokens of the brand's suggestions, for names no confirmed item has. A suggestion binds nobody, but a file
+ * linked to a brand that is still all suggestions needs its colours, fonts and sizes as tokens to design with at all:
+ * linking gives it these as provisional tokens, which confirming the suggestions later turns into the brand's own.
+ */
+export function provisionalBrandTokens(data: BrandData): Token[] {
+  const bound = new Set(tokensOf(data, false).map((t) => t.name));
+  return tokensOf(data, true).filter((t) => !bound.has(t.name));
+}
+
+function tokensOf(data: BrandData, suggested: boolean): Token[] {
   const out = new Map<string, Token>();
   const add = (name: string, kind: TokenKind, value: string) => {
     if (TOKEN_NAME.test(name) && value) out.set(name, { name, kind, value });
   };
-  for (const c of data.colors) if (!c.suggested) add(c.token, 'color', c.value);
-  for (const f of data.families) if (!f.suggested) add(f.token, 'font-family', familyStack(f));
-  for (const t of data.typeScale) if (!t.suggested) add(t.token, 'font-size', pxValue(t.size));
-  for (const s of data.spacing) if (!s.suggested) add(s.token, 'spacing', pxValue(s.value));
-  for (const r of data.radius) if (!r.suggested) add(r.token, 'radius', pxValue(r.value));
-  const container = bindingFields(data).container;
-  if (container) add('container', 'container', pxValue(container));
+  const pick = (i: BrandItemBase) => (i.suggested === true) === suggested;
+  for (const c of data.colors) if (pick(c)) add(c.token, 'color', c.value);
+  for (const f of data.families) if (pick(f)) add(f.token, 'font-family', familyStack(f));
+  for (const t of data.typeScale) if (pick(t)) add(t.token, 'font-size', pxValue(t.size));
+  for (const s of data.spacing) if (pick(s)) add(s.token, 'spacing', pxValue(s.value));
+  for (const r of data.radius) if (pick(r)) add(r.token, 'radius', pxValue(r.value));
+  if (!suggested) {
+    const container = bindingFields(data).container;
+    if (container) add('container', 'container', pxValue(container));
+  }
   return [...out.values()].sort((a, b) => (a.name < b.name ? -1 : 1));
 }
 
@@ -970,12 +1040,13 @@ export function stepTextStyle(data: BrandData, step: BrandTypeStep): Record<stri
  * Writes what a brand defines into a file, using the file's own design system: tokens, values per theme mode, and a
  * text style per step of the scale. Removes what this brand set earlier and no longer has. Other tokens stay.
  */
-export function applyBrandTokens(doc: BogenDoc, data: BrandData, origin?: unknown): { set: string[]; removed: string[] } {
+export function applyBrandTokens(doc: BogenDoc, data: BrandData, origin?: unknown): { set: string[]; removed: string[]; provisional: string[] } {
   const tokens = brandTokens(data);
   const previous = doc.meta.get('brandTokens');
   const names = new Set(tokens.map((t) => t.name));
   const set: string[] = [];
   const removed: string[] = [];
+  const provisional: string[] = [];
   doc.transact(() => {
     const current = new Map(doc.getTokens().map((t) => [t.name, t]));
     for (const t of tokens) {
@@ -984,6 +1055,20 @@ export function applyBrandTokens(doc: BogenDoc, data: BrandData, origin?: unknow
       doc.setToken(t.name, t.kind, t.value);
       set.push(t.name);
     }
+    // Suggestions: only where the file has no token of that name, so that nothing a person set is overwritten by
+    // what nobody confirmed. They are tracked like the brand's own and go when the suggestion goes.
+    const before = doc.meta.get('brandProvisionalTokens');
+    const ownedBefore = new Set(Array.isArray(before) ? (before as unknown[]).filter((n): n is string => typeof n === 'string') : []);
+    for (const t of provisionalBrandTokens(data)) {
+      const had = current.get(t.name);
+      if (had && !ownedBefore.has(t.name)) continue;
+      names.add(t.name);
+      provisional.push(t.name);
+      if (had?.value === t.value && had.kind === t.kind) continue;
+      doc.setToken(t.name, t.kind, t.value);
+      set.push(t.name);
+    }
+    doc.meta.set('brandProvisionalTokens', provisional);
     if (Array.isArray(previous)) {
       for (const name of previous as unknown[]) {
         if (typeof name === 'string' && !names.has(name) && current.has(name)) {
@@ -1015,7 +1100,7 @@ export function applyBrandTokens(doc: BogenDoc, data: BrandData, origin?: unknow
     }
     doc.meta.set('brandTextStyles', [...keys]);
   }, origin);
-  return { set, removed };
+  return { set, removed, provisional };
 }
 
 /** Confirmed items of a section. What is still a suggestion does not bind anyone yet. */

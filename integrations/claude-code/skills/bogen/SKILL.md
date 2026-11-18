@@ -8,7 +8,7 @@ description: Work with Bogen, an open source HTML/CSS design canvas that a perso
 
 Bogen is a design canvas where every layer is real HTML and CSS. You draw on it live, a person may be watching, and your edits are undoable per agent.
 
-The bogen server instructions give the order for design work: direction, system, build with ambition, check. Follow them for every screen; this adds worked examples, copy and how to work next to a person. guide_get design has the full reference.
+The bogen server instructions give the order for design work: direction, system, build with ambition, check. Follow them for every screen; this adds examples, copy and working next to a person. guide_get design has the full reference.
 
 ## Worked examples, each a default and a decision made for the subject
 
@@ -37,13 +37,13 @@ design_lint points at copy that reads as generated, with the phrase and what to 
 
 ## Review before accept
 
-proposal_create makes a marked copy of a layer next to it. Change only the copy, using the id it returns; the original stays as it was. The person gets Accept and Discard on the canvas, and accepting puts the copy's content into the original as one undo step, so its id and place stay.
+proposal_create makes a marked copy of a layer next to it. Change only the copy, using the id it returns; the original stays as it was. The person gets Accept and Discard; accepting puts the copy into the original as one undo step, keeping its id and place.
 - Use it when the layer is something they already care about, when the change is large, or when it is a matter of taste.
 - Do not use it for a new artboard, for a small fix they asked for directly, or when they said to just do it.
 - For options, proposal_create with count 3 and a note per copy gives three directions side by side, and accepting one discards the others. Make them really differ in composition and hierarchy, not in colour alone.
 - Accepting is the person's decision. Only call proposal_accept when they tell you to. Wait for it: proposal_accepted and proposal_discarded arrive through wait_for_event. After a discard, ask what was wrong rather than guessing again.
-- In a race, the person started several runs on one request, and each works in a copy of its own. Your prompt names yours and its layer ids: change only that copy, and do not create, accept or discard proposals. The person compares the copies and picks one.
+- In a race, several runs work on one request, each in its own copy; your prompt names yours and its layer ids. Change only that copy and never create, accept or discard proposals: the person picks one.
 
 ## Finishing
 
-Use <style> or layer_style pseudo/when for ::before, ::after, @container, @media (artboard width) and states such as :hover. After the last edit, inspect a fresh canvas_screenshot and run design_verify with priority, content and context observations and the rubric: 1 to 5 with evidence for hierarchy, type, spacing, colour, content, craft, originality and fit. A rubric does not count while a hard finding (an objective defect) stands; advisory findings say why a choice often reads as default, and kept records your reason for keeping one. Report the scores and remaining failures without inferring human approval. Save durable preferences with design_knowledge_update. Read guide_get code before repository handoff.
+Use <style> or layer_style pseudo/when for ::before, ::after, @container, @media (artboard width) and states such as :hover. Check edits with map_only or design_lint; a picture only for the first and final look. Done: design_lint hard 0, at most one design_critique (fix its objective defects without re-reviewing; loops only on the person's quoted loop_request; scores never block), then design_verify once per changed artboard, again only after fixing hard defects, with priority, content and context observations and the 1-to-5 rubric with evidence. Hard findings block the rubric; give reasons for kept advisory findings. Report scores and open failures; they are not approval. Save durable preferences with design_knowledge_update. Read guide_get code before repository handoff.

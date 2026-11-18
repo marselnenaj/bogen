@@ -359,6 +359,7 @@ export function HistoryPanel() {
           ref={inputRef}
           className="token-input"
           placeholder={t('Commit message')}
+          aria-label={t('Commit message')}
           dir="auto"
           value={message}
           data-testid="history-message"
@@ -368,8 +369,8 @@ export function HistoryPanel() {
         <button type="submit" className="btn" disabled={busy || !message.trim()} title={t('Commit ({shortcut})', { shortcut: 'Ctrl+Alt+S' })} data-testid="history-commit">{t('Commit')}</button>
       </form>
       <div className="hist-tools">
-        <button type="button" className="btn btn-quiet" data-testid="history-versions" onClick={() => window.dispatchEvent(new Event('bogen:versions'))}>{t('Versions')}…</button>
         <label className="hist-auto"><input type="checkbox" checked={showAuto} onChange={(e) => setShowAuto(e.target.checked)} data-testid="history-show-auto" /><span>{t('Show automatic commits')}</span></label>
+        <button type="button" className="btn btn-quiet" data-testid="history-versions" onClick={() => window.dispatchEvent(new Event('bogen:versions'))}>{t('Versions')}…</button>
         <button type="button" className="btn btn-quiet" disabled={!fileId || !pageId} onClick={() => fileId && pageId && setStageView({ kind: 'replay', fileId, pageId })} title={t('Play back how this page was built, step by step')} data-testid="history-replay"><Play size={12} /> {t('Replay')}</button>
       </div>
       {error ? <div className="error hist-pad" data-testid="history-error">{error}</div> : null}

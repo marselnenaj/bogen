@@ -1,9 +1,14 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
-import { WifiOff } from 'lucide-react';
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { CloudOff, WifiOff } from 'lucide-react';
+import { onTeamWriteState, resolveUnsent, teamWriteState } from './doc/team-writer.ts';
+import { forgetStoredCopy } from './doc/offline.ts';
+import { onServerEvent } from './lib/events.ts';
 import { Canvas } from './canvas/Canvas.tsx';
 import { installShortcuts } from './commands/registry.ts';
 import { startPresence } from './doc/presence.ts';
-import { maybeSession, Session, setSession } from './doc/session.ts';
+import { maybeSession, setSession, type Session } from './doc/session.ts';
+import { acquireSession, releaseSession } from './doc/session-cache.ts';
+import { saveView, sessionsChanged, takeView, useTabs } from './tabs/tabs-state.ts';
 import { api } from './lib/api.ts';
 import { phoneOrigin, useReachable } from './lib/phone.ts';
 import { usePhoneSync } from './doc/phone-link.ts';
@@ -11,7 +16,7 @@ import { PhoneSyncLine } from './phone/PhoneSync.tsx';
 import { ensureFont } from './lib/fonts.ts';
 import { LeftPanel } from './panels/LeftPanel.tsx';
 import { ProposalBars } from './canvas/ProposalBars.tsx';
-import { AwayBanner, startFileTitle } from './panels/FileBanners.tsx';
+import { AwayBanner, startFileTitle, useAwayNote } from './panels/FileBanners.tsx';
 import { LibraryBanner } from './panels/LibraryBanner.tsx';
 import { ProjectKindBanner } from './panels/ProjectKind.tsx';
 import { rememberedTool } from './state/tool-preference.ts';
@@ -41,11 +46,13 @@ import { Lightbox } from './ui/Lightbox.tsx';
 import { SettingsDialog } from './panels/SettingsDialog.tsx';
 import { ExtensionApproval } from './panels/BrowserExtension.tsx';
 import { BulkRenameDialog } from './panels/BulkRename.tsx';
+import { GenerateImageDialog } from './panels/GenerateImage.tsx';
 import { PublishDialogs } from './panels/PublishDialogs.tsx';
 import { RestyleDialog } from './panels/RestyleDialog.tsx';
 import { useSettings } from './state/settings.ts';
 import { useUi } from './state/ui.ts';
 const ChecksDialog = lazy(() => import('./panels/ChecksDialog.tsx'));
+const CritiqueDialog = lazy(() => import('./panels/CritiqueDialog.tsx'));
 const ComplianceDialog = lazy(() => import('./panels/ComplianceDialog.tsx'));
 import { editor, useEditor } from './state/store.ts';
 import { stopTextEdit } from './canvas/text-edit.ts';
@@ -148,6 +155,37 @@ function ConnectionBanner() {
   );
 }
 
+/**
+ * A team file whose changes this device could not sign as yours: they are kept on the computer, never dropped, and
+ * the team does not have them yet (teams-1). Try again writes them anew as yours; Keep only here lets them go.
+ */
+function TeamUnsentBanner() {
+  const t = useT();
+  const fileId = useEditor((s) => s.fileId);
+  const st = useSyncExternalStore(onTeamWriteState, () => teamWriteState(fileId));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (!fileId || (!st.unsent && !st.noId)) return null;
+  const act = (action: 'retry' | 'drop') => {
+    setBusy(true);
+    setError('');
+    resolveUnsent(fileId, action).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e))).finally(() => setBusy(false));
+  };
+  return (
+    <div className="banner" role="status" data-testid="team-unsent-banner">
+      <CloudOff size={14} />
+      <span>{st.unsent ? t('Changes to this team file are kept on this computer only: they could not be signed as yours, so the team does not have them yet.') : t('This team file has no writer id on this device yet. Edits wait here until it connects to the computer.')}</span>
+      {st.unsent ? (
+        <>
+          <button type="button" className="btn" disabled={busy} onClick={() => act('retry')} data-testid="team-unsent-retry">{t('Try again')}</button>
+          <button type="button" className="btn" disabled={busy} onClick={() => act('drop')} data-testid="team-unsent-drop">{t('Keep only here')}</button>
+        </>
+      ) : null}
+      {error ? <span className="error" dir="auto">{error}</span> : null}
+    </div>
+  );
+}
+
 /** On the phone a file can open from its stored copy without ever reaching the computer. The line says what waits. */
 function PhoneConnectionBanner({ connection }: { connection: string }) {
   const sync = usePhoneSync();
@@ -158,6 +196,17 @@ function PhoneConnectionBanner({ connection }: { connection: string }) {
       <WifiOff size={14} />
       <PhoneSyncLine />
     </div>
+  );
+}
+
+/** The recent-changes strip, holding the note of what changed while the file was closed. With the panels hidden the note is a row of its own. */
+function ChangesStrip({ minimal }: { minimal: boolean }) {
+  const away = useAwayNote();
+  return (
+    <>
+      {!minimal ? <RecentChanges away={away} /> : null}
+      <AwayBanner away={away} strip={!minimal} />
+    </>
   );
 }
 
@@ -173,10 +222,21 @@ function Toast() {
 export function Editor({ fileId, layout = 'full', children }: { fileId: string; layout?: 'full' | 'bare'; children?: ReactNode }) {
   const t = useT();
   const [ready, setReady] = useState(false);
+  // Bumped when the computer replaced this file's copy (teams-1: unsigned changes written anew as yours): the
+  // session and any stored copy go, and the file loads again.
+  const [epoch, setEpoch] = useState(0);
+  // A reset file loads anew: its session must close, not wait behind the tab for the next visit.
+  const resetting = useRef(false);
+  useEffect(() => onServerEvent((e) => {
+    if (e.t !== 'file-reset' || e.fileId !== fileId) return;
+    resetting.current = true;
+    void forgetStoredCopy(fileId).finally(() => setEpoch((n) => n + 1));
+  }), [fileId]);
   /** On the phone: whether this file had a stored copy. Null until that is known. */
   const [stored, setStored] = useState<boolean | null>(null);
   const connection = useEditor((s) => s.connection);
   const checksOpen = useUi((s) => s.checksOpen);
+  const critiqueOpen = useUi((s) => s.critiqueOpen);
   const complianceOpen = useUi((s) => s.complianceOpen);
   const minimal = useEditor((s) => s.minimal);
   const pageId = useEditor((s) => s.pageId);
@@ -187,9 +247,11 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
   const sessionRef = useRef<Session | null>(null);
 
   useEffect(() => {
-    const s = new Session(fileId);
+    // A tab that was left a moment ago still has its session: the file is back at once, synced meanwhile.
+    const s = acquireSession(fileId);
     sessionRef.current = s;
     setSession(s);
+    sessionsChanged();
     editor().set({ fileId, ready: false, connection: 'connecting', everConnected: false, pageId: null, selection: [], hoverId: null, editingTextId: null, editingPathId: null, tool: rememberedTool(), gesture: {}, peers: [], activity: [], activeAgents: {}, activeThreadId: null, threadRuns: {}, pendingComment: null, followClientId: null, prompt: { open: chatOpenFor(fileId), runId: null, running: false, messages: [], nodeIds: [] } });
     camera.value = { x: 0, y: 0, z: 1 };
 
@@ -233,11 +295,19 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
         setReady(true);
         editor().set({ ready: true });
         offViews = installViews(fileId);
+        // Back in a tab: the selection, panels and thread it was left with. A link in the address wins.
+        const view = takeView(fileId);
+        if (view && !/[?&](select|layer|version)=/.test(location.hash)) {
+          editor().set({ selection: view.selection.filter((id) => s.snap.nodes.has(id)), leftTab: view.leftTab, rightTab: view.rightTab, activeThreadId: view.activeThreadId });
+        }
         showLinkedVersion(fileId);
         showLinkedSelection(s);
       }
     };
-    s.provider.on('sync', onSync);
+    // Nobody writes before this tab knows the id it writes a team file with (team-writer.ts); for any other file
+    // that is known at once.
+    const onSyncWhenWriter = (synced: boolean) => void s.writer.ready.then(() => { if (sessionRef.current === s) onSync(synced); });
+    s.provider.on('sync', onSyncWhenWriter);
     // A stored copy with pages opens at once, before the server answers, or when it never does.
     void s.offline?.loaded.then((had) => {
       if (sessionRef.current !== s) return;
@@ -251,6 +321,9 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       else st.set({ connection: 'connecting' });
     };
     s.provider.on('status', onStatus);
+    // A session from a tab is connected and synced already: no event will say so again.
+    if (s.provider.wsconnected) onStatus({ status: 'connected' });
+    if (s.provider.synced) onSyncWhenWriter(true);
 
     const offPresence = startPresence(s);
     const offEvents = startAgentEvents();
@@ -315,6 +388,8 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
     };
 
     return () => {
+      const st = editor();
+      if (st.fileId === fileId && st.ready) saveView(fileId, { selection: st.selection, leftTab: st.leftTab, rightTab: st.rightTab, activeThreadId: st.activeThreadId });
       stopTextEdit();
       offViews?.();
       clearInterval(fade);
@@ -327,14 +402,21 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       offSel();
       offPage();
       window.removeEventListener('hashchange', onHash);
-      s.provider.off('sync', onSync);
+      s.provider.off('sync', onSyncWhenWriter);
       s.provider.off('status', onStatus);
+      s.undo.off('stack-item-added', onAdd as never);
+      s.undo.off('stack-item-popped', onPop as never);
       // React runs this before the cleanups of the panels inside, which still read the session as they let go of it,
       // and, when the hash moves straight to another file, before the next file's editor sets its own. So the session
       // goes after those cleanups, and the global one is cleared only if no other file's session took its place.
+      // A file that stays open as a tab keeps its session for a while (session-cache.ts); a closed tab, a reset
+      // file or a screen without tabs lets it go now.
+      const keep = !resetting.current && useTabs.getState().tabs.some((t) => t.id === fileId);
+      resetting.current = false;
       queueMicrotask(() => {
         if (maybeSession() === s) setSession(null);
-        s.destroy();
+        releaseSession(s, keep);
+        sessionsChanged();
       });
       sessionRef.current = null;
       setReady(false);
@@ -342,7 +424,7 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       if (editor().fileId === fileId) editor().set({ ready: false });
       document.title = 'Bogen';
     };
-  }, [fileId]);
+  }, [fileId, epoch]);
   useEffect(() => ready && layout === 'full' ? installWebMcp(fileId) : undefined, [fileId, layout, ready]);
 
   if (!ready || !pageId) {
@@ -381,9 +463,9 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
   return (
     <div className={`editor${minimal ? ' is-minimal' : ''}`} data-testid="editor" data-chrome={lay.mode} data-toolbar={lay.toolbar} data-short={lay.short ? '' : undefined}>
       {!minimal ? <Toolbar /> : null}
-      {!minimal ? <RecentChanges /> : null}
+      <ChangesStrip minimal={minimal} />
       <ConnectionBanner />
-      <AwayBanner />
+      <TeamUnsentBanner />
       <LibraryBanner />
       <ProjectKindBanner />
       <OmarchyThemeBanner />
@@ -407,6 +489,7 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       <SettingsDialog />
       <ExtensionApproval />
       <BulkRenameDialog />
+      <GenerateImageDialog />
       <PullRequestDialog />
       <RepoTokensDialog />
       <PublishDialogs />
@@ -414,6 +497,7 @@ export function Editor({ fileId, layout = 'full', children }: { fileId: string; 
       <OmarchyThemeDialog />
       <SizesView />
       {checksOpen ? <Suspense fallback={null}><ChecksDialog /></Suspense> : null}
+      {critiqueOpen ? <Suspense fallback={null}><CritiqueDialog /></Suspense> : null}
       {complianceOpen ? <Suspense fallback={null}><ComplianceDialog /></Suspense> : null}
       <Toast />
     </div>

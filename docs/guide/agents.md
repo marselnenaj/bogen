@@ -139,9 +139,9 @@ request pays for that on every turn, and some stop at a number of tools. Pick a 
 
 | Mode | Tools | `tools/list` response |
 | --- | --- | --- |
-| `full` (the default) | One per tool, 208, with every description. | about 270 KB |
-| `compact` | One per tool, each description its first sentence, arguments without descriptions, and annotations equal to MCP's defaults left out. | about 117 KB |
-| `grouped` | 19 area tools, such as `edit`, `brand` or `checks`. Each takes `operation`, a tool's name, and `arguments`, that tool's own arguments. Its description lists the area's tools with their required arguments, split into read-only, writes and destructive. | about 19 KB |
+| `full` (the default for outside clients) | One per tool, 236, with every description. | about 346 KB |
+| `compact` | One per tool, each description its first sentence, arguments without descriptions, and annotations equal to MCP's defaults left out. | about 148 KB |
+| `grouped` | 19 area tools, such as `edit`, `brand` or `checks`. Each takes `operation`, a tool's name, and `arguments`, that tool's own arguments. Its description lists the area's tools with their required arguments, split into read-only, writes and destructive. | about 20 KB |
 
 Sizes are of this version, measured by `packages/server/test/tool-modes.test.ts`. Nothing is taken
 away: in `compact` and `grouped` there is also a `schema` tool that answers any tool's whole schema,
@@ -150,6 +150,21 @@ as does the resource `bogen://reference/{tool}`; calling a tool by its own name 
 strictest: `destructiveHint` when any of its tools deletes something, so a client that asks before
 destructive tools asks for the whole area. An unknown value is the full list, with a warning on
 standard error.
+
+Bogen's own canvas runs use `grouped` for Claude Code, Codex and OpenCode. They can fetch a full
+schema on demand; this does not change the mode of an outside MCP client or its installed settings.
+`layer_tree` starts two levels deep, with up to 80 short lines and `offset` for the next page;
+`detail: "full"` adds layout values. `layer_get` still returns the whole stored layer. Screenshots
+default to lossless PNG capped at 1280px; request `max_dimension: 2000` or a smaller layer for details.
+`design_lint` returns 20 findings per page, hard findings first, with global counts and `next_offset`.
+`design_verify` keeps the full evidence on the server and omits submitted evidence from its response;
+request `detail: "full"` to read it back. `trace_get` defaults to a timing/error summary; its full trace
+is available with `detail: "full"` or `save: true`.
+
+Independent design critiques use Sonnet at medium effort, with one JPEG per selected artboard capped
+at 1280px. Explicit Fable and Opus choices remain available. When Sonnet made the design, automatic
+review uses Opus to keep the reviewer independent. A failed routine Sonnet review does not retry on a
+more expensive model. Maker model and effort selections saved in Run settings remain in effect.
 
 `bogen install` writes the list that suits each client:
 
@@ -442,6 +457,11 @@ conversation and tells each run what came before:
 - The next run in that conversation gets a short transcript ahead of your message: the last 8 turns,
   at most 6000 characters, newest kept, each with the layer ids it touched. It does not matter which
   CLI ran a turn, so you can switch from Claude to Codex in the middle and Codex knows what Claude did.
+- With Claude Code, a follow-up in the same file and conversation, on the same model and within an hour
+  of the last turn, continues the same Claude Code session (`--resume`), so the agent keeps everything
+  it read and said, not only the transcript. Claude Code keeps that session in its own session store
+  on this computer. Another file, another model, a turn by another CLI in between, or a session that is
+  gone starts a fresh run with the transcript.
 - The conversation survives a reload and a restart of the server. The chat and the phone show it again
   when they open. **New chat** (at the top of the chat, at the top of the thread on the phone)
   starts a new one, and the agent forgets the old one.
@@ -574,6 +594,13 @@ it is. If it needs something from you, it asks in the thread.
 - Comment runs start on the cheapest model each CLI offers, at low effort (for Claude, `haiku`).
   Change that in the Agents tab, or under a new comment. Replies then keep the thread's model: see
   [Conversations](#conversations-replies-go-to-the-same-agent).
+- A chat or call run with Claude Code, when you chose no model or effort for the prompt (in the chat, in
+  the Agents tab or in a call), gets one by the size of the request: Sonnet at medium effort for one local
+  change (text, colour, size or spacing of named layers, or a fix of listed findings), Sonnet at low effort
+  for a question or a look, and Claude Code's own default for new screens, a redesign, a direction or
+  anything unclear. Without Sonnet, small runs use Opus at low effort. The chat shows the choice next to the
+  agent's name ("Sonnet · small change"), and the run history and trace keep it with the reason. Your
+  saved choice is never changed.
 - Only you, on this device, start runs. A comment that arrives from a paired device, that an agent
   writes, or that comes with an imported file never starts anything.
 - The run gets the thread (its last 24,000 characters) and what earlier runs on the thread did: the

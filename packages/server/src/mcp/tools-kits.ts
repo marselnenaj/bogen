@@ -7,9 +7,23 @@ import { fileIdArg, type ToolDefiner } from './kit.ts';
 
 const FALLBACK = { width: 240, height: 48 };
 
+/** A variant of a kit's first component with an axis, written as instance_create takes it. */
+function firstAxis(kit: { components: KitComponent[] }): string | undefined {
+  const c = kit.components.find((k) => k.axes && Object.keys(k.axes).length);
+  if (!c?.axes) return undefined;
+  const [axis, values] = Object.entries(c.axes)[0]!;
+  return JSON.stringify({ [axis]: values[1] ?? values[0] });
+}
+
+/** How a phone screen is put together from a platform kit: the parts in order, at the platform's sizes. */
+const PHONE_RECIPE: Record<string, string> = {
+  'ionic-ios': 'An iPhone screen from this kit: an artboard 393x852 with display:flex; flex-direction:column; background:var(--ion-background-color), holding in order <x-instance component="Status bar">, <x-instance component="Toolbar" prop-size="large" prop-title="Today" prop-show-back="false">, the content in a <section style="flex:1;display:flex;flex-direction:column;gap:24px;padding:8px 16px 24px">, and <x-instance component="Tab bar" prop-tab-1="Today"> (Tab item instances as its children for your own icons), or on a flow step <x-instance component="Button" prop-size="large" prop-width="full" prop-label="Continue"> and <x-instance component="Home indicator">. Lists: <x-instance component="List section" prop-header="Due"> with <x-instance component="List row" prop-accessory="chevron" prop-title="…" prop-detail="…"> children; a modal is a Sheet; nothing yet is an Empty state. Variant values and props are both prop-*.',
+  'material-3': 'An Android screen from this kit: an artboard 412x915 with display:flex; flex-direction:column; background:var(--md-sys-color-surface), holding in order <x-instance component="Top app bar" prop-size="large" prop-title="Today">, the content in a <section style="flex:1;display:flex;flex-direction:column;gap:24px;padding:8px 16px 24px">, and <x-instance component="Navigation bar">. Lists are List item instances; the one primary action is a filled Button or a FAB.',
+};
+
 /** Component kits: ready libraries such as shadcn/ui, with tokens, dark mode and the import for code. See kits/. */
 export function registerKitTools(define: ToolDefiner): void {
-  define('kit_list', { description: 'Component kits to design with: shadcn/ui on Radix (shadcn) and on Base UI (shadcn-base-ui; pick the one whose base the project\'s components.json style names), Radix Themes, Bootstrap 5, Material 3 (a phone kit, code as MUI) and Ionic in iOS mode (a phone kit), and kits made from a linked code project. Each has components with variants, props and slots, tokens in its own CSS variable names with light and dark modes, and for each component the import and props of its code library.', readOnly: true }, {
+  define('kit_list', { description: 'Component kits to design with: shadcn/ui on Radix (shadcn) and on Base UI (shadcn-base-ui; pick the one whose base the project\'s components.json style names), Radix Themes, Bootstrap 5, Material 3 (an Android phone kit, code as MUI) and Ionic in iOS mode (an iPhone kit: status bar, navigation bar, grouped lists, tab bar, sheet; start every iPhone screen here), and kits made from a linked code project. Each has components with variants, props and slots, tokens in its own CSS variable names with light and dark modes, and for each component the import and props of its code library.', readOnly: true }, {
     kit: z.string().optional().describe('One kit, by id or name, for its whole component list.'),
   }, ({ kit }) => {
     if (kit) return kitSummary(findKit(kit));
@@ -18,7 +32,7 @@ export function registerKitTools(define: ToolDefiner): void {
         const s = kitSummary(k);
         return { id: s.id, name: s.name, description: s.description, platform: s.platform, library: s.library, ...(s.design ? { design: s.design } : {}), source: s.source, components: s.components.map((c) => c.name) };
       }),
-      next: 'kit_use with a kit id links it into the file. Then place its components with instance_create or <x-instance component="Button" variant-variant="outline"> in html_write.',
+      next: 'kit_use with a kit id links it into the file. Then place its components with instance_create or <x-instance component="Button" prop-variant="outline"> in html_write: variant values and props are both prop-*.',
     };
   });
 
@@ -64,7 +78,7 @@ export function registerKitTools(define: ToolDefiner): void {
       ...out,
       ...(codeKit ? { kit_id: codeKit } : {}),
       next: out.library
-        ? `Place components with instance_create (component "Button", variant {"variant":"outline"}) or <x-instance component="Button"> in html_write. The showcase is in the file ${out.library.id}.`
+        ? `${PHONE_RECIPE[chosen!.id] ?? `Place components with instance_create (component "${chosen!.components[0]?.name ?? 'Button'}"${firstAxis(chosen!) ? `, variant ${firstAxis(chosen!)}` : ''}) or <x-instance component="${chosen!.components[0]?.name ?? 'Button'}"> in html_write.`} The showcase is in the file ${out.library.id}.`
         : 'The mains are on their own page of this file. Place instances of them like any component.',
     };
   });

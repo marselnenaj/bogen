@@ -56,7 +56,7 @@ describe('recovering the chat while its agent is working', () => {
     events.listener!({ t: 'agent', fileId: 'file1', runId: 'run1', kind: 'tool', tool: 'html_write' });
     expect(editor().prompt.messages.at(-1)?.text).toBe('html_write');
     stopPrompt();
-    expect(stop).toHaveBeenCalledWith('run1');
+    expect(stop).toHaveBeenCalledWith('run1', false);
     events.listener!({ t: 'agent', fileId: 'file1', runId: 'run1', kind: 'done', text: 'Stopped.' });
     expect(editor().prompt).toMatchObject({ running: false, runId: null, startedAt: undefined });
     off();
@@ -204,5 +204,24 @@ describe('a chat request in flight', () => {
     answer.resolve({ runId: 'run1' });
     await sending;
     expect(editor().prompt.messages).toEqual([]);
+  });
+});
+
+describe('the model picked by the size of the request', () => {
+  it('goes on the message, and comes back with a restored chat', async () => {
+    vi.spyOn(api, 'startRun').mockResolvedValue({ runId: 'run1', sized: { size: 'small', label: 'Sonnet' } });
+    await sendPrompt('Make the headline bigger', 'claude');
+    expect(editor().prompt.messages[0]).toMatchObject({ role: 'user', text: 'Make the headline bigger', sized: { size: 'small', label: 'Sonnet' } });
+    expect(editor().prompt.runId).toBe('run1');
+    const { turnMessages } = await import('../src/panels/prompt-actions.ts');
+    expect(turnMessages([{ ...turn('done'), sized: { size: 'answer', label: 'Sonnet' } }])[0]).toMatchObject({ role: 'user', sized: { size: 'answer', label: 'Sonnet' } });
+  });
+
+  it('sends the call\'s size hint and no model of its own', async () => {
+    const start = vi.spyOn(api, 'startRun').mockResolvedValue({ runId: 'run1' });
+    await sendPrompt('[Voice call.]\n\nGoal: Make the headline bigger.', 'claude', { call: { language: 'en' }, size: 'small' });
+    expect(start.mock.calls[0]![0]).toMatchObject({ size: 'small', call: { language: 'en' } });
+    expect(start.mock.calls[0]![0]).not.toHaveProperty('model');
+    expect(editor().prompt.messages[0]!.sized).toBeUndefined();
   });
 });

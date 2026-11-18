@@ -42,6 +42,8 @@ export interface RunTrace {
   runner: string;
   model?: string;
   effort?: string;
+  /** The model Bogen picked by the size of the request, because nobody chose one, and why. */
+  sized?: { size: string; reason: string; model?: string; effort?: string };
   actualModel?: string;
   review?: string;
   source: 'prompt' | 'comment' | 'race' | 'live';
@@ -153,6 +155,7 @@ export class RunTraces implements RunObserver {
     this.live.set(runId, {
       format: TRACE_FORMAT, version: TRACE_VERSION, runId, fileId: req.fileId, fileName: req.live ? undefined : req.fileName, runner: req.runner,
       ...(req.model ? { model: req.model } : {}), ...(req.effort ? { effort: req.effort } : {}), ...(req.review ? { review: req.review } : {}),
+      ...(req.sized ? { sized: { size: req.sized.size, reason: req.sized.reason, ...(req.sized.model ? { model: req.sized.model } : {}), ...(req.sized.effort ? { effort: req.sized.effort } : {}) } } : {}),
       source: req.live ? 'live' : req.race ? 'race' : req.threadId ? 'comment' : 'prompt',
       ...(req.conversationId ? { conversationId: req.conversationId } : {}), ...(req.threadId ? { threadId: req.threadId } : {}),
       startedAt: Date.now(), status: 'running',

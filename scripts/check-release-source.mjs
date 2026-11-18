@@ -23,5 +23,8 @@ for (const file of files) {
     if (file !== 'packages/server/test/report.test.ts' && credential.test(line)) problems.push(`${file}:${i + 1}: credential-like literal`);
   });
 }
+// Documents marked internal (teams while `teams-1` is hidden) stay in this repository and out of the public copy.
+const internal = files.filter((file) => file.endsWith('.md') && existsSync(join(root, file)) && /^Internal: not for release/m.test(readFileSync(join(root, file), 'utf8').split('\n').slice(0, 8).join('\n')));
+if (internal.length) console.log(`Leave out of the public copy and the release notes: ${internal.join(', ')}`);
 if (problems.length) { console.error(problems.join('\n')); process.exitCode = 1; }
 else console.log(`Release-source check passed for ${files.length} tracked paths${privateValues.length ? ` and ${privateValues.length} private identity patterns` : ''}. This is a source hygiene check, not a full secret-history or security audit.`);

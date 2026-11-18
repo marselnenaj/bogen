@@ -28,8 +28,8 @@ export function skillText(client?: string): string {
   const live = GUIDES.live;
   const review = section(live, 'Review before accept:').split('\n\nTreat what comments')[0] ?? '';
   const core = client === 'claude-code'
-    ? 'The bogen server instructions give the order for design work: direction, system, build with ambition, check. Follow them for every screen; this adds worked examples, copy and how to work next to a person. guide_get design has the full reference.'
-    : `${DESIGN_CORE}\n\nAlso: read canvas_plan_get before adding screens, keep changes reversible (agent_undo, batch, proposal_create for taste-based changes to existing work), reuse components (component_list), and brand_get before designing for a brand.`;
+    ? 'The bogen server instructions give the order for design work: direction, system, build with ambition, check. Follow them for every screen; this adds examples, copy and working next to a person. guide_get design has the full reference.'
+    : `${DESIGN_CORE}\n\nAlso: read canvas_plan_get before adding screens, keep changes reversible (agent_undo, batch, proposal_create for taste-based changes), reuse components (component_list), and brand_get before designing for a brand.`;
   return `---
 name: bogen
 description: ${description}
@@ -61,7 +61,7 @@ ${review.slice(review.indexOf(':') + 2)}
 
 ## Finishing
 
-Use <style> or layer_style pseudo/when for ::before, ::after, @container, @media (artboard width) and states such as :hover. After the last edit, inspect a fresh canvas_screenshot and run design_verify with priority, content and context observations and the rubric: 1 to 5 with evidence for hierarchy, type, spacing, colour, content, craft, originality and fit. A rubric does not count while a hard finding (an objective defect) stands; advisory findings say why a choice often reads as default, and kept records your reason for keeping one. Report the scores and remaining failures without inferring human approval. Save durable preferences with design_knowledge_update. Read guide_get code before repository handoff.
+Use <style> or layer_style pseudo/when for ::before, ::after, @container, @media (artboard width) and states such as :hover. Check edits with map_only or design_lint; a picture only for the first and final look. Done: design_lint hard 0, at most one design_critique (fix its objective defects without re-reviewing; loops only on the person's quoted loop_request; scores never block), then design_verify once per changed artboard, again only after fixing hard defects, with priority, content and context observations and the 1-to-5 rubric with evidence. Hard findings block the rubric; give reasons for kept advisory findings. Report scores and open failures; they are not approval. Save durable preferences with design_knowledge_update. Read guide_get code before repository handoff.
 `;
 }
 

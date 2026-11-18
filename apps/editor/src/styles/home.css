@@ -1,0 +1,152 @@
+/*
+ * Home: the files edited last, the ways to start, the brands and the themes, then every file. Loaded after the
+ * shared sheets (Home.tsx imports it), so these rules settle what app.css, craft.css and brand.css set for Home.
+ * Spacing is on the scale (--space-*), every control is at least --target tall.
+ */
+
+.home .visually-hidden { position: absolute; margin: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* The header */
+.home-head { gap: var(--space-md); padding: 0 var(--space-md); }
+.home-brand { gap: var(--space-sm); }
+.home-search { gap: var(--space-sm); padding: 0 var(--space-sm); }
+.home-search input { align-self: stretch; }
+.home-live { display: inline-flex; align-items: center; min-height: var(--target); font-size: var(--text-md); }
+
+/* The column: sections one under the other, each with its heading on the same line as its actions. */
+.home-body { padding: var(--space-lg) var(--space-xl) var(--space-xl); }
+.home-drop { gap: var(--space-xl); }
+.home-section, .brands, .examples { margin: 0; display: flex; flex-direction: column; gap: var(--space-md); }
+.brands-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-height: 28px; height: auto; }
+.brands-title { margin: 0; display: inline-flex; align-items: baseline; gap: var(--space-sm); font-size: var(--text-lg); font-weight: 600; color: var(--ui-fg); }
+.home-count { font-size: var(--text-sm); font-weight: 400; color: var(--ui-fg-2); font-variant-numeric: tabular-nums; }
+.examples-toggle { display: inline-flex; align-items: center; gap: var(--space-xs); min-height: 28px; font: inherit; color: var(--ui-fg); }
+.examples-toggle:hover { color: var(--ui-accent); }
+.home-more, .omarchy-more { align-self: flex-start; display: inline-flex; align-items: center; min-height: var(--target); padding: 0; font-size: var(--text-md); color: var(--ui-fg-2); }
+.home-more:hover, .omarchy-more:hover { color: var(--ui-fg); }
+
+/* Recent: one row of the files edited last. */
+.home-recent-row { display: grid; gap: var(--space-md); }
+.home-recent-file { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; color: var(--ui-fg); text-decoration: none; border-radius: var(--radius); }
+.home-recent-file .file-thumb { pointer-events: none; }
+.home-recent-file:hover .file-thumb { box-shadow: 0 0 0 1.5px var(--ui-accent); }
+.home-recent-file:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+
+/* A file card opens from anywhere on it: the thumbnail's button stretches over the card (.file is positioned), and
+   the check box, the last-edit link, the title and the menu sit above it. Ctrl, Shift and a selection still select. */
+.file .file-thumb::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
+.file .file-thumb:focus-visible { outline: none; }
+.file:has(> .file-thumb:focus-visible) { outline: 2px solid var(--ui-accent); outline-offset: 2px; border-radius: var(--radius); }
+.file .file-title, .file .file-more, .file a.file-recent, .file .rename-input { position: relative; z-index: 1; }
+.home-recent-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Brands: a card each, its colours across the top. */
+.brand-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: var(--space-md); }
+.brand-row { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-xs); height: auto; min-width: 0; padding: var(--space-md); border: 1px solid var(--ui-border); border-radius: var(--radius); background: var(--ui-bg-2); }
+.brand-row { position: relative; }
+.brand-row:hover { border-color: color-mix(in oklab, var(--ui-border) 60%, var(--ui-fg-2)); }
+/* The whole card opens the brand: the name's button stretches over it; the card's own controls sit above. */
+.brand-row .brand-open::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.brand-row .brand-open:focus-visible { outline: none; }
+.brand-row:has(.brand-open:focus-visible) { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.brand-row .icon-btn, .brand-row .rename-input { position: relative; z-index: 1; }
+.brands .brand-swatches { width: 100%; height: var(--space-xl); margin-bottom: var(--space-xs); border-radius: var(--radius); }
+.brand-card-head { display: flex; align-items: center; gap: var(--space-xs); min-width: 0; min-height: var(--target); }
+.brand-card-head .brand-name { flex: 1 1 auto; min-height: var(--target); }
+.brand-card-head .rename-input { flex: 1 1 auto; min-width: 0; }
+.brand-card-head .icon-btn { flex: none; }
+.brands .brand-facts { flex: none; }
+.brand-todo { font-size: var(--text-sm); color: var(--ui-accent); }
+.brands > .hint { max-width: 60ch; }
+
+/* Examples and themes keep their rows; the rows are a comfortable target. */
+.example-row { gap: var(--space-md); min-height: 32px; height: auto; }
+.example-list .brand-swatches { width: 96px; height: var(--space-lg); }
+.tl-open, .tl-copy { gap: var(--space-md); }
+.tl-has { gap: var(--space-xs); }
+.tl-chip { padding: 0 var(--space-sm); }
+.tl-copies { padding: 0 0 var(--space-sm) 108px; }
+.theme-library .tl-head { gap: var(--space-sm); }
+.tl-bring { padding: 0 var(--space-sm); }
+.tl-actions .btn { padding: 0 var(--space-sm); gap: var(--space-xs); }
+
+/* The tools over the file grid */
+.home-tools { gap: var(--space-xs); margin-bottom: 0; }
+.home-files { display: flex; flex-direction: column; gap: var(--space-md); }
+.home-crumbs { gap: var(--space-2xs); font-size: var(--text-lg); }
+.home-crumbs span { gap: var(--space-2xs); }
+.home-crumbs button { display: inline-flex; align-items: center; min-height: 28px; padding: 0 var(--space-xs); font-weight: 600; }
+
+/* A file card: a target for each line that does something. */
+.file-grid { grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: var(--space-lg) var(--space-md); }
+.file-info { padding: var(--space-xs) 0 0; column-gap: var(--space-xs); }
+.file-title { display: block; min-height: var(--target); line-height: var(--target); }
+.file-recent { display: block; min-height: var(--target); line-height: var(--target); }
+.file-check { left: var(--space-xs); top: var(--space-xs); width: var(--target); height: var(--target); border-radius: var(--radius); background: transparent; box-shadow: none; }
+.file-check::before { content: ""; position: absolute; inset: var(--space-xs); border-radius: 3px; background: var(--ui-bg); box-shadow: inset 0 0 0 1px var(--ui-fg-2); }
+.file-check.is-on { background: transparent; box-shadow: none; }
+.file-check.is-on::before { background: var(--ui-accent); box-shadow: none; }
+.file-check.is-on::after { left: 9px; top: 6px; }
+.file-list .file { gap: var(--space-md); padding: 0 var(--space-xs); }
+.file-list .file-check { left: var(--space-xs); top: 10px; }
+.file-list .file-info { column-gap: var(--space-md); }
+.file-list .file:has(.file-recent) { padding-block: var(--space-xs); }
+
+/* The side: folders and kinds */
+.home-side-head { padding: 0 var(--space-2xs) 0 var(--space-sm); }
+.folder-open { gap: var(--space-sm); }
+.folder-row { font-size: var(--text-md); }
+.folder-count { padding: 0 var(--space-xs); }
+
+/* Places: Files and Brands, above the folders. */
+.home-places { display: flex; flex-direction: column; gap: 2px; padding: var(--space-xs) var(--space-2xs) var(--space-sm); border-bottom: 1px solid var(--ui-border); margin-bottom: var(--space-xs); }
+.home-place { display: flex; align-items: center; gap: var(--space-sm); min-height: var(--target); padding: 0 var(--space-sm); border-radius: var(--radius); color: var(--ui-fg); text-decoration: none; font-size: var(--text-md); }
+.home-place span:first-of-type { flex: 1 1 auto; }
+.home-place:hover { background: var(--hover); }
+.home-place.is-active { background: var(--active); font-weight: 600; }
+.home-place:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.brands.is-place { gap: var(--space-md); }
+.brands.is-place .brands-title { font-size: var(--text-xl, 20px); }
+.brands-from-website { padding: var(--space-md); }
+
+/* The prompt box at the top of Home */
+.composer { display: flex; flex-direction: column; gap: var(--space-xs); }
+.composer-box { border: 1px solid var(--ui-border); border-radius: var(--radius-lg, 8px); background: var(--ui-bg); overflow: hidden; }
+.composer-tabs { display: flex; gap: var(--space-2xs); padding: 0 var(--space-xs); border-bottom: 1px solid var(--ui-border); overflow-x: auto; }
+.composer-tabs button { flex: none; min-height: 40px; padding: 0 var(--space-sm); color: var(--ui-fg-2); font-size: var(--text-md); white-space: nowrap; }
+.composer-tabs button:hover { color: var(--ui-fg); }
+.composer-tabs button.is-on { color: var(--ui-fg); font-weight: 600; box-shadow: inset 0 -2px 0 var(--ui-accent); }
+.composer-tabs button:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.composer-prompt { display: block; width: 100%; min-height: 64px; resize: vertical; border: 0; padding: var(--space-md); background: transparent; color: var(--ui-fg); font: inherit; font-size: 16px; line-height: 1.45; }
+.composer-prompt:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.composer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-sm); background: var(--ui-bg-2); border-top: 1px solid var(--ui-border); }
+.composer-spacer { flex: 1 1 auto; }
+.composer-pick { display: inline-flex; align-items: center; gap: var(--space-xs); min-height: var(--target); padding: 0 var(--space-xs); border: 1px solid var(--ui-border); border-radius: var(--radius); background: var(--ui-bg); font-size: var(--text-sm); color: var(--ui-fg-2); }
+.composer-pick select { border: 0; background: transparent; color: var(--ui-fg); font: inherit; font-weight: 600; max-width: 180px; }
+.composer-link { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-md); background: color-mix(in oklab, var(--ui-accent) 10%, var(--ui-bg)); font-size: var(--text-sm); }
+.composer-hint { margin: 0; font-size: var(--text-sm); color: var(--ui-fg-2); }
+.from-website-form { display: flex; flex-direction: column; }
+.from-website-url { display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-md) var(--space-md) var(--space-xs); font-size: var(--text-sm); font-weight: 600; color: var(--ui-fg); }
+.from-website-url input { min-height: 36px; padding: 0 var(--space-sm); border: 1px solid var(--ui-border); border-radius: var(--radius); background: var(--ui-bg); color: var(--ui-fg); font: inherit; font-weight: 400; font-size: 15px; }
+.from-website-what { margin: 0; padding: 0 var(--space-md) var(--space-md); font-size: var(--text-sm); color: var(--ui-fg-2); max-width: 72ch; }
+.from-website-card { display: flex; flex-direction: column; gap: var(--space-xs); margin: var(--space-sm) var(--space-md) var(--space-md); padding: var(--space-md); border: 1px solid var(--ui-border); border-radius: var(--radius); font-size: var(--text-sm); }
+.from-website-card p { margin: 0; }
+.from-website-card.is-partial { border-color: color-mix(in oklab, #c08a1e 60%, var(--ui-border)); background: color-mix(in oklab, #c08a1e 8%, var(--ui-bg)); }
+.from-website-card.is-failed { border-color: color-mix(in oklab, var(--danger, #c8321e) 60%, var(--ui-border)); background: color-mix(in oklab, var(--danger, #c8321e) 8%, var(--ui-bg)); }
+.from-website-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+.from-website-steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-2xs); }
+.from-website-steps li { display: flex; align-items: center; gap: var(--space-xs); color: var(--ui-fg-2); }
+.from-website-steps li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; flex: none; }
+.from-website-steps li.is-done::before { background: #2f8a4a; box-shadow: none; }
+.from-website-steps li.is-now { color: var(--ui-fg); font-weight: 600; }
+.from-website-steps li.is-now::before { background: var(--ui-accent); box-shadow: none; }
+.from-website-note { color: var(--ui-fg-2); }
+.from-website-found { display: grid; grid-template-columns: auto 1fr; gap: 2px var(--space-md); margin: 0; }
+.from-website-found dt { color: var(--ui-fg-2); }
+.from-website-found dd { margin: 0; }
+.from-website-notes { margin: 0; padding-left: 1.2em; color: var(--ui-fg-2); }
+.from-website-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+@media (max-width: 650px) {
+  .composer-pick select { max-width: 120px; }
+  .composer-bar .btn-primary { flex: 1 1 100%; }
+}

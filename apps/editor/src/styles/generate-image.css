@@ -1,0 +1,56 @@
+/* Generate image: a prompt, then the pictures side by side like a contact sheet, and the one picked goes in. */
+.gen-dialog { width: min(600px, calc(100 * var(--ui-vw) - 32px)); max-height: calc(86 * var(--ui-vh)); }
+.gen-body { display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-lg); overflow: auto; min-height: 0; }
+.gen-foot { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--ui-border); flex: none; flex-wrap: wrap; }
+.gen-foot .btn-primary { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.gen-note { flex: 1 1 200px; min-width: 0; font-size: var(--text-md); line-height: 1.4; color: var(--ui-fg-2); }
+.gen-field { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; }
+.gen-label { font-size: var(--text-md); font-weight: 600; color: var(--ui-fg); }
+.gen-prompt { min-height: 88px; resize: vertical; padding: var(--space-sm) var(--space-md); border-radius: var(--radius); border: 1px solid var(--ui-border); background: var(--ui-bg-2); color: var(--ui-fg); font: inherit; font-size: var(--text-lg); line-height: 1.45; }
+.gen-prompt:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; border-color: var(--ui-accent); }
+.gen-row { display: flex; gap: var(--space-lg); align-items: flex-end; flex-wrap: wrap; }
+.gen-seg { display: flex; flex-wrap: wrap; padding: 2px; gap: 2px; border-radius: var(--radius); background: var(--ui-bg-2); border: 1px solid var(--ui-border); }
+.gen-segb { display: inline-flex; align-items: center; gap: var(--space-xs); min-height: 28px; min-width: 28px; justify-content: center; padding: 0 var(--space-sm); border: 0; border-radius: 3px; background: transparent; color: var(--ui-fg-2); font: inherit; font-size: var(--text-md); cursor: pointer; }
+.gen-segb:hover { background: var(--hover); color: var(--ui-fg); }
+.gen-segb.is-active { background: var(--accent-soft); color: var(--ui-fg); font-weight: 600; }
+.gen-segb:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+.gen-shape { display: inline-block; border: 1.5px solid currentColor; border-radius: 1px; flex: none; }
+.gen-target { margin: 0; display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; font-size: var(--text-md); color: var(--ui-fg-2); }
+.gen-chip { display: inline-flex; align-items: center; height: 22px; padding: 0 var(--space-sm); border-radius: 11px; background: var(--active); color: var(--ui-fg); font-size: var(--text-sm); font-weight: 600; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gen-error { margin: 0; color: var(--ui-danger); font-size: var(--text-md); }
+.gen-said { margin: 0; font-size: var(--text-lg); line-height: 1.45; color: var(--ui-fg-2); padding-inline-start: var(--space-md); border-inline-start: 2px solid var(--ui-border); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.gen-sheet { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); outline: none; }
+.gen-cell { position: relative; aspect-ratio: 3 / 2; border-radius: var(--radius); overflow: hidden; background: var(--ui-bg-2); outline: 1px solid var(--ui-border); cursor: pointer; }
+.gen-sheet.is-square .gen-cell { aspect-ratio: 1; }
+.gen-sheet.is-portrait .gen-cell { aspect-ratio: 2 / 3; }
+.gen-sheet.is-wide .gen-cell { aspect-ratio: 16 / 9; }
+.gen-sheet.is-tall .gen-cell { aspect-ratio: 9 / 16; }
+.gen-sheet.is-portrait, .gen-sheet.is-tall { grid-template-columns: repeat(4, 1fr); }
+.gen-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gen-cell.is-selected { outline: 3px solid var(--ui-accent); outline-offset: 2px; }
+.gen-cell:focus-visible { outline: 3px solid var(--ui-accent); outline-offset: 2px; }
+.gen-num { position: absolute; inset-inline-start: var(--space-sm); top: var(--space-sm); min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 11px; background: rgb(14 14 12 / 72%); color: #f4f2ec; font-size: var(--text-sm); font-weight: 700; }
+.gen-tick { position: absolute; inset-inline-end: var(--space-sm); top: var(--space-sm); width: 24px; height: 24px; display: grid; place-items: center; border-radius: 12px; background: var(--ui-accent); color: var(--ui-accent-fg); }
+.gen-size { position: absolute; inset-inline-end: var(--space-sm); bottom: var(--space-sm); padding: 2px var(--space-xs); border-radius: 3px; background: rgb(14 14 12 / 72%); color: #f4f2ec; font-size: var(--text-sm); }
+.gen-wait { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-sm); cursor: default; color: var(--ui-fg-2); font-size: var(--text-md); background: linear-gradient(110deg, var(--ui-bg-2) 30%, var(--hover) 50%, var(--ui-bg-2) 70%) 0 0 / 300% 100%; animation: gen-shimmer 1.6s linear infinite; }
+.gen-spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ui-border); border-top-color: var(--ui-accent); animation: gen-turn 0.9s linear infinite; }
+.gen-fail { display: flex; flex-direction: column; justify-content: center; gap: var(--space-xs); padding: var(--space-md); cursor: default; background: color-mix(in oklab, var(--ui-danger) 10%, var(--ui-bg)); outline-color: color-mix(in oklab, var(--ui-danger) 40%, transparent); color: var(--ui-fg); font-size: var(--text-md); line-height: 1.4; }
+.gen-fail b { font-size: var(--text-lg); }
+.gen-bar { height: 3px; border-radius: 2px; background: var(--ui-border); overflow: hidden; }
+.gen-bar i { display: block; height: 100%; background: var(--ui-accent); transition: width 300ms ease; }
+.gen-lead { margin: 0; font-size: var(--text-lg); line-height: 1.5; color: var(--ui-fg); }
+.gen-status { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border-radius: var(--radius); background: var(--ui-bg-2); font-size: var(--text-md); color: var(--ui-fg); }
+.gen-dot { width: 8px; height: 8px; border-radius: 4px; flex: none; background: var(--ui-danger); }
+.gen-dot.is-signed-out { background: #d9a53a; }
+.gen-steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-sm); }
+.gen-steps li { display: flex; gap: var(--space-md); align-items: baseline; font-size: var(--text-lg); line-height: 1.45; color: var(--ui-fg); }
+.gen-steps code { font-family: var(--ui-mono); font-size: var(--text-md); padding: 1px var(--space-xs); border-radius: 3px; background: var(--ui-bg-2); }
+.gen-n { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 11px; background: var(--active); font-size: var(--text-sm); font-weight: 700; }
+/* Generate next to Upload image in the inspector. */
+.image-actions { display: flex; gap: var(--space-sm); }
+.image-actions > .btn { flex: 1 1 0; justify-content: center; }
+@keyframes gen-shimmer { to { background-position: -300% 0; } }
+@keyframes gen-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .gen-wait, .gen-spin { animation: none; }
+}

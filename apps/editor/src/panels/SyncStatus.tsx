@@ -58,7 +58,7 @@ export function SyncStatus({ peers }: { peers: PeerInfo[] }) {
         <button type="button" className={`sync-status is-warn is-button${up.length ? ' is-connected' : ''}`} title={title} data-testid="sync-status" data-warn="version" onClick={() => setDeploying(stale.id)}>
           <span className="sync-dot" />
           <span className="sync-name">{t('{name}: other version', { name: stale.name })}</span>
-          <span className="sync-update" data-testid="sync-update">{t('Update the other device')}</span>
+          <span className="sync-update" title={t('Update the other device')} data-testid="sync-update"><span aria-hidden="true">{t('Update')}</span><span className="sync-update-full">{t('Update the other device')}</span></span>
         </button>
         {deploying ? <PeerDeployDialog peerId={deploying} onClose={() => setDeploying(null)} /> : null}
       </>

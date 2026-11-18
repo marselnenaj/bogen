@@ -7,10 +7,10 @@ import type { Storage } from './storage.ts';
 import { errorMessage } from './util.ts';
 
 /**
- * What an agent is told wherever images come up. Bogen makes no images itself: the agent draws them, or brings
- * them from its own image tool, and stores them here.
+ * What an agent is told wherever images come up. Bogen has no image model: image_generate asks the person's own
+ * Codex CLI when it is there, and otherwise the agent draws them, or brings them from its own image tool.
  */
-export const MAKE_IMAGES = 'Bogen has no image generator. Make images yourself: inline <svg> or CSS when that suits the subject, or your own image tool (such as Codex\'s built-in image generation or an image MCP server), then store the file with asset_upload and use its src.';
+export const MAKE_IMAGES = 'Bogen has no image model of its own. image_generate makes a picture with the Codex CLI when the person has it installed and signed in, and says so when not. Otherwise make images yourself: inline <svg> or CSS when that suits the subject, or your own image tool (such as Codex\'s built-in image generation or an image MCP server), then store the file with asset_upload and use its src. For a real photo, image_search finds free ones (CC0, public domain, CC BY, CC BY-SA) and asset_upload from_search imports one with its credit.';
 
 /** `bogen-gen:` once asked the server to generate an image. It does nothing now, and says so. */
 const GEN = /bogen-gen:/i;

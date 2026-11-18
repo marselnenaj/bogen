@@ -116,7 +116,11 @@ const chord = async (page: Page, key: string, mods: string[]) => {
   await page.keyboard.press(key as never);
   for (const m of mods.reverse()) await page.keyboard.up(m as never);
 };
-const review = (page: Page, mode: string) => page.select('select[data-testid="prompt-review"]', mode);
+// The mode is picked in its sheet over the field.
+const review = async (page: Page, mode: string) => {
+  await page.click('[data-testid="prompt-review"]');
+  await page.click(`[data-testid="prompt-review-${mode}"]`);
+};
 const typeIn = async (page: Page, words: string) => {
   await page.click('[data-testid="prompt-input"]');
   await page.keyboard.type(words);

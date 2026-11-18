@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { connectionFromEnv, probe, probeState, startDaemon, stopDaemon, type Connection } from './daemon.ts';
+import { acquireServeLock, type HeldLock } from './serve-lock.ts';
 import { bogenHome, DEFAULT_PORT, ensurePrivateHome, errorMessage } from './util.ts';
 import { FULL_VERSION, VERSION } from './version.ts';
 
@@ -63,6 +64,7 @@ Usage:
 
 Environment:
   BOGEN_HOME         Data folder (default $XDG_DATA_HOME/bogen or ~/.local/share/bogen)
+                     Commands use the server this folder records, and refuse one that serves another folder
   BOGEN_PORT         Port (default ${DEFAULT_PORT})
   BOGEN_URL          For \`mcp\`, \`status\`, \`open\`: use a server elsewhere
   BOGEN_TOKEN        Bearer token, as an alternative to --token
@@ -102,6 +104,14 @@ async function serve(values: { port?: string; host?: string; token?: string; dev
   } catch (e) {
     fail(errorMessage(e));
   }
+  const port = portArg(values.port) ?? (Number(process.env.BOGEN_PORT) || DEFAULT_PORT);
+  // One server per data folder, before anything of it is read: a second one would lose the first one's edits.
+  let lock: HeldLock;
+  try {
+    lock = acquireServeLock(home, { port, host });
+  } catch (e) {
+    fail(errorMessage(e));
+  }
   const { BogenServer } = await import('./http/server.ts');
   const allowedOrigins = process.env.BOGEN_ALLOWED_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean);
   const server = new BogenServer({
@@ -109,14 +119,16 @@ async function serve(values: { port?: string; host?: string; token?: string; dev
     // For testing against a stand-in. It decides where a Figma token goes, so only the environment can set it.
     ...(process.env.BOGEN_FIGMA_API ? { figmaApiBase: process.env.BOGEN_FIGMA_API } : {}),
     tailnet: values.tailnet, insecureAllowAnyHost: values['insecure-allow-any-host'], updateChecks: !values.dev,
-    port: portArg(values.port) ?? (Number(process.env.BOGEN_PORT) || DEFAULT_PORT),
+    port,
   });
   try {
     await server.listen();
   } catch (e) {
+    lock.release();
     if ((e as NodeJS.ErrnoException).code === 'EADDRINUSE') fail(`Port ${server.options.port} is in use. If that is Bogen already, run \`bogen status\`.`);
     throw e;
   }
+  lock.setPort(server.port);
   process.stdout.write(`Bogen ${VERSION} on http://${host.includes(':') ? `[${host}]` : host}:${server.port}\n`);
   process.stdout.write(`Data in ${home}\n`);
   let stopping = false;
@@ -125,7 +137,7 @@ async function serve(values: { port?: string; host?: string; token?: string; dev
     stopping = true;
     // An editor, a phone or a peer can hold a socket open; after a moment, stop anyway rather than wait for systemd's kill.
     setTimeout(() => process.exit(0), 3000).unref();
-    void server.close().then(() => process.exit(0));
+    void server.close().then(() => { lock.release(); process.exit(0); });
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
@@ -340,6 +352,7 @@ async function main(): Promise<void> {
       const { status } = result;
       process.stdout.write(`Running on ${conn.url}, version ${status.version}, pid ${status.pid}, ${status.files} files.\n`);
       if (status.version !== FULL_VERSION) process.stdout.write(`  This command is ${FULL_VERSION}, so that server runs another build. Restart it.\n`);
+      if (conn.home && status.home && status.home !== conn.home.id) process.stdout.write(`  It serves another data folder than ${conn.home.path}${conn.home.named ? ' (BOGEN_HOME)' : ''}.\n`);
       for (const p of status.peers ?? []) if (p.versionMismatch) process.stdout.write(`  ${p.name} runs ${p.version}, which differs. Update it: bogen peer deploy <its ssh host>\n`);
       for (const a of status.agents) process.stdout.write(`  ${a.name}: ${a.status} in "${a.fileName}", last ${a.lastTool}\n`);
       return;
@@ -366,12 +379,14 @@ async function main(): Promise<void> {
         } catch (e) {
           fail(errorMessage(e));
         }
-        openUrl(`${conn.token ? url : `${conn.url}/`}${target.hash}`);
-        process.stdout.write(`Opening ${target.name}: ${conn.url}/${target.hash}\n`);
+        const { openInBogen } = await import('./cli-open.ts');
+        const where = await openInBogen(conn, target.hash, () => openUrl(`${conn.token ? url : `${conn.url}/`}${target.hash}`));
+        process.stdout.write(where === 'window' ? `Showing ${target.name} in the Bogen window that has it: ${conn.url}/${target.hash}\n` : `Opening ${target.name}: ${conn.url}/${target.hash}\n`);
         return;
       }
-      openUrl(url);
-      process.stdout.write(`Opening ${conn.url}\n`);
+      const { openInBogen } = await import('./cli-open.ts');
+      const where = await openInBogen(conn, '', () => openUrl(url));
+      process.stdout.write(where === 'window' ? `Showing the Bogen window: ${conn.url}\n` : `Opening ${conn.url}\n`);
       return;
     }
     case 'welcome': {

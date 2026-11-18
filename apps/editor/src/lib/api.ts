@@ -19,10 +19,12 @@ export interface StatusAgent { name: string; fileId: string; fileName?: string; 
 export interface PeerInfo { id: string; name: string; state: 'connected' | 'offline'; lastSyncAt: number | null; pending: number; error?: string; version?: string; versionMismatch?: boolean; here?: { fileId: string; people: { name: string; selection: number }[] }[] }
 /** A newer release, when the server's daily check found one and checks are on. */
 export interface UpdateNote { version: string; current: string; notes?: string; how: string }
-export interface Status { version: string; port: number; files: number; agents: StatusAgent[]; peers?: PeerInfo[]; update?: UpdateNote | null }
+export interface Status { version: string; port: number; files: number; agents: StatusAgent[]; peers?: PeerInfo[]; update?: UpdateNote | null; /** Features this server has turned on, such as teams-1. */ features?: string[] }
 export interface UploadedAsset { name: string; src: string; url: string }
 export interface ConversationSummary { id: string; title: string; startedAt: number; updatedAt: number; turns: number; runners: string[]; running: boolean }
-export interface ConversationTurn { runId: string; at: number; runner: string; message: string; reply?: string; layers: string[]; status: 'running' | 'done' | 'failed' | 'stopped' | 'interrupted'; review?: string; nudged?: boolean }
+export interface ConversationTurn { runId: string; at: number; runner: string; message: string; reply?: string; layers: string[]; status: 'running' | 'done' | 'failed' | 'stopped' | 'interrupted'; review?: string; nudged?: boolean; sized?: SizedRun }
+/** The model Bogen picked for a run by the size of its request, because nobody chose one. */
+export interface SizedRun { size: 'small' | 'large' | 'answer'; label?: string }
 export interface ExampleEntry { id: string; kind: string; name: string; description: string; brand: string; parts: { key: string; name: string; size: string }[]; colors: string[]; fonts: string[] }
 export interface FontEntry { family: string; source: 'google' | 'local' | 'file'; /** A font made in this file. */ made?: boolean; category?: string; weights?: number[]; variable?: boolean; axes?: { tag: string; min: number; max: number }[] }
 
@@ -116,12 +118,12 @@ export const api = {
     if (!res.ok || !out.client) throw new Error(out.error ?? String(res.status));
     return { client: out.client, how: out.how ?? '' };
   },
-  startRun: (req: { fileId: string; pageId?: string; nodeIds: string[]; prompt: string; title?: string; runner: string; model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; conversationId?: string; device?: string; images?: string[]; language?: RunLanguage; discipline?: string; mentions?: { kind: string; id: string }[]; variation?: { count: number; range: string; vary: string[] } }) => json<{ runId: string }>('/api/runs', body(req)),
+  startRun: (req: { fileId: string; pageId?: string; nodeIds: string[]; prompt: string; title?: string; runner: string; model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; conversationId?: string; device?: string; images?: string[]; language?: RunLanguage; discipline?: string; mentions?: { kind: string; id: string }[]; variation?: { count: number; range: string; vary: string[] }; call?: { language: 'de' | 'en'; steer?: boolean }; size?: SizedRun['size'] }) => json<{ runId: string; sized?: SizedRun }>('/api/runs', body(req)),
   /** The turns of a chat the server keeps, so that one opened again after a reload shows what was said. */
   conversation: (fileId: string, id: string) => json<{ id: string; turns: ConversationTurn[] }>(`/api/runs/conversations/${encodeURIComponent(id)}?fileId=${encodeURIComponent(fileId)}`),
   /** The chats of a file, the one talked in last first, for the chat panel's list of earlier chats. */
   conversations: (fileId: string) => json<ConversationSummary[]>(`/api/runs/conversations?fileId=${encodeURIComponent(fileId)}`),
-  stopRun: async (id: string) => { await fetch(`/api/runs/${id}/stop`, { method: 'POST' }); },
+  stopRun: async (id: string, gentle = false) => { await fetch(`/api/runs/${id}/stop${gentle ? '?gentle=1' : ''}`, { method: 'POST' }); },
   /** A comment that asks for an agent. The server writes it, and starts the agent only for a person on its own device. */
   postComment: (req: { fileId: string; text: string; author: string; threadId?: string; pageId?: string; nodeId?: string; x?: number; y?: number; attachments?: { src: string; name?: string; width?: number; height?: number }[]; to?: RunnerId | 'comment'; model?: string; effort?: string }) => json<CommentSent>('/api/comments', body(req)),
   commentRuns: (fileId: string) => json<ThreadRun[]>(`/api/comments/runs?fileId=${encodeURIComponent(fileId)}`),

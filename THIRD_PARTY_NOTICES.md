@@ -16,10 +16,10 @@ node scripts/gen-third-party-notices.mjs --check   # exits 1 when it is out of d
 
 | Where | What it is | Packages |
 | --- | --- | --- |
-| CLI | `packages/server/dist/cli.js`, one bundle made by esbuild from the server, `@bogen/core` and their dependencies, with its worker bundles next to it, QuickJS's WebAssembly in `dist/quickjs/` for `script_run`, and `dist/vendor/` with Mermaid's browser bundle and pdf.js as files of their own, read on first use. Counted from the declared dependencies, so a few the bundler leaves out as unused may be listed. | 257 |
+| CLI | `packages/server/dist/cli.js`, one bundle made by esbuild from the server, `@bogen/core` and their dependencies, with its worker bundles next to it, QuickJS's WebAssembly in `dist/quickjs/` for `script_run`, and `dist/vendor/` with Mermaid's browser bundle and pdf.js as files of their own, read on first use. Counted from the declared dependencies, so a few the bundler leaves out as unused may be listed. | 259 |
 | Shader runtime | `packages/server/dist/shader-runtime.js`, the page script that draws shader layers in renders. | 5 |
 | Editor | The built editor in `apps/editor/dist`, copied to `packages/server/dist/editor`. Fonts included. | 16 |
-| npm install | Not bundled: the published package `bogen-design` depends on `puppeteer-core`, `esbuild` and `tailwindcss`, and npm installs them with what they need. | 52 |
+| npm install | Not bundled: the published package `bogen-design` depends on `puppeteer-core`, `esbuild` and `tailwindcss`, and npm installs them with what they need. | 215 |
 
 The bundles are minified and keep no license comments, so this file is where those notices live. It is included
 in the npm package.
@@ -62,6 +62,11 @@ Other material from third parties:
   with `woff2-encoder` (MIT), which is Google's woff2 and Brotli (both MIT) compiled to WebAssembly; both listed
   below, neither builds anything native. `packages/server/src/ofl.ts` holds the SIL Open Font License 1.1 verbatim,
   as the licence allows, so that a font derived from an OFL font carries it.
+- **English phonemizer.** `packages/server/src/speech/dizione/` is a port to TypeScript of dizione 0.1.0
+  (Apache-2.0, Muhammed Nazeem, <https://github.com/n4ze3m/dizione>), the phonemizer of the tiny-voca voices: its
+  Python modules translated one for one, and `data.ts` holding its hand-written tables unchanged. It is not a
+  dependency, so its notice is here; the Apache-2.0 text is under License texts below. The voice model and the
+  phonemizer data it reads are downloaded on request and listed in ASSET_PROVENANCE.md.
 - **Accessibility engine.** `compliance_check` runs `axe-core` (MPL-2.0, Deque Systems) in the headless renderer,
   bundled into the CLI. MPL-2.0 section 3.3 allows a Larger Work that contains it to be distributed under the GNU GPL
   as a Secondary License, because axe-core is not marked "Incompatible With Secondary Licenses". Its files stay under
@@ -75,18 +80,22 @@ Other material from third parties:
 
 | License | Packages |
 | --- | --- |
-| MIT | 234 |
-| ISC | 48 |
-| BSD-3-Clause | 10 |
-| Apache-2.0 | 8 |
+| MIT | 344 |
+| ISC | 58 |
+| Apache-2.0 | 23 |
+| BSD-3-Clause | 20 |
 | BSD-2-Clause | 8 |
+| BlueOak-1.0.0 | 6 |
 | OFL-1.1 | 2 |
 | Unlicense | 2 |
+| (BSD-2-Clause OR MIT OR Apache-2.0) | 1 |
 | (MIT AND Zlib) | 1 |
 | (MIT OR GPL-3.0-or-later) | 1 |
 | (MPL-2.0 OR Apache-2.0) | 1 |
 | 0BSD | 1 |
 | CC0-1.0 | 1 |
+| EPL-2.0 OR GPL-3.0-or-later | 1 |
+| GPL-3.0-or-later | 1 |
 | MPL-2.0 | 1 |
 
 ## Packages
@@ -95,21 +104,44 @@ Other material from third parties:
 | --- | --- | --- | --- | --- |
 | `@antfu/install-pkg` | 2.1.0 | MIT | CLI | <https://github.com/antfu-collective/install-pkg> |
 | `@braintree/sanitize-url` | 7.1.2 | MIT | CLI | <https://github.com/braintree/sanitize-url> |
-| `@chevrotain/types` | 11.1.2 | Apache-2.0 | CLI | <https://github.com/Chevrotain/chevrotain> |
+| `@chevrotain/cst-dts-gen` | 13.2.0 | Apache-2.0 | CLI | <https://github.com/Chevrotain/chevrotain> |
+| `@chevrotain/gast` | 13.2.0 | Apache-2.0 | CLI | <https://github.com/Chevrotain/chevrotain> |
+| `@chevrotain/regexp-to-ast` | 13.2.0 | Apache-2.0 | CLI | <https://github.com/Chevrotain/chevrotain> |
+| `@chevrotain/types` | 13.2.0 | Apache-2.0 | CLI | <https://github.com/Chevrotain/chevrotain> |
+| `@chevrotain/utils` | 13.2.0 | Apache-2.0 | CLI | <https://github.com/Chevrotain/chevrotain> |
 | `@fontsource-variable/archivo` | 5.3.0 | OFL-1.1 | Editor | <https://github.com/fontsource/font-files> |
 | `@fontsource-variable/source-sans-3` | 5.3.1 | OFL-1.1 | Editor | <https://github.com/fontsource/font-files> |
+| `@fugood/node-whisper-wasm` | 1.1.3 | MIT | npm install | <https://github.com/mybigday/whisper.node> |
+| `@fugood/whisper.node` | 1.1.3 | MIT | npm install | <https://github.com/whisper-node/whisper.node> |
 | `@hono/node-server` | 2.1.7 | MIT | CLI | <https://github.com/honojs/node-server> |
+| `@huggingface/jinja` | 0.5.13 | MIT | npm install | <https://github.com/huggingface/huggingface.js> |
 | `@iconify/types` | 2.0.0 | MIT | CLI | <https://github.com/iconify/iconify> |
 | `@iconify/utils` | 3.1.7 | MIT | CLI | <https://github.com/iconify/iconify> |
+| `@isaacs/fs-minipass` | 4.0.1 | ISC | npm install | <https://github.com/npm/fs-minipass> |
 | `@jitl/quickjs-ffi-types` | 0.32.0 | MIT | CLI | <https://github.com/justjake/quickjs-emscripten> |
 | `@jitl/quickjs-wasmfile-release-asyncify` | 0.32.0 | MIT | CLI | <https://github.com/justjake/quickjs-emscripten> |
-| `@mermaid-js/parser` | 1.2.1 | MIT | CLI | <https://github.com/mermaid-js/mermaid> |
+| `@kwsites/file-exists` | 1.1.1 | MIT | npm install |  |
+| `@kwsites/promise-deferred` | 1.1.1 | MIT | npm install | <https://github.com/kwsites/promise-deferred> |
+| `@mermaid-js/parser` | 2.0.1 | MIT | CLI | <https://github.com/mermaid-js/mermaid> |
 | `@modelcontextprotocol/sdk` | 1.32.2 | MIT | CLI | <https://github.com/modelcontextprotocol/typescript-sdk> |
 | `@paper-design/shaders` | 0.0.82 | Apache-2.0 | Shader runtime, Editor |  |
 | `@paper-design/shaders-react` | 0.0.82 | Apache-2.0 | Shader runtime, Editor |  |
 | `@pdf-lib/standard-fonts` | 1.0.0 | MIT | CLI | <https://github.com/Hopding/standard-fonts> |
 | `@pdf-lib/upng` | 1.0.1 | MIT | CLI | <https://github.com/Hopding/upng> |
+| `@protobufjs/aspromise` | 1.1.2 | BSD-3-Clause | npm install | <https://github.com/dcodeIO/protobuf.js> |
+| `@protobufjs/base64` | 1.1.2 | BSD-3-Clause | npm install | <https://github.com/dcodeIO/protobuf.js> |
+| `@protobufjs/codegen` | 2.0.5 | BSD-3-Clause | npm install | <https://github.com/dcodeIO/protobuf.js> |
+| `@protobufjs/eventemitter` | 1.1.1 | BSD-3-Clause | npm install | <https://github.com/dcodeIO/protobuf.js> |
+| `@protobufjs/fetch` | 1.1.1 | BSD-3-Clause | npm install | <https://github.com/dcodeIO/protobuf.js> |
+| `@protobufjs/float` | 1.0.2 | BSD-3-Clause | npm install | <https://github.com/dcodeIO/protobuf.js> |
+| `@protobufjs/path` | 1.1.2 | BSD-3-Clause | npm install | <https://github.com/dcodeIO/protobuf.js> |
+| `@protobufjs/pool` | 1.1.0 | BSD-3-Clause | npm install | <https://github.com/dcodeIO/protobuf.js> |
+| `@protobufjs/utf8` | 1.1.2 | BSD-3-Clause | npm install | <https://github.com/protobufjs/protobuf.js> |
 | `@puppeteer/browsers` | 3.2.7 | Apache-2.0 | npm install | <https://github.com/puppeteer/puppeteer/tree/main/packages/browsers> |
+| `@reflink/reflink` | 0.1.19 | MIT | npm install | <https://github.com/pnpm/reflink> |
+| `@simple-git/args-pathspec` | 1.0.4 | MIT | npm install | <https://github.com/steveukx/git-js> |
+| `@simple-git/argv-parser` | 2.0.1 | MIT | npm install | <https://github.com/steveukx/git-js> |
+| `@tinyhttp/content-disposition` | 2.2.4 | MIT | npm install | <https://github.com/tinyhttp/tinyhttp> |
 | `@types/d3` | 7.4.3 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | `@types/d3-array` | 3.2.2 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | `@types/d3-axis` | 3.0.6 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
@@ -143,25 +175,42 @@ Other material from third parties:
 | `@types/d3-zoom` | 3.0.9 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | `@types/dom-webcodecs` | 0.1.19 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | `@types/geojson` | 7946.0.16 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
-| `@types/node` | 22.20.5 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
+| `@types/node` | 22.20.5 | MIT | CLI, npm install | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | `@types/trusted-types` | 2.0.7 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | `@types/wicg-file-system-access` | 2020.9.8 | MIT | CLI | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | `@upsetjs/venn.js` | 2.0.0 | MIT | CLI | <https://github.com/upsetjs/venn.js> |
 | `accepts` | 2.0.0 | MIT | CLI | <https://github.com/jshttp/accepts> |
 | `ajv` | 8.20.0 | MIT | CLI | <https://github.com/ajv-validator/ajv> |
 | `ajv-formats` | 3.0.1 | MIT | CLI | <https://github.com/ajv-validator/ajv-formats> |
+| `ansi-escapes` | 6.2.1 | MIT | npm install | <https://github.com/sindresorhus/ansi-escapes> |
+| `ansi-regex` | 5.0.1 | MIT | npm install | <https://github.com/chalk/ansi-regex> |
 | `ansi-regex` | 6.6.0 | MIT | npm install | <https://github.com/chalk/ansi-regex> |
+| `ansi-styles` | 4.3.0 | MIT | npm install | <https://github.com/chalk/ansi-styles> |
 | `ansi-styles` | 6.2.3 | MIT | npm install | <https://github.com/chalk/ansi-styles> |
+| `async-retry` | 1.3.3 | MIT | npm install | <https://github.com/vercel/async-retry> |
 | `axe-core` | 4.14.0 | MPL-2.0 | CLI | <https://github.com/dequelabs/axe-core> |
 | `body-parser` | 2.4.0 | MIT | CLI | <https://github.com/expressjs/body-parser> |
 | `boolbase` | 2.0.0 | ISC | CLI | <https://github.com/fb55/boolbase> |
-| `bytes` | 3.1.2 | MIT | CLI | <https://github.com/visionmedia/bytes.js> |
+| `bytes` | 3.1.2 | MIT | CLI, npm install | <https://github.com/visionmedia/bytes.js> |
 | `call-bind-apply-helpers` | 1.0.2 | MIT | CLI | <https://github.com/ljharb/call-bind-apply-helpers> |
 | `call-bound` | 1.0.4 | MIT | CLI | <https://github.com/ljharb/call-bound> |
+| `chalk` | 5.6.2 | MIT | npm install | <https://github.com/chalk/chalk> |
+| `chevrotain` | 13.2.0 | Apache-2.0 | CLI | <https://github.com/Chevrotain/chevrotain> |
+| `chmodrp` | 1.0.2 | MIT | npm install | <https://github.com/leonzalion/chmodrp> |
+| `chownr` | 3.0.0 | BlueOak-1.0.0 | npm install | <https://github.com/isaacs/chownr> |
 | `chromium-bidi` | 157.0.8090-0 | Apache-2.0 | npm install | <https://github.com/GoogleChromeLabs/chromium-bidi> |
+| `ci-info` | 4.5.0 | MIT | npm install | <https://github.com/watson/ci-info> |
+| `cli-cursor` | 5.0.0 | MIT | npm install | <https://github.com/sindresorhus/cli-cursor> |
+| `cli-spinners` | 2.9.2 | MIT | npm install | <https://github.com/sindresorhus/cli-spinners> |
+| `cli-spinners` | 3.4.0 | MIT | npm install | <https://github.com/sindresorhus/cli-spinners> |
+| `cliui` | 8.0.1 | ISC | npm install | <https://github.com/yargs/cliui> |
 | `cliui` | 9.0.1 | ISC | npm install | <https://github.com/yargs/cliui> |
+| `cmake-js` | 8.0.0 | MIT | npm install | <https://github.com/cmake-js/cmake-js> |
+| `color-convert` | 2.0.1 | MIT | npm install | <https://github.com/Qix-/color-convert> |
+| `color-name` | 1.1.4 | MIT | npm install |  |
 | `commander` | 7.2.0 | MIT | CLI | <https://github.com/tj/commander.js> |
-| `commander` | 8.3.0 | MIT | CLI | <https://github.com/tj/commander.js> |
+| `commander` | 10.0.1 | MIT | npm install | <https://github.com/tj/commander.js> |
+| `commander` | 15.1.0 | MIT | CLI | <https://github.com/tj/commander.js> |
 | `content-disposition` | 2.0.1 | MIT | CLI | <https://github.com/jshttp/content-disposition> |
 | `content-type` | 1.0.5 | MIT | CLI | <https://github.com/jshttp/content-type> |
 | `content-type` | 2.1.0 | MIT | CLI | <https://github.com/jshttp/content-type> |
@@ -171,7 +220,7 @@ Other material from third parties:
 | `cors` | 2.8.6 | MIT | CLI | <https://github.com/expressjs/cors> |
 | `cose-base` | 1.0.3 | MIT | CLI | <https://github.com/iVis-at-Bilkent/cose-base> |
 | `cose-base` | 2.2.0 | MIT | CLI | <https://github.com/iVis-at-Bilkent/cose-base> |
-| `cross-spawn` | 7.0.6 | MIT | CLI |  |
+| `cross-spawn` | 7.0.6 | MIT | CLI, npm install |  |
 | `css-select` | 7.0.0 | BSD-2-Clause | CLI | <https://github.com/fb55/css-select> |
 | `css-what` | 8.0.0 | BSD-2-Clause | CLI | <https://github.com/fb55/css-what> |
 | `culori` | 4.0.2 | MIT | CLI, Editor |  |
@@ -215,7 +264,8 @@ Other material from third parties:
 | `d3-zoom` | 3.0.1 | ISC | CLI | <https://github.com/d3/d3-zoom> |
 | `dagre-d3-es` | 7.0.14 | MIT | CLI | <https://github.com/tbo47/dagre-es> |
 | `dayjs` | 1.11.23 | MIT | CLI | <https://github.com/iamkun/dayjs> |
-| `debug` | 4.4.3 | MIT | CLI | <https://github.com/debug-js/debug> |
+| `debug` | 4.4.3 | MIT | CLI, npm install | <https://github.com/debug-js/debug> |
+| `deep-extend` | 0.6.0 | MIT | npm install | <https://github.com/unclechu/node-deep-extend> |
 | `delaunator` | 5.1.0 | ISC | CLI | <https://github.com/mapbox/delaunator> |
 | `depd` | 2.0.0 | MIT | CLI | <https://github.com/dougwilson/nodejs-depd> |
 | `devtools-protocol` | 0.0.1717327 | BSD-3-Clause | npm install | <https://github.com/ChromeDevTools/devtools-protocol> |
@@ -226,9 +276,12 @@ Other material from third parties:
 | `domutils` | 4.0.2 | BSD-2-Clause | CLI | <https://github.com/fb55/domutils> |
 | `dunder-proto` | 1.0.1 | MIT | CLI | <https://github.com/es-shims/dunder-proto> |
 | `ee-first` | 1.1.1 | MIT | CLI | <https://github.com/jonathanong/ee-first> |
+| `elkjs` | 0.12.1 | EPL-2.0 OR GPL-3.0-or-later | CLI | <https://github.com/kieler/elkjs> |
+| `emoji-regex` | 8.0.0 | MIT | npm install | <https://github.com/mathiasbynens/emoji-regex> |
 | `emoji-regex` | 10.6.0 | MIT | npm install | <https://github.com/mathiasbynens/emoji-regex> |
 | `encodeurl` | 2.0.2 | MIT | CLI | <https://github.com/pillarjs/encodeurl> |
 | `entities` | 8.1.0 | BSD-2-Clause | CLI | <https://github.com/fb55/entities> |
+| `env-var` | 7.5.0 | MIT | npm install | <https://github.com/evanshortiss/env-var> |
 | `es-define-property` | 1.0.1 | MIT | CLI | <https://github.com/ljharb/es-define-property> |
 | `es-errors` | 1.3.0 | MIT | CLI | <https://github.com/ljharb/es-errors> |
 | `es-object-atoms` | 1.1.2 | MIT | CLI | <https://github.com/ljharb/es-object-atoms> |
@@ -236,24 +289,31 @@ Other material from third parties:
 | `esbuild` | 0.28.2 | MIT | npm install | <https://github.com/evanw/esbuild> |
 | `escalade` | 3.2.0 | MIT | npm install | <https://github.com/lukeed/escalade> |
 | `escape-html` | 1.0.3 | MIT | CLI | <https://github.com/component/escape-html> |
+| `espeak-ng` | 1.0.2 | GPL-3.0-or-later | npm install | <https://github.com/ianmarmour/espeak-ng.js> |
 | `etag` | 1.8.1 | MIT | CLI | <https://github.com/jshttp/etag> |
+| `eventemitter3` | 5.0.4 | MIT | npm install | <https://github.com/primus/eventemitter3> |
 | `eventsource` | 3.0.7 | MIT | CLI | <https://git@github.com/EventSource/eventsource> |
 | `eventsource-parser` | 3.1.1 | MIT | CLI | <https://github.com/rexxars/eventsource-parser> |
 | `express` | 5.3.0 | MIT | CLI | <https://github.com/expressjs/express> |
 | `express-rate-limit` | 8.7.4 | MIT | CLI | <https://github.com/express-rate-limit/express-rate-limit> |
 | `fast-deep-equal` | 3.1.3 | MIT | CLI | <https://github.com/epoberezkin/fast-deep-equal> |
 | `fast-uri` | 3.1.9 | BSD-3-Clause | CLI | <https://github.com/fastify/fast-uri> |
-| `fastdom` | 1.0.12 | MIT | CLI | <https://github.com/wilsonpage/fastdom> |
+| `filename-reserved-regex` | 3.0.0 | MIT | npm install | <https://github.com/sindresorhus/filename-reserved-regex> |
+| `filenamify` | 6.0.0 | MIT | npm install | <https://github.com/sindresorhus/filenamify> |
 | `finalhandler` | 2.1.1 | MIT | CLI | <https://github.com/pillarjs/finalhandler> |
+| `flatbuffers` | 25.9.23 | Apache-2.0 | npm install | <https://github.com/google/flatbuffers> |
 | `forwarded` | 0.2.0 | MIT | CLI | <https://github.com/jshttp/forwarded> |
 | `fractional-indexing` | 4.0.0 | CC0-1.0 | CLI | <https://github.com/rocicorp/fractional-indexing> |
 | `fresh` | 2.0.0 | MIT | CLI | <https://github.com/jshttp/fresh> |
+| `fs-extra` | 11.4.1 | MIT | npm install | <https://github.com/jprichardson/node-fs-extra> |
 | `function-bind` | 1.1.2 | MIT | CLI | <https://github.com/Raynos/function-bind> |
 | `get-caller-file` | 2.0.5 | ISC | npm install | <https://github.com/stefanpenner/get-caller-file> |
 | `get-east-asian-width` | 1.7.0 | MIT | npm install | <https://github.com/sindresorhus/get-east-asian-width> |
 | `get-intrinsic` | 1.3.0 | MIT | CLI | <https://github.com/ljharb/get-intrinsic> |
 | `get-proto` | 1.0.1 | MIT | CLI | <https://github.com/ljharb/get-proto> |
 | `gopd` | 1.2.0 | MIT | CLI | <https://github.com/ljharb/gopd> |
+| `graceful-fs` | 4.2.12 | BlueOak-1.0.0 | npm install | <https://github.com/isaacs/node-graceful-fs> |
+| `guid-typescript` | 1.0.9 | ISC | npm install | <https://github.com/NicolasDeveloper/guid-typescript> |
 | `hachure-fill` | 0.5.2 | MIT | CLI | <https://github.com/pshihn/hachure-fill> |
 | `has-symbols` | 1.1.0 | MIT | CLI | <https://github.com/inspect-js/has-symbols> |
 | `hasown` | 2.0.4 | MIT | CLI | <https://github.com/inspect-js/hasOwn> |
@@ -263,74 +323,113 @@ Other material from third parties:
 | `https` | 1.0.0 | ISC | CLI |  |
 | `iconv-lite` | 0.6.3 | MIT | CLI | <https://github.com/ashtuchkin/iconv-lite> |
 | `iconv-lite` | 0.7.3 | MIT | CLI | <https://github.com/pillarjs/iconv-lite> |
-| `image-size` | 1.2.1 | MIT | CLI | <https://github.com/image-size/image-size> |
+| `ignore` | 7.0.14 | MIT | npm install | <https://github.com/kaelzhang/node-ignore> |
+| `image-size` | 2.1.0 | MIT | CLI | <https://codeberg.org/image-size/image-size> |
 | `imagetracerjs` | 1.2.6 | Unlicense | CLI | <https://github.com/jankovicsandras/imagetracerjs> |
 | `immediate` | 3.0.6 | MIT | CLI | <https://github.com/calvinmetcalf/immediate> |
 | `import-meta-resolve` | 4.2.0 | MIT | CLI | <https://github.com/wooorm/import-meta-resolve> |
 | `inherits` | 2.0.4 | ISC | CLI | <https://github.com/isaacs/inherits> |
+| `ini` | 1.3.8 | ISC | npm install | <https://github.com/isaacs/ini> |
 | `internmap` | 1.0.1 | ISC | CLI | <https://github.com/mbostock/internmap> |
 | `internmap` | 2.0.3 | ISC | CLI | <https://github.com/mbostock/internmap> |
 | `ip-address` | 10.7.6 | MIT | CLI | <https://github.com/beaugunderson/ip-address> |
 | `ipaddr.js` | 1.9.1 | MIT | CLI | <https://github.com/whitequark/ipaddr.js> |
+| `ipull` | 3.9.5 | MIT | npm install | <https://github.com/ido-pluto/ipull> |
+| `is-fullwidth-code-point` | 3.0.0 | MIT | npm install | <https://github.com/sindresorhus/is-fullwidth-code-point> |
+| `is-fullwidth-code-point` | 5.1.0 | MIT | npm install | <https://github.com/sindresorhus/is-fullwidth-code-point> |
+| `is-interactive` | 2.0.0 | MIT | npm install | <https://github.com/sindresorhus/is-interactive> |
 | `is-promise` | 4.0.0 | MIT | CLI | <https://github.com/then/is-promise> |
+| `is-unicode-supported` | 2.1.0 | MIT | npm install | <https://github.com/sindresorhus/is-unicode-supported> |
 | `isarray` | 1.0.0 | MIT | CLI | <https://github.com/juliangruber/isarray> |
-| `isexe` | 2.0.0 | ISC | CLI | <https://github.com/isaacs/isexe> |
+| `isexe` | 2.0.0 | ISC | CLI, npm install | <https://github.com/isaacs/isexe> |
+| `isexe` | 4.0.0 | BlueOak-1.0.0 | npm install | <https://github.com/isaacs/isexe> |
 | `isomorphic.js` | 0.2.5 | MIT | CLI, Editor | <https://github.com/dmonad/isomorphic.js> |
 | `jose` | 6.2.17 | MIT | CLI | <https://github.com/panva/jose> |
 | `json-schema-traverse` | 1.0.0 | MIT | CLI | <https://github.com/epoberezkin/json-schema-traverse> |
 | `json-schema-typed` | 8.0.2 | BSD-2-Clause | CLI | <https://github.com/RemyRylan/json-schema-typed> |
+| `jsonfile` | 6.2.1 | MIT | npm install |  |
 | `jszip` | 3.10.2 | (MIT OR GPL-3.0-or-later) | CLI | <https://github.com/Stuk/jszip> |
-| `katex` | 0.16.47 | MIT | CLI | <https://github.com/KaTeX/KaTeX> |
+| `katex` | 0.18.10 | MIT | CLI | <https://github.com/KaTeX/KaTeX> |
 | `khroma` | 2.1.0 | MIT | CLI | <https://github.com/fabiospampinato/khroma> |
 | `layout-base` | 1.0.2 | MIT | CLI | <https://github.com/iVis-at-Bilkent/layout-base> |
 | `layout-base` | 2.0.1 | MIT | CLI | <https://github.com/iVis-at-Bilkent/layout-base> |
 | `lib0` | 0.2.120 | MIT | CLI, Editor | <https://github.com/dmonad/lib0> |
 | `lie` | 3.3.0 | MIT | CLI | <https://github.com/calvinmetcalf/lie> |
+| `lifecycle-utils` | 2.1.0 | MIT | npm install | <https://github.com/giladgd/lifecycle-utils> |
+| `lifecycle-utils` | 4.5.2 | MIT | npm install | <https://github.com/giladgd/lifecycle-utils> |
 | `lodash-es` | 4.18.1 | MIT | CLI | <https://github.com/lodash/lodash> |
+| `lodash.debounce` | 4.0.8 | MIT | npm install | <https://github.com/lodash/lodash> |
+| `log-symbols` | 7.0.1 | MIT | npm install | <https://github.com/sindresorhus/log-symbols> |
+| `long` | 5.3.2 | Apache-2.0 | npm install | <https://github.com/dcodeIO/long.js> |
+| `lowdb` | 7.0.1 | MIT | npm install | <https://github.com/typicode/lowdb> |
 | `lucide-react` | 1.72.0 | ISC | Editor | <https://github.com/lucide-icons/lucide> |
 | `marked` | 16.4.2 | MIT | CLI | <https://github.com/markedjs/marked> |
 | `math-intrinsics` | 1.1.0 | MIT | CLI | <https://github.com/es-shims/math-intrinsics> |
 | `media-typer` | 1.1.1 | MIT | CLI | <https://github.com/jshttp/media-typer> |
 | `merge-descriptors` | 2.0.0 | MIT | CLI | <https://github.com/sindresorhus/merge-descriptors> |
-| `mermaid` | 11.17.2 | MIT | CLI | <https://github.com/mermaid-js/mermaid> |
+| `mermaid` | 12.3.0 | MIT | CLI | <https://github.com/mermaid-js/mermaid> |
 | `mime-db` | 1.54.0 | MIT | CLI | <https://github.com/jshttp/mime-db> |
 | `mime-types` | 3.0.2 | MIT | CLI | <https://github.com/jshttp/mime-types> |
+| `mimic-function` | 5.0.1 | MIT | npm install | <https://github.com/sindresorhus/mimic-function> |
+| `minimist` | 1.2.8 | MIT | npm install | <https://github.com/minimistjs/minimist> |
+| `minipass` | 7.1.3 | BlueOak-1.0.0 | npm install | <https://github.com/isaacs/minipass> |
+| `minizlib` | 3.1.0 | MIT | npm install | <https://github.com/isaacs/minizlib> |
 | `mitt` | 3.0.1 | MIT | npm install | <https://github.com/developit/mitt> |
 | `modern-tar` | 0.8.6 | MIT | npm install | <https://github.com/ayuhito/modern-tar> |
 | `mp4-muxer` | 5.2.2 | MIT | CLI | <https://github.com/Vanilagy/mp4-muxer> |
-| `ms` | 2.1.3 | MIT | CLI | <https://github.com/vercel/ms> |
+| `ms` | 2.1.3 | MIT | CLI, npm install | <https://github.com/vercel/ms> |
+| `nanoid` | 5.1.16 | MIT | npm install | <https://github.com/ai/nanoid> |
 | `negotiator` | 1.1.0 | MIT | CLI | <https://github.com/jshttp/negotiator> |
+| `node-addon-api` | 8.9.2 | MIT | npm install | <https://github.com/nodejs/node-addon-api> |
+| `node-api-headers` | 1.9.0 | MIT | npm install | <https://github.com/nodejs/node-api-headers> |
+| `node-llama-cpp` | 3.22.3 | MIT | npm install | <https://github.com/withcatai/node-llama-cpp> |
 | `nth-check` | 3.0.1 | BSD-2-Clause | CLI | <https://github.com/fb55/nth-check> |
 | `object-assign` | 4.1.1 | MIT | CLI | <https://github.com/sindresorhus/object-assign> |
 | `object-inspect` | 1.13.4 | MIT | CLI | <https://github.com/inspect-js/object-inspect> |
 | `on-finished` | 2.4.2 | MIT | CLI | <https://github.com/jshttp/on-finished> |
 | `once` | 1.4.0 | ISC | CLI | <https://github.com/isaacs/once> |
+| `onetime` | 7.0.0 | MIT | npm install | <https://github.com/sindresorhus/onetime> |
+| `onnxruntime-common` | 1.31.1 | MIT | npm install | <https://github.com/Microsoft/onnxruntime> |
+| `onnxruntime-web` | 1.31.1 | MIT | npm install | <https://github.com/Microsoft/onnxruntime> |
 | `opentype.js` | 2.0.0 | MIT | CLI | <https://github.com/opentypejs/opentype.js> |
+| `ora` | 9.4.1 | MIT | npm install | <https://github.com/sindresorhus/ora> |
 | `package-manager-detector` | 1.9.0 | MIT | CLI | <https://github.com/antfu-collective/package-manager-detector> |
 | `pako` | 1.0.11 | (MIT AND Zlib) | CLI | <https://github.com/nodeca/pako> |
 | `paper` | 0.16.0 | MIT | Editor | <https://github.com/paperjs/paper.js> |
+| `parse-ms` | 3.0.0 | MIT | npm install | <https://github.com/sindresorhus/parse-ms> |
+| `parse-ms` | 4.0.0 | MIT | npm install | <https://github.com/sindresorhus/parse-ms> |
 | `parseurl` | 1.3.3 | MIT | CLI | <https://github.com/pillarjs/parseurl> |
 | `path-data-parser` | 0.1.0 | MIT | CLI | <https://github.com/pshihn/path-data-parser> |
-| `path-key` | 3.1.1 | MIT | CLI | <https://github.com/sindresorhus/path-key> |
+| `path-key` | 3.1.1 | MIT | CLI, npm install | <https://github.com/sindresorhus/path-key> |
 | `path-to-regexp` | 8.4.2 | MIT | CLI | <https://github.com/pillarjs/path-to-regexp> |
 | `pdf-lib` | 1.17.1 | MIT | CLI | <https://github.com/Hopding/pdf-lib> |
 | `pdfjs-dist` | 6.4.299 | Apache-2.0 | CLI | <https://github.com/mozilla/pdf.js> |
 | `pkce-challenge` | 5.0.1 | MIT | CLI | <https://github.com/crouchcd/pkce-challenge> |
+| `platform` | 1.3.6 | MIT | npm install | <https://github.com/bestiejs/platform.js> |
 | `points-on-curve` | 0.2.0 | MIT | CLI | <https://github.com/pshihn/bezier-points> |
 | `points-on-path` | 0.2.1 | MIT | CLI | <https://github.com/pshihn/points-on-path> |
 | `pptxgenjs` | 4.0.1 | MIT | CLI | <https://github.com/gitbrent/PptxGenJS> |
+| `pretty-bytes` | 6.1.1 | MIT | npm install | <https://github.com/sindresorhus/pretty-bytes> |
+| `pretty-ms` | 8.0.0 | MIT | npm install | <https://github.com/sindresorhus/pretty-ms> |
+| `pretty-ms` | 9.3.1 | MIT | npm install | <https://github.com/sindresorhus/pretty-ms> |
 | `process-nextick-args` | 2.0.1 | MIT | CLI | <https://github.com/calvinmetcalf/process-nextick-args> |
+| `proper-lockfile` | 4.1.2 | MIT | npm install |  |
+| `protobufjs` | 7.6.6 | BSD-3-Clause | npm install | <https://github.com/protobufjs/protobuf.js> |
 | `proxy-addr` | 2.0.8 | MIT | CLI | <https://github.com/jshttp/proxy-addr> |
 | `puppeteer-core` | 25.17.0 | Apache-2.0 | npm install | <https://github.com/puppeteer/puppeteer/tree/main/packages/puppeteer-core> |
 | `qs` | 6.17.1 | BSD-3-Clause | CLI | <https://github.com/ljharb/qs> |
-| `queue` | 6.0.2 | MIT | CLI | <https://github.com/jessetane/queue> |
 | `quickjs-emscripten-core` | 0.32.0 | MIT | CLI | <https://github.com/justjake/quickjs-emscripten> |
 | `range-parser` | 1.3.0 | MIT | CLI | <https://github.com/jshttp/range-parser> |
 | `raw-body` | 3.0.2 | MIT | CLI | <https://github.com/stream-utils/raw-body> |
+| `rc` | 1.2.8 | (BSD-2-Clause OR MIT OR Apache-2.0) | npm install | <https://github.com/dominictarr/rc> |
 | `react` | 19.3.1 | MIT | Shader runtime, Editor | <https://github.com/react/react> |
 | `react-dom` | 19.3.1 | MIT | Shader runtime, Editor | <https://github.com/react/react> |
 | `readable-stream` | 2.3.8 | MIT | CLI | <https://github.com/nodejs/readable-stream> |
+| `require-directory` | 2.1.1 | MIT | npm install | <https://github.com/troygoode/node-require-directory> |
 | `require-from-string` | 2.0.2 | MIT | CLI | <https://github.com/floatdrop/require-from-string> |
+| `restore-cursor` | 5.1.0 | MIT | npm install | <https://github.com/sindresorhus/restore-cursor> |
+| `retry` | 0.12.0 | MIT | npm install | <https://github.com/tim-kos/node-retry> |
+| `retry` | 0.13.1 | MIT | npm install | <https://github.com/tim-kos/node-retry> |
 | `robust-predicates` | 3.0.3 | Unlicense | CLI | <https://github.com/mourner/robust-predicates> |
 | `roughjs` | 4.6.6 | MIT | CLI | <https://github.com/pshihn/rough> |
 | `router` | 2.2.0 | MIT | CLI | <https://github.com/pillarjs/router> |
@@ -338,50 +437,72 @@ Other material from third parties:
 | `safe-buffer` | 5.1.2 | MIT | CLI | <https://github.com/feross/safe-buffer> |
 | `safer-buffer` | 2.1.2 | MIT | CLI | <https://github.com/ChALkeR/safer-buffer> |
 | `scheduler` | 0.28.0 | MIT | Shader runtime, Editor | <https://github.com/react/react> |
+| `semver` | 7.8.6 | ISC | npm install | <https://github.com/npm/node-semver> |
 | `send` | 1.2.1 | MIT | CLI | <https://github.com/pillarjs/send> |
 | `serve-static` | 2.2.1 | MIT | CLI | <https://github.com/expressjs/serve-static> |
 | `setimmediate` | 1.0.5 | MIT | CLI | <https://github.com/YuzuJS/setImmediate> |
 | `setprototypeof` | 1.2.0 | ISC | CLI | <https://github.com/wesleytodd/setprototypeof> |
-| `shebang-command` | 2.0.0 | MIT | CLI | <https://github.com/kevva/shebang-command> |
-| `shebang-regex` | 3.0.0 | MIT | CLI | <https://github.com/sindresorhus/shebang-regex> |
+| `shebang-command` | 2.0.0 | MIT | CLI, npm install | <https://github.com/kevva/shebang-command> |
+| `shebang-regex` | 3.0.0 | MIT | CLI, npm install | <https://github.com/sindresorhus/shebang-regex> |
+| `sherpa-onnx-node` | 2.0.1 | Apache-2.0 | npm install | <https://github.com/csukuangfj/sherpa-onnx> |
 | `side-channel` | 1.1.1 | MIT | CLI | <https://github.com/ljharb/side-channel> |
 | `side-channel-list` | 1.0.1 | MIT | CLI | <https://github.com/ljharb/side-channel-list> |
 | `side-channel-map` | 1.0.1 | MIT | CLI | <https://github.com/ljharb/side-channel-map> |
 | `side-channel-weakmap` | 1.0.2 | MIT | CLI | <https://github.com/ljharb/side-channel-weakmap> |
+| `signal-exit` | 3.0.7 | ISC | npm install | <https://github.com/tapjs/signal-exit> |
+| `signal-exit` | 4.1.0 | ISC | npm install | <https://github.com/tapjs/signal-exit> |
+| `simple-git` | 4.0.2 | MIT | npm install | <https://github.com/steveukx/git-js> |
+| `sleep-promise` | 9.1.0 | MIT | npm install | <https://github.com/brummelte/sleep-promise> |
+| `slice-ansi` | 7.1.2 | MIT | npm install | <https://github.com/chalk/slice-ansi> |
+| `slice-ansi` | 8.0.0 | MIT | npm install | <https://github.com/chalk/slice-ansi> |
 | `smol-toml` | 1.9.1 | BSD-3-Clause | CLI | <https://github.com/squirrelchat/smol-toml> |
 | `statuses` | 2.0.2 | MIT | CLI | <https://github.com/jshttp/statuses> |
-| `strictdom` | 1.0.1 | MIT | CLI | <https://github.com/wilsonpage/strictdom> |
+| `stdin-discarder` | 0.3.2 | MIT | npm install | <https://github.com/sindresorhus/stdin-discarder> |
+| `stdout-update` | 4.0.1 | MIT | npm install | <https://github.com/keindev/stdout-update> |
+| `steno` | 4.0.2 | MIT | npm install | <https://github.com/typicode/steno> |
 | `string_decoder` | 1.1.1 | MIT | CLI | <https://github.com/nodejs/string_decoder> |
+| `string-width` | 4.2.3 | MIT | npm install | <https://github.com/sindresorhus/string-width> |
 | `string-width` | 7.2.0 | MIT | npm install | <https://github.com/sindresorhus/string-width> |
 | `string-width` | 8.3.0 | MIT | npm install | <https://github.com/sindresorhus/string-width> |
+| `strip-ansi` | 6.0.1 | MIT | npm install | <https://github.com/chalk/strip-ansi> |
 | `strip-ansi` | 7.2.0 | MIT | npm install | <https://github.com/chalk/strip-ansi> |
+| `strip-json-comments` | 2.0.1 | MIT | npm install | <https://github.com/sindresorhus/strip-json-comments> |
 | `stylis` | 4.4.0 | MIT | CLI | <https://github.com/thysultan/stylis.js> |
 | `tailwindcss` | 4.3.5 | MIT | npm install | <https://github.com/tailwindlabs/tailwindcss> |
+| `tar` | 7.5.23 | BlueOak-1.0.0 | npm install | <https://github.com/isaacs/node-tar> |
 | `tinyexec` | 1.3.1 | MIT | CLI | <https://github.com/tinylibs/tinyexec> |
 | `toidentifier` | 1.0.1 | MIT | CLI | <https://github.com/component/toidentifier> |
 | `ts-dedent` | 2.3.0 | MIT | CLI | <https://github.com/tamino-martinius/node-ts-dedent> |
 | `tslib` | 1.14.1 | 0BSD | CLI | <https://github.com/Microsoft/tslib> |
 | `type-is` | 2.1.0 | MIT | CLI | <https://github.com/jshttp/type-is> |
 | `typed-query-selector` | 2.12.3 | MIT | npm install | <https://github.com/g-plane/typed-query-selector> |
-| `undici-types` | 6.21.0 | MIT | CLI | <https://github.com/nodejs/undici> |
+| `undici-types` | 6.21.0 | MIT | CLI, npm install | <https://github.com/nodejs/undici> |
+| `universalify` | 2.0.1 | MIT | npm install | <https://github.com/RyanZim/universalify> |
 | `unpipe` | 1.0.0 | MIT | CLI | <https://github.com/stream-utils/unpipe> |
+| `url-join` | 4.0.1 | MIT | npm install | <https://github.com/jfromaniello/url-join> |
 | `util-deprecate` | 1.0.2 | MIT | CLI | <https://github.com/TooTallNate/util-deprecate> |
-| `uuid` | 14.0.3 | MIT | CLI | <https://github.com/uuidjs/uuid> |
+| `validate-npm-package-name` | 7.0.2 | ISC | npm install | <https://github.com/npm/validate-npm-package-name> |
 | `vary` | 1.1.2 | MIT | CLI | <https://github.com/jshttp/vary> |
 | `webdriver-bidi-protocol` | 1.0.2 | Apache-2.0 | npm install | <https://github.com/GoogleChromeLabs/webdriver-bidi-protocol> |
 | `webm-muxer` | 5.1.4 | MIT | CLI | <https://github.com/Vanilagy/webm-muxer> |
-| `which` | 2.0.2 | ISC | CLI | <https://github.com/isaacs/node-which> |
+| `which` | 2.0.2 | ISC | CLI, npm install | <https://github.com/isaacs/node-which> |
+| `which` | 6.0.1 | ISC | npm install | <https://github.com/npm/node-which> |
 | `woff2-encoder` | 2.0.0 | MIT | CLI | <https://github.com/itskyedo/woff2-encoder> |
+| `wrap-ansi` | 7.0.0 | MIT | npm install | <https://github.com/chalk/wrap-ansi> |
 | `wrap-ansi` | 9.0.2 | MIT | npm install | <https://github.com/chalk/wrap-ansi> |
 | `wrappy` | 1.0.2 | ISC | CLI | <https://github.com/npm/wrappy> |
 | `ws` | 8.22.2 | MIT | CLI, npm install | <https://github.com/websockets/ws> |
 | `y-protocols` | 1.0.7 | MIT | CLI, Editor | <https://github.com/yjs/y-protocols> |
 | `y-websocket` | 3.1.0 | MIT | Editor | <https://github.com/yjs/y-websocket> |
 | `y18n` | 5.0.8 | ISC | npm install | <https://github.com/yargs/y18n> |
+| `yallist` | 5.0.0 | BlueOak-1.0.0 | npm install | <https://github.com/isaacs/yallist> |
 | `yaml` | 2.9.1 | ISC | CLI | <https://github.com/eemeli/yaml> |
+| `yargs` | 17.7.3 | MIT | npm install | <https://github.com/yargs/yargs> |
 | `yargs` | 18.2.0 | MIT | npm install | <https://github.com/yargs/yargs> |
+| `yargs-parser` | 21.1.1 | ISC | npm install | <https://github.com/yargs/yargs-parser> |
 | `yargs-parser` | 22.0.0 | ISC | npm install | <https://github.com/yargs/yargs-parser> |
 | `yjs` | 13.6.33 | MIT | CLI, Editor | <https://github.com/yjs/yjs> |
+| `yoctocolors` | 2.2.0 | MIT | npm install | <https://github.com/sindresorhus/yoctocolors> |
 | `zod` | 4.6.7 | MIT | CLI, npm install | <https://github.com/colinhacks/zod> |
 | `zod-to-json-schema` | 3.25.2 | ISC | CLI | <https://github.com/StefanTerdell/zod-to-json-schema> |
 | `zustand` | 5.1.0 | MIT | Editor | <https://github.com/pmndrs/zustand> |
@@ -418,6 +539,48 @@ Prebuilt binaries for one operating system and processor. npm installs only the 
 | `@esbuild/win32-arm64` | 0.28.2 | MIT | npm install |
 | `@esbuild/win32-ia32` | 0.28.2 | MIT | npm install |
 | `@esbuild/win32-x64` | 0.28.2 | MIT | npm install |
+| `@fugood/node-whisper-darwin-arm64` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-darwin-x64` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-linux-arm64` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-linux-arm64-cuda` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-linux-arm64-vulkan` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-linux-x64` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-linux-x64-cuda` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-linux-x64-vulkan` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-win32-arm64` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-win32-arm64-vulkan` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-win32-x64` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-win32-x64-cuda` | 1.1.3 | MIT | npm install |
+| `@fugood/node-whisper-win32-x64-vulkan` | 1.1.3 | MIT | npm install |
+| `@node-llama-cpp/linux-arm64` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/linux-armv7l` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/linux-riscv64` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/linux-x64` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/linux-x64-cuda` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/linux-x64-cuda-ext` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/linux-x64-vulkan` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/mac-arm64-metal` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/mac-x64` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/win-arm64` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/win-x64` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/win-x64-cuda` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/win-x64-cuda-ext` | 3.22.3 | MIT | npm install |
+| `@node-llama-cpp/win-x64-vulkan` | 3.22.3 | MIT | npm install |
+| `@reflink/reflink-darwin-arm64` | 0.1.19 | MIT | npm install |
+| `@reflink/reflink-darwin-x64` | 0.1.19 | MIT | npm install |
+| `@reflink/reflink-linux-arm64-gnu` | 0.1.19 | MIT | npm install |
+| `@reflink/reflink-linux-arm64-musl` | 0.1.19 | MIT | npm install |
+| `@reflink/reflink-linux-x64-gnu` | 0.1.19 | MIT | npm install |
+| `@reflink/reflink-linux-x64-musl` | 0.1.19 | MIT | npm install |
+| `@reflink/reflink-win32-arm64-msvc` | 0.1.19 | MIT | npm install |
+| `@reflink/reflink-win32-x64-msvc` | 0.1.19 | MIT | npm install |
+| `sherpa-onnx-darwin-arm64` | 2.0.1 | Apache-2.0 | npm install |
+| `sherpa-onnx-darwin-x64` | 2.0.1 | Apache-2.0 | npm install |
+| `sherpa-onnx-linux-arm64` | 2.0.1 | Apache-2.0 | npm install |
+| `sherpa-onnx-linux-x64` | 2.0.1 | Apache-2.0 | npm install |
+| `sherpa-onnx-win-arm64` | 2.0.1 | Apache-2.0 | npm install |
+| `sherpa-onnx-win-ia32` | 2.0.1 | Apache-2.0 | npm install |
+| `sherpa-onnx-win-x64` | 2.0.1 | Apache-2.0 | npm install |
 
 ## Copyright notices
 
@@ -427,14 +590,31 @@ license file; its license is the one in its `package.json`.
 - `@antfu/install-pkg` 2.1.0: Copyright (c) 2021 Anthony Fu <https://github.com/antfu>
 - `@braintree/sanitize-url` 7.1.2: Copyright (c) 2017 Braintree
 - `@fontsource-variable/archivo` 5.3.0: Copyright 2020 The Archivo Project Authors (https://github.com/Omnibus-Type/Archivo) Archivo-Italic[wdth,wght].ttf: Copyright 2020 The Archivo Project Authors (https://github.com/Omnibus-Type/Archivo)
+- `@fugood/whisper.node` 1.1.3: Copyright (c) 2025 ggml / whisper.cpp contributors; Copyright (c) 2025 Jhen-Jie Hong <developer@jhen.me>; Copyright (c) 2025 Hans Chen <hans.chen@bricks.tools>
 - `@hono/node-server` 2.1.7: Copyright (c) 2022 - present, Yusuke Wada and Hono contributors
+- `@huggingface/jinja` 0.5.13: Copyright (c) 2023 Hugging Face
 - `@iconify/types` 2.0.0: Copyright (c) 2021 - 2022 Vjacheslav Trushkin / Iconify OÜ
 - `@iconify/utils` 3.1.7: Copyright (c) 2021-PRESENT Vjacheslav Trushkin
+- `@isaacs/fs-minipass` 4.0.1: Copyright (c) Isaac Z. Schlueter and Contributors
 - `@jitl/quickjs-wasmfile-release-asyncify` 0.32.0: Copyright (c) 2017-2021 Fabrice Bellard; Copyright (c) 2017-2021 Charlie Gordon
-- `@mermaid-js/parser` 1.2.1: Copyright (c) 2023 Yokozuna59
+- `@kwsites/file-exists` 1.1.1: Copyright (c) 2015 Steve King
+- `@kwsites/promise-deferred` 1.1.1: Copyright (c) 2018 kwsites
+- `@mermaid-js/parser` 2.0.1: Copyright (c) 2023 Yokozuna59
 - `@modelcontextprotocol/sdk` 1.32.2: Copyright (c) 2024 Anthropic, PBC
 - `@pdf-lib/standard-fonts` 1.0.0: Copyright (c) 2018 Andrew Dillon
 - `@pdf-lib/upng` 1.0.1: Copyright (c) 2017 Photopea
+- `@protobufjs/aspromise` 1.1.2: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@protobufjs/base64` 1.1.2: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@protobufjs/codegen` 2.0.5: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@protobufjs/eventemitter` 1.1.1: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@protobufjs/fetch` 1.1.1: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@protobufjs/float` 1.0.2: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@protobufjs/path` 1.1.2: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@protobufjs/pool` 1.1.0: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@protobufjs/utf8` 1.1.2: Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@simple-git/args-pathspec` 1.0.4: Copyright (c) 2025 Steve King
+- `@simple-git/argv-parser` 2.0.1: Copyright (c) 2025 Steve King
+- `@tinyhttp/content-disposition` 2.2.4: Copyright (c) 2020 v 1 r t l
 - `@types/d3` 7.4.3: Copyright (c) Microsoft Corporation.
 - `@types/d3-array` 3.2.2: Copyright (c) Microsoft Corporation.
 - `@types/d3-axis` 3.0.6: Copyright (c) Microsoft Corporation.
@@ -475,17 +655,33 @@ license file; its license is the one in its `package.json`.
 - `accepts` 2.0.0: Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2015 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `ajv` 8.20.0: Copyright (c) 2015-2021 Evgeny Poberezkin
 - `ajv-formats` 3.0.1: Copyright (c) 2020 Evgeny Poberezkin
+- `ansi-escapes` 6.2.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `ansi-regex` 5.0.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `ansi-regex` 6.6.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `ansi-styles` 4.3.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `ansi-styles` 6.2.3: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `async-retry` 1.3.3: Copyright (c) 2021 Vercel, Inc.
 - `axe-core` 4.14.0: Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors; Copyright (c) 2010, Linden Research, Inc.; Copyright (c) 2012, Joshua Bell
 - `body-parser` 2.4.0: Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2014-2015 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `boolbase` 2.0.0: Copyright (c) 2014-2015, Felix Boehm <me@feedic.com>
 - `bytes` 3.1.2: Copyright (c) 2012-2014 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2015 Jed Watson <jed.watson@me.com>
 - `call-bind-apply-helpers` 1.0.2: Copyright (c) 2024 Jordan Harband
 - `call-bound` 1.0.4: Copyright (c) 2024 Jordan Harband
+- `chalk` 5.6.2: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `chmodrp` 1.0.2: Copyright (c) Leon Si <contact@leonzalion.com> (https://leonzalion.com)
+- `chownr` 3.0.0: copyright in it.
+- `ci-info` 4.5.0: Copyright (c) 2016 Thomas Watson Steen
+- `cli-cursor` 5.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `cli-spinners` 2.9.2: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `cli-spinners` 3.4.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `cliui` 8.0.1: Copyright (c) 2015, Contributors
 - `cliui` 9.0.1: Copyright (c) 2015, Contributors
+- `cmake-js` 8.0.0: Copyright (c) 2015 Gábor Mező aka unbornchikken
+- `color-convert` 2.0.1: Copyright (c) 2011-2016 Heather Arthur <fayearthur@gmail.com>
+- `color-name` 1.1.4: Copyright (c) 2015 Dmitry Ivanov
 - `commander` 7.2.0: Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
-- `commander` 8.3.0: Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
+- `commander` 10.0.1: Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
+- `commander` 15.1.0: Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
 - `content-disposition` 2.0.1: Copyright (c) 2014-2017 Douglas Christopher Wilson
 - `content-type` 1.0.5: Copyright (c) 2015 Douglas Christopher Wilson
 - `content-type` 2.1.0: Copyright (c) 2015 Douglas Christopher Wilson
@@ -540,6 +736,7 @@ license file; its license is the one in its `package.json`.
 - `dagre-d3-es` 7.0.14: Copyright (c) 2022-2024 Thibaut Lassalle, David Newell, Alois Klink, Sidharth Vinod and dagre-es contributors
 - `dayjs` 1.11.23: Copyright (c) 2018-present, iamkun
 - `debug` 4.4.3: Copyright (c) 2014-2017 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2018-2021 Josh Junon
+- `deep-extend` 0.6.0: Copyright (c) 2013-2018, Viacheslav Lotsmanov
 - `delaunator` 5.1.0: Copyright (c) 2026, Mapbox
 - `depd` 2.0.0: Copyright (c) 2014-2018 Douglas Christopher Wilson
 - `dom-serializer` 3.1.1: Copyright © 2022 The Cheerio contributors
@@ -548,9 +745,12 @@ license file; its license is the one in its `package.json`.
 - `domutils` 4.0.2: Copyright (c) Felix Böhm
 - `dunder-proto` 1.0.1: Copyright (c) 2024 ECMAScript Shims
 - `ee-first` 1.1.1: Copyright (c) 2014 Jonathan Ong me@jongleberry.com
+- `elkjs` 0.12.1: copyright rights in its Contribution, if any, to grant the copyright
+- `emoji-regex` 8.0.0: Copyright Mathias Bynens <https://mathiasbynens.be/>
 - `emoji-regex` 10.6.0: Copyright Mathias Bynens <https://mathiasbynens.be/>
 - `encodeurl` 2.0.2: Copyright (c) 2016 Douglas Christopher Wilson
 - `entities` 8.1.0: Copyright (c) Felix Böhm
+- `env-var` 7.5.0: Copyright (c) 2016, 2024 Evan Shortiss
 - `es-define-property` 1.0.1: Copyright (c) 2024 Jordan Harband
 - `es-errors` 1.3.0: Copyright (c) 2024 Jordan Harband
 - `es-object-atoms` 1.1.2: Copyright (c) 2024 Jordan Harband
@@ -558,22 +758,28 @@ license file; its license is the one in its `package.json`.
 - `esbuild` 0.28.2: Copyright (c) 2020 Evan Wallace
 - `escalade` 3.2.0: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
 - `escape-html` 1.0.3: Copyright (c) 2012-2013 TJ Holowaychuk; Copyright (c) 2015 Andreas Lubbe; Copyright (c) 2015 Tiancheng "Timothy" Gu
+- `espeak-ng` 1.0.2: Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>; copyright on the Program, and are irrevocable provided the stated; Copyright (C) <year> <name of author>
 - `etag` 1.8.1: Copyright (c) 2014-2016 Douglas Christopher Wilson
+- `eventemitter3` 5.0.4: Copyright (c) 2014 Arnout Kazemier
 - `eventsource` 3.0.7: Copyright (c) EventSource GitHub organisation
 - `eventsource-parser` 3.1.1: Copyright (c) 2026 Espen Hovlandsdal <espen@hovlandsdal.com>
 - `express` 5.3.0: Copyright (c) 2009-2014 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2013-2014 Roman Shtylman <shtylman+expressjs@gmail.com>; Copyright (c) 2014-2015 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `express-rate-limit` 8.7.4: Copyright 2023 Nathan Friedly, Vedant K
 - `fast-deep-equal` 3.1.3: Copyright (c) 2017 Evgeny Poberezkin
 - `fast-uri` 3.1.9: Copyright (c) 2011-2021, Gary Court until https://github.com/garycourt/uri-js/commit/a1acf730b4bba3f1097c9f52e7d9d3aba8cdcaae; Copyright (c) 2021-present The Fastify team <https://github.com/fastify/fastify#team>
+- `filename-reserved-regex` 3.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `filenamify` 6.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `finalhandler` 2.1.1: Copyright (c) 2014-2022 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `forwarded` 0.2.0: Copyright (c) 2014-2017 Douglas Christopher Wilson
 - `fresh` 2.0.0: Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2016-2017 Douglas Christopher Wilson <doug@somethingdoug.com>
+- `fs-extra` 11.4.1: Copyright (c) 2011-2024 JP Richardson
 - `function-bind` 1.1.2: Copyright (c) 2013 Raynos.
 - `get-caller-file` 2.0.5: Copyright 2018 Stefan Penner
 - `get-east-asian-width` 1.7.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `get-intrinsic` 1.3.0: Copyright (c) 2020 Jordan Harband
 - `get-proto` 1.0.1: Copyright (c) 2025 Jordan Harband
 - `gopd` 1.2.0: Copyright (c) 2022 Jordan Harband
+- `graceful-fs` 4.2.12: copyright in it.
 - `hachure-fill` 0.5.2: Copyright (c) 2023 Preet Shihn
 - `has-symbols` 1.1.0: Copyright (c) 2016 Jordan Harband
 - `hasown` 2.0.4: Copyright (c) Jordan Harband and contributors
@@ -582,72 +788,108 @@ license file; its license is the one in its `package.json`.
 - `http-errors` 2.0.1: Copyright (c) 2014 Jonathan Ong me@jongleberry.com; Copyright (c) 2016 Douglas Christopher Wilson doug@somethingdoug.com
 - `iconv-lite` 0.6.3: Copyright (c) 2011 Alexander Shtuchkin
 - `iconv-lite` 0.7.3: Copyright (c) 2011 Alexander Shtuchkin
-- `image-size` 1.2.1: Copyright © 2013-Present Aditya Yadav, http://netroy.in
+- `ignore` 7.0.14: Copyright (c) 2013 Kael Zhang <i@kael.me>, contributors
+- `image-size` 2.1.0: Copyright © 2013-Present Aditya Yadav, http://netroy.in
 - `immediate` 3.0.6: Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, Domenic Denicola, Brian Cavalier
 - `import-meta-resolve` 4.2.0: Copyright (c) Titus Wormer <mailto:tituswormer@gmail.com>; Copyright Node.js contributors. All rights reserved.; Copyright Joyent, Inc. and other Node contributors. All rights reserved.
 - `inherits` 2.0.4: Copyright (c) Isaac Z. Schlueter
+- `ini` 1.3.8: Copyright (c) Isaac Z. Schlueter and Contributors
 - `internmap` 1.0.1: Copyright 2021 Mike Bostock
 - `internmap` 2.0.3: Copyright 2021 Mike Bostock
 - `ip-address` 10.7.6: Copyright (C) 2011 by Beau Gunderson
 - `ipaddr.js` 1.9.1: Copyright (C) 2011-2017 whitequark <whitequark@whitequark.org>
+- `ipull` 3.9.5: Copyright (c) 2023 Ido S.
+- `is-fullwidth-code-point` 3.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+- `is-fullwidth-code-point` 5.1.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `is-interactive` 2.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `is-promise` 4.0.0: Copyright (c) 2014 Forbes Lindesay
+- `is-unicode-supported` 2.1.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `isexe` 2.0.0: Copyright (c) Isaac Z. Schlueter and Contributors
+- `isexe` 4.0.0: copyright in it.
 - `isomorphic.js` 0.2.5: Copyright (c) 2020 Kevin Jahns <kevin.jahns@protonmail.com>.
 - `jose` 6.2.17: Copyright (c) 2018 Filip Skokan
 - `json-schema-traverse` 1.0.0: Copyright (c) 2017 Evgeny Poberezkin
+- `jsonfile` 6.2.1: Copyright (c) 2012-2015, JP Richardson <jprichardson@gmail.com>
 - `jszip` 3.10.2: Copyright (c) 2009-2016 Stuart Knightley, David Duponchel, Franz Buchinger, António Afonso; Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>; copyright on the Program, and are irrevocable provided the stated
-- `katex` 0.16.47: Copyright (c) 2013-2020 Khan Academy and other contributors
+- `katex` 0.18.10: Copyright (c) 2013-2020 Khan Academy and other contributors
 - `khroma` 2.1.0: Copyright (c) 2019-present Fabio Spampinato, Andrew Maney
 - `layout-base` 1.0.2: Copyright (c) 2019 iVis@Bilkent
 - `layout-base` 2.0.1: Copyright (c) 2019 iVis@Bilkent
 - `lib0` 0.2.120: Copyright (c) 2019 Kevin Jahns <kevin.jahns@protonmail.com>.
+- `lifecycle-utils` 2.1.0: Copyright (c) 2023 Gilad S.
+- `lifecycle-utils` 4.5.2: Copyright (c) 2023 Gilad S.
 - `lodash-es` 4.18.1: Copyright OpenJS Foundation and other contributors <https://openjsf.org/>; Copyright and related rights for sample code are waived via CC0. Sample
+- `lodash.debounce` 4.0.8: Copyright jQuery Foundation and other contributors <https://jquery.org/>; Copyright and related rights for sample code are waived via CC0. Sample
+- `log-symbols` 7.0.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `lowdb` 7.0.1: Copyright (c) 2021 typicode
 - `lucide-react` 1.72.0: Copyright (c) 2026 Lucide Icons and Contributors; Copyright (c) 2013-present Cole Bemis
 - `marked` 16.4.2: Copyright (c) 2018+, MarkedJS (https://github.com/markedjs/); Copyright (c) 2011-2018, Christopher Jeffrey (https://github.com/chjj/); Copyright © 2004, John Gruber
 - `math-intrinsics` 1.1.0: Copyright (c) 2024 ECMAScript Shims
 - `media-typer` 1.1.1: Copyright (c) 2014-2017 Douglas Christopher Wilson
 - `merge-descriptors` 2.0.0: Copyright (c) Jonathan Ong <me@jongleberry.com>; Copyright (c) Douglas Christopher Wilson <doug@somethingdoug.com>; Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
-- `mermaid` 11.17.2: Copyright (c) 2014 - 2022 Knut Sveidqvist
+- `mermaid` 12.3.0: Copyright (c) 2014 - 2022 Knut Sveidqvist
 - `mime-db` 1.54.0: Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2015-2022 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `mime-types` 3.0.2: Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2015 Douglas Christopher Wilson <doug@somethingdoug.com>
+- `mimic-function` 5.0.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `minipass` 7.1.3: copyright in it.
+- `minizlib` 3.1.0: Copyright (c) 2017-2023 Isaac Z. Schlueter and Contributors; Copyright (c) 2017-2023 Node.js contributors. All rights reserved.; Copyright (c) 2017-2023 Joyent, Inc. and other Node contributors. All rights reserved.
 - `mitt` 3.0.1: Copyright (c) 2021 Jason Miller
 - `modern-tar` 0.8.6: Copyright (c) 2025 Ayuhito
 - `mp4-muxer` 5.2.2: Copyright (c) 2023 Vanilagy
 - `ms` 2.1.3: Copyright (c) 2020 Vercel, Inc.
+- `nanoid` 5.1.16: Copyright 2017 Andrey Sitnik <andrey@sitnik.es>
 - `negotiator` 1.1.0: Copyright (c) 2012-2014 Federico Romero; Copyright (c) 2012-2014 Isaac Z. Schlueter; Copyright (c) 2014-2015 Douglas Christopher Wilson
+- `node-addon-api` 8.9.2: Copyright (c) 2017 [Node.js API collaborators](https://github.com/nodejs/node-addon-api#collaborators)
+- `node-api-headers` 1.9.0: Copyright (c) 2021 Node.js
+- `node-llama-cpp` 3.22.3: Copyright (c) 2023 Gilad S.
 - `nth-check` 3.0.1: Copyright (c) Felix Böhm
 - `object-assign` 4.1.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `object-inspect` 1.13.4: Copyright (c) 2013 James Halliday
 - `on-finished` 2.4.2: Copyright (c) 2013 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2014 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `once` 1.4.0: Copyright (c) Isaac Z. Schlueter and Contributors
+- `onetime` 7.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `opentype.js` 2.0.0: Copyright (c) 2020 Frederik De Bleser
+- `ora` 9.4.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `package-manager-detector` 1.9.0: Copyright (c) 2020-PRESENT Anthony Fu <https://github.com/antfu>
 - `pako` 1.0.11: Copyright (C) 2014-2017 by Vitaly Puzrin and Andrei Tuputcyn
 - `paper` 0.16.0: Copyright (c) 2011 - 2020, Jürg Lehni & Jonathan Puckey
+- `parse-ms` 3.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `parse-ms` 4.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `parseurl` 1.3.3: Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2014-2017 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `path-data-parser` 0.1.0: Copyright (c) 2020 Preet Shihn
 - `path-key` 3.1.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `path-to-regexp` 8.4.2: Copyright (c) 2014 Blake Embrey (hello@blakeembrey.com)
 - `pdf-lib` 1.17.1: Copyright (c) 2019 Andrew Dillon
 - `pkce-challenge` 5.0.1: Copyright (c) 2019
+- `platform` 1.3.6: Copyright 2014-2020 Benjamin Tan; Copyright 2011-2013 John-David Dalton
 - `points-on-curve` 0.2.0: Copyright (c) 2020 Preet Shihn
 - `points-on-path` 0.2.1: Copyright (c) 2020 Preet
 - `pptxgenjs` 4.0.1: Copyright (c) 2015-2022 Brent Ely
+- `pretty-bytes` 6.1.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `pretty-ms` 8.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `pretty-ms` 9.3.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `proper-lockfile` 4.1.2: Copyright (c) 2018 Made With MOXY Lda <hello@moxy.studio>
+- `protobufjs` 7.6.6: Copyright (c) 2016, Daniel Wirtz All rights reserved.
 - `proxy-addr` 2.0.8: Copyright (c) 2014-2016 Douglas Christopher Wilson
 - `qs` 6.17.1: Copyright (c) 2014, Nathan LaFreniere and other [contributors](https://github.com/ljharb/qs/graphs/contributors)
-- `queue` 6.0.2: Copyright (c) 2014 Jesse Tane <jesse.tane@gmail.com>
 - `range-parser` 1.3.0: Copyright (c) 2012-2014 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2015-2016 Douglas Christopher Wilson <doug@somethingdoug.com
 - `raw-body` 3.0.2: Copyright (c) 2013-2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2014-2022 Douglas Christopher Wilson <doug@somethingdoug.com>
+- `rc` 1.2.8: Copyright (c) 2011 Dominic Tarr; Copyright (c) 2013, Dominic Tarr; Copyright (c) 2011 Dominic Tarr
 - `react` 19.3.1: Copyright (c) Meta Platforms, Inc. and affiliates.
 - `react-dom` 19.3.1: Copyright (c) Meta Platforms, Inc. and affiliates.
 - `readable-stream` 2.3.8: Copyright Node.js contributors. All rights reserved.; Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+- `require-directory` 2.1.1: Copyright (c) 2011 Troy Goode <troygoode@gmail.com>
 - `require-from-string` 2.0.2: Copyright (c) Vsevolod Strukchinsky <floatdrop@gmail.com> (github.com/floatdrop)
+- `restore-cursor` 5.1.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `retry` 0.12.0: Copyright (c) 2011:
+- `retry` 0.13.1: Copyright (c) 2011:
 - `roughjs` 4.6.6: Copyright (c) 2019 Preet Shihn
 - `router` 2.2.0: Copyright (c) 2013 Roman Shtylman; Copyright (c) 2014-2022 Douglas Christopher Wilson
 - `rw` 1.3.3: Copyright (c) 2014-2016, Michael Bostock
 - `safe-buffer` 5.1.2: Copyright (c) Feross Aboukhadijeh
 - `safer-buffer` 2.1.2: Copyright (c) 2018 Nikita Skovoroda <chalkerx@gmail.com>
 - `scheduler` 0.28.0: Copyright (c) Meta Platforms, Inc. and affiliates.
+- `semver` 7.8.6: Copyright (c) Isaac Z. Schlueter and Contributors
 - `send` 1.2.1: Copyright (c) 2012 TJ Holowaychuk; Copyright (c) 2014-2022 Douglas Christopher Wilson
 - `serve-static` 2.2.1: Copyright (c) 2010 Sencha Inc.; Copyright (c) 2011 LearnBoost; Copyright (c) 2011 TJ Holowaychuk; Copyright (c) 2014-2016 Douglas Christopher Wilson
 - `setimmediate` 1.0.5: Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola
@@ -658,14 +900,27 @@ license file; its license is the one in its `package.json`.
 - `side-channel-list` 1.0.1: Copyright (c) 2024 Jordan Harband
 - `side-channel-map` 1.0.1: Copyright (c) 2024 Jordan Harband
 - `side-channel-weakmap` 1.0.2: Copyright (c) 2019 Jordan Harband
+- `signal-exit` 3.0.7: Copyright (c) 2015, Contributors
+- `signal-exit` 4.1.0: Copyright (c) 2015-2023 Benjamin Coe, Isaac Z. Schlueter, and Contributors
+- `simple-git` 4.0.2: Copyright (c) 2025 Steve King
+- `sleep-promise` 9.1.0: Copyright (c) 2015 Jan Brummelte
+- `slice-ansi` 7.1.2: Copyright (c) DC <threedeecee@gmail.com>; Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `slice-ansi` 8.0.0: Copyright (c) DC <threedeecee@gmail.com>; Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `smol-toml` 1.9.1: Copyright (c) Squirrel Chat et al., All rights reserved.
 - `statuses` 2.0.2: Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2016 Douglas Christopher Wilson <doug@somethingdoug.com>
+- `stdin-discarder` 0.3.2: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `stdout-update` 4.0.1: Copyright (c) 2022 Daniil Ryazanov <kein@tagproject.ru>
+- `steno` 4.0.2: Copyright (c) 2021 typicode
 - `string_decoder` 1.1.1: Copyright Node.js contributors. All rights reserved.; Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+- `string-width` 4.2.3: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `string-width` 7.2.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `string-width` 8.3.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `strip-ansi` 6.0.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `strip-ansi` 7.2.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- `strip-json-comments` 2.0.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `stylis` 4.4.0: Copyright (c) 2016-present Sultan Tarimo
 - `tailwindcss` 4.3.5: Copyright (c) Tailwind Labs, Inc.
+- `tar` 7.5.23: copyright in it.
 - `tinyexec` 1.3.1: Copyright (c) 2024 Tinylibs
 - `toidentifier` 1.0.1: Copyright (c) 2016 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `ts-dedent` 2.3.0: Copyright (c) 2018 Tamino Martinius
@@ -673,29 +928,37 @@ license file; its license is the one in its `package.json`.
 - `type-is` 2.1.0: Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2014-2015 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `typed-query-selector` 2.12.3: Copyright (c) 2020-present Pig Fang
 - `undici-types` 6.21.0: Copyright (c) Matteo Collina and Undici contributors
+- `universalify` 2.0.1: Copyright (c) 2017, Ryan Zimmerman <opensrc@ryanzim.com>
 - `unpipe` 1.0.0: Copyright (c) 2015 Douglas Christopher Wilson <doug@somethingdoug.com>
+- `url-join` 4.0.1: Copyright (c) 2015 José F. Romaniello
 - `util-deprecate` 1.0.2: Copyright (c) 2014 Nathan Rajlich <nathan@tootallnate.net>
-- `uuid` 14.0.3: Copyright (c) 2010-2020 Robert Kieffer and other contributors
+- `validate-npm-package-name` 7.0.2: Copyright (c) 2015, npm, Inc
 - `vary` 1.1.2: Copyright (c) 2014-2017 Douglas Christopher Wilson
 - `webdriver-bidi-protocol` 1.0.2: Copyright 2024 Google Inc.
 - `webm-muxer` 5.1.4: Copyright (c) 2022 Vanilagy
 - `which` 2.0.2: Copyright (c) Isaac Z. Schlueter and Contributors
+- `which` 6.0.1: Copyright (c) Isaac Z. Schlueter and Contributors
 - `woff2-encoder` 2.0.0: Copyright (c) 2023-PRESENT Kyedo <https://github.com/itskyedo>
+- `wrap-ansi` 7.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `wrap-ansi` 9.0.2: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `wrappy` 1.0.2: Copyright (c) Isaac Z. Schlueter and Contributors
 - `ws` 8.22.2: Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>; Copyright (c) 2013 Arnout Kazemier and contributors; Copyright (c) 2016 Luigi Pinca and contributors
 - `y-protocols` 1.0.7: Copyright (c) 2019 Kevin Jahns <kevin.jahns@protonmail.com>.
 - `y-websocket` 3.1.0: Copyright (c) 2025 Kevin Jahns <kevin.jahns@protonmail.com>.
 - `y18n` 5.0.8: Copyright (c) 2015, Contributors
+- `yallist` 5.0.0: copyright in it.
 - `yaml` 2.9.1: Copyright Eemeli Aro <eemeli@gmail.com>
+- `yargs` 17.7.3: Copyright 2010 James Halliday (mail@substack.net); Modified work Copyright 2014 Contributors (ben@npmjs.com)
 - `yargs` 18.2.0: Copyright 2010 James Halliday (mail@substack.net); Modified work Copyright 2014 Contributors (ben@npmjs.com)
+- `yargs-parser` 21.1.1: Copyright (c) 2016, Contributors
 - `yargs-parser` 22.0.0: Copyright (c) 2016, Contributors
 - `yjs` 13.6.33: Copyright (c) 2023
+- `yoctocolors` 2.2.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `zod` 4.6.7: Copyright (c) 2025 Colin McDonnell
 - `zod-to-json-schema` 3.25.2: Copyright (c) 2020, Stefan Terdell
 - `zustand` 5.1.0: Copyright (c) 2019 Paul Henschel
 
-No license file in the package: `@puppeteer/browsers` 3.2.7 (Apache-2.0), `fastdom` 1.0.12 (MIT), `https` 1.0.0 (ISC), `isarray` 1.0.0 (MIT), `puppeteer-core` 25.17.0 (Apache-2.0), `strictdom` 1.0.1 (MIT).
+No license file in the package: `@fugood/node-whisper-wasm` 1.1.3 (MIT), `@puppeteer/browsers` 3.2.7 (Apache-2.0), `@reflink/reflink` 0.1.19 (MIT), `guid-typescript` 1.0.9 (ISC), `https` 1.0.0 (ISC), `isarray` 1.0.0 (MIT), `onnxruntime-common` 1.31.1 (MIT), `onnxruntime-web` 1.31.1 (MIT), `puppeteer-core` 25.17.0 (Apache-2.0), `sherpa-onnx-node` 2.0.1 (Apache-2.0).
 
 ## NOTICE files
 
@@ -839,6 +1102,28 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 One text per license, as the first package that uses it ships it. The copyright lines above belong in place of the
 ones in these texts for every other package under the same license.
+
+### (BSD-2-Clause OR MIT OR Apache-2.0)
+
+From `rc 1.2.8`, file `LICENSE.APACHE2`.
+
+```text
+Apache License, Version 2.0
+
+Copyright (c) 2011 Dominic Tarr
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
 
 ### (MIT AND Zlib)
 
@@ -1754,7 +2039,7 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ### Apache-2.0
 
-From `@chevrotain/types 11.1.2`, file `LICENSE.txt`.
+From `@chevrotain/cst-dts-gen 13.2.0`, file `LICENSE.txt`.
 
 ```text
 Apache License
@@ -1960,6 +2245,76 @@ Apache License
    limitations under the License.
 ```
 
+### BlueOak-1.0.0
+
+From `chownr 3.0.0`, file `LICENSE.md`.
+
+```text
+All packages under `src/` are licensed according to the terms in
+their respective `LICENSE` or `LICENSE.md` files.
+
+The remainder of this project is licensed under the Blue Oak
+Model License, as follows:
+
+-----
+
+# Blue Oak Model License
+
+Version 1.0.0
+
+## Purpose
+
+This license gives everyone as much permission to work with
+this software as possible, while protecting contributors
+from liability.
+
+## Acceptance
+
+In order to receive this license, you must agree to its
+rules.  The rules of this license are both obligations
+under that agreement and conditions to your license.
+You must not do anything with this software that triggers
+a rule that you cannot or will not follow.
+
+## Copyright
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe that contributor's
+copyright in it.
+
+## Notices
+
+You must ensure that everyone who gets a copy of
+any part of this software from you, with or without
+changes, also gets the text of this license or a link to
+<https://blueoakcouncil.org/license/1.0.0>.
+
+## Excuse
+
+If anyone notifies you in writing that you have not
+complied with [Notices](#notices), you can keep your
+license by taking all practical steps to comply within 30
+days after the notice.  If you do not do so, your license
+ends immediately.
+
+## Patent
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe any patent claims
+they can license or become able to license.
+
+## Reliability
+
+No contributor can revoke this license.
+
+## No Liability
+
+***As far as the law allows, this software comes as is,
+without any warranty or condition, and no contributor
+will be liable to anyone for any damages related to this
+software or this license, under any kind of legal claim.***
+```
+
 ### BSD-2-Clause
 
 From `css-select 7.0.0`, file `LICENSE`.
@@ -1980,36 +2335,35 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ### BSD-3-Clause
 
-From `d3-array 2.12.1`, file `LICENSE`.
+From `@protobufjs/aspromise 1.1.2`, file `LICENSE`.
 
 ```text
-Copyright 2010-2020 Mike Bostock
-All rights reserved.
+Copyright (c) 2016, Daniel Wirtz  All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
 
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
+* Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+* Neither the name of its author, nor the names of its contributors
+  may be used to endorse or promote products derived from this software
+  without specific prior written permission.
 
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-* Neither the name of the author nor the names of contributors may be used to
-  endorse or promote products derived from this software without specific prior
-  written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 ### CC0-1.0
@@ -2140,12 +2494,965 @@ express Statement of Purpose.
     this CC0 or use of the Work.
 ```
 
-### ISC
+### EPL-2.0 OR GPL-3.0-or-later
 
-From `boolbase 2.0.0`, file `LICENSE`.
+From `elkjs 0.12.1`, file `LICENSE.md`.
 
 ```text
-Copyright (c) 2014-2015, Felix Boehm <me@feedic.com>
+# Eclipse Public License - v 2.0
+
+THE ACCOMPANYING PROGRAM IS PROVIDED UNDER THE TERMS OF THIS ECLIPSE
+PUBLIC LICENSE (“AGREEMENT”). ANY USE, REPRODUCTION OR DISTRIBUTION OF
+THE PROGRAM CONSTITUTES RECIPIENT'S ACCEPTANCE OF THIS AGREEMENT.
+
+## 1. DEFINITIONS
+
+“Contribution” means:
+
+-   a\) in the case of the initial Contributor, the initial content
+    Distributed under this Agreement, and
+-   b\) in the case of each subsequent Contributor:
+    -   i\) changes to the Program, and
+    -   ii\) additions to the Program;
+
+    where such changes and/or additions to the Program originate from
+    and are Distributed by that particular Contributor. A Contribution
+    “originates” from a Contributor if it was added to the Program by
+    such Contributor itself or anyone acting on such Contributor's
+    behalf. Contributions do not include changes or additions to the
+    Program that are not Modified Works.
+
+“Contributor” means any person or entity that Distributes the Program.
+
+“Licensed Patents” mean patent claims licensable by a Contributor which
+are necessarily infringed by the use or sale of its Contribution alone
+or when combined with the Program.
+
+“Program” means the Contributions Distributed in accordance with this
+Agreement.
+
+“Recipient” means anyone who receives the Program under this Agreement
+or any Secondary License (as applicable), including Contributors.
+
+“Derivative Works” shall mean any work, whether in Source Code or other
+form, that is based on (or derived from) the Program and for which the
+editorial revisions, annotations, elaborations, or other modifications
+represent, as a whole, an original work of authorship.
+
+“Modified Works” shall mean any work in Source Code or other form that
+results from an addition to, deletion from, or modification of the
+contents of the Program, including, for purposes of clarity any new file
+in Source Code form that contains any contents of the Program. Modified
+Works shall not include works that contain only declarations,
+interfaces, types, classes, structures, or files of the Program solely
+in each case in order to link to, bind by name, or subclass the Program
+or Modified Works thereof.
+
+“Distribute” means the acts of a) distributing or b) making available in
+any manner that enables the transfer of a copy.
+
+“Source Code” means the form of a Program preferred for making
+modifications, including but not limited to software source code,
+documentation source, and configuration files.
+
+“Secondary License” means either the GNU General Public License, Version
+2.0, or any later versions of that license, including any exceptions or
+additional permissions as identified by the initial Contributor.
+
+## 2. GRANT OF RIGHTS
+
+-   a\) Subject to the terms of this Agreement, each Contributor hereby
+    grants Recipient a non-exclusive, worldwide, royalty-free copyright
+    license to reproduce, prepare Derivative Works of, publicly display,
+    publicly perform, Distribute and sublicense the Contribution of such
+    Contributor, if any, and such Derivative Works.
+-   b\) Subject to the terms of this Agreement, each Contributor hereby
+    grants Recipient a non-exclusive, worldwide, royalty-free patent license
+    under Licensed Patents to make, use, sell, offer to sell, import and
+    otherwise transfer the Contribution of such Contributor, if any, in
+    Source Code or other form. This patent license shall apply to the
+    combination of the Contribution and the Program if, at the time the
+    Contribution is added by the Contributor, such addition of the
+    Contribution causes such combination to be covered by the
+    Licensed Patents. The patent license shall not apply to any other
+    combinations which include the Contribution. No hardware per se is
+    licensed hereunder.
+-   c\) Recipient understands that although each Contributor grants the
+    licenses to its Contributions set forth herein, no assurances are
+    provided by any Contributor that the Program does not infringe the
+    patent or other intellectual property rights of any other entity. Each
+    Contributor disclaims any liability to Recipient for claims brought by
+    any other entity based on infringement of intellectual property rights
+    or otherwise. As a condition to exercising the rights and licenses
+    granted hereunder, each Recipient hereby assumes sole responsibility to
+    secure any other intellectual property rights needed, if any. For
+    example, if a third party patent license is required to allow Recipient
+    to Distribute the Program, it is Recipient's responsibility to acquire
+    that license before distributing the Program.
+-   d\) Each Contributor represents that to its knowledge it has sufficient
+    copyright rights in its Contribution, if any, to grant the copyright
+    license set forth in this Agreement.
+-   e\) Notwithstanding the terms of any Secondary License, no Contributor
+    makes additional grants to any Recipient (other than those set forth in
+    this Agreement) as a result of such Recipient's receipt of the Program
+    under the terms of a Secondary License (if permitted under the terms of
+    Section 3).
+
+## 3. REQUIREMENTS
+
+3.1 If a Contributor Distributes the Program in any form, then:
+
+-   a\) the Program must also be made available as Source Code, in accordance
+    with section 3.2, and the Contributor must accompany the Program with a
+    statement that the Source Code for the Program is available under this
+    Agreement, and informs Recipients how to obtain it in a reasonable
+    manner on or through a medium customarily used for software exchange;
+    and
+-   b\) the Contributor may Distribute the Program under a license different
+    than this Agreement, provided that such license:
+    -   i\) effectively disclaims on behalf of all other Contributors all
+        warranties and conditions, express and implied, including warranties or
+        conditions of title and non-infringement, and implied warranties or
+        conditions of merchantability and fitness for a particular purpose;
+    -   ii\) effectively excludes on behalf of all other Contributors all
+        liability for damages, including direct, indirect, special, incidental
+        and consequential damages, such as lost profits;
+    -   iii\) does not attempt to limit or alter the recipients' rights in the
+        Source Code under section 3.2; and
+    -   iv\) requires any subsequent distribution of the Program by any party to
+        be under a license that satisfies the requirements of this section 3.
+
+3.2 When the Program is Distributed as Source Code:
+
+-   a\) it must be made available under this Agreement, or if the Program (i)
+    is combined with other material in a separate file or files made
+    available under a Secondary License, and (ii) the initial Contributor
+    attached to the Source Code the notice described in Exhibit A of this
+    Agreement, then the Program may be made available under the terms of
+    such Secondary Licenses, and
+-   b\) a copy of this Agreement must be included with each copy of
+    the Program.
+
+3.3 Contributors may not remove or alter any copyright, patent,
+trademark, attribution notices, disclaimers of warranty, or limitations
+of liability (‘notices’) contained within the Program from any copy of
+the Program which they Distribute, provided that Contributors may add
+their own appropriate notices.
+
+## 4. COMMERCIAL DISTRIBUTION
+
+Commercial distributors of software may accept certain responsibilities
+with respect to end users, business partners and the like. While this
+license is intended to facilitate the commercial use of the Program, the
+Contributor who includes the Program in a commercial product offering
+should do so in a manner which does not create potential liability for
+other Contributors. Therefore, if a Contributor includes the Program in
+a commercial product offering, such Contributor (“Commercial
+Contributor”) hereby agrees to defend and indemnify every other
+Contributor (“Indemnified Contributor”) against any losses, damages and
+costs (collectively “Losses”) arising from claims, lawsuits and other
+legal actions brought by a third party against the Indemnified
+Contributor to the extent caused by the acts or omissions of such
+Commercial Contributor in connection with its distribution of the
+Program in a commercial product offering. The obligations in this
+section do not apply to any claims or Losses relating to any actual or
+alleged intellectual property infringement. In order to qualify, an
+Indemnified Contributor must: a) promptly notify the Commercial
+Contributor in writing of such claim, and b) allow the Commercial
+Contributor to control, and cooperate with the Commercial Contributor
+in, the defense and any related settlement negotiations. The Indemnified
+Contributor may participate in any such claim at its own expense.
+
+For example, a Contributor might include the Program in a commercial
+product offering, Product X. That Contributor is then a Commercial
+Contributor. If that Commercial Contributor then makes performance
+claims, or offers warranties related to Product X, those performance
+claims and warranties are such Commercial Contributor's responsibility
+alone. Under this section, the Commercial Contributor would have to
+defend claims against the other Contributors related to those
+performance claims and warranties, and if a court requires any other
+Contributor to pay any damages as a result, the Commercial Contributor
+must pay those damages.
+
+## 5. NO WARRANTY {#warranty}
+
+EXCEPT AS EXPRESSLY SET FORTH IN THIS AGREEMENT, AND TO THE EXTENT
+PERMITTED BY APPLICABLE LAW, THE PROGRAM IS PROVIDED ON AN “AS IS”
+BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR
+IMPLIED INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OR CONDITIONS OF
+TITLE, NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR
+PURPOSE. Each Recipient is solely responsible for determining the
+appropriateness of using and distributing the Program and assumes all
+risks associated with its exercise of rights under this Agreement,
+including but not limited to the risks and costs of program errors,
+compliance with applicable laws, damage to or loss of data, programs or
+equipment, and unavailability or interruption of operations.
+
+## 6. DISCLAIMER OF LIABILITY {#disclaimer}
+
+EXCEPT AS EXPRESSLY SET FORTH IN THIS AGREEMENT, AND TO THE EXTENT
+PERMITTED BY APPLICABLE LAW, NEITHER RECIPIENT NOR ANY CONTRIBUTORS
+SHALL HAVE ANY LIABILITY FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING WITHOUT LIMITATION LOST
+PROFITS), HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OR DISTRIBUTION OF THE PROGRAM OR THE
+EXERCISE OF ANY RIGHTS GRANTED HEREUNDER, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGES.
+
+## 7. GENERAL
+
+If any provision of this Agreement is invalid or unenforceable under
+applicable law, it shall not affect the validity or enforceability of
+the remainder of the terms of this Agreement, and without further action
+by the parties hereto, such provision shall be reformed to the minimum
+extent necessary to make such provision valid and enforceable.
+
+If Recipient institutes patent litigation against any entity (including
+a cross-claim or counterclaim in a lawsuit) alleging that the Program
+itself (excluding combinations of the Program with other software or
+hardware) infringes such Recipient's patent(s), then such Recipient's
+rights granted under Section 2(b) shall terminate as of the date such
+litigation is filed.
+
+All Recipient's rights under this Agreement shall terminate if it fails
+to comply with any of the material terms or conditions of this Agreement
+and does not cure such failure in a reasonable period of time after
+becoming aware of such noncompliance. If all Recipient's rights under
+this Agreement terminate, Recipient agrees to cease use and distribution
+of the Program as soon as reasonably practicable. However, Recipient's
+obligations under this Agreement and any licenses granted by Recipient
+relating to the Program shall continue and survive.
+
+Everyone is permitted to copy and distribute copies of this Agreement,
+but in order to avoid inconsistency the Agreement is copyrighted and may
+only be modified in the following manner. The Agreement Steward reserves
+the right to publish new versions (including revisions) of this
+Agreement from time to time. No one other than the Agreement Steward has
+the right to modify this Agreement. The Eclipse Foundation is the
+initial Agreement Steward. The Eclipse Foundation may assign the
+responsibility to serve as the Agreement Steward to a suitable separate
+entity. Each new version of the Agreement will be given a distinguishing
+version number. The Program (including Contributions) may always be
+Distributed subject to the version of the Agreement under which it was
+received. In addition, after a new version of the Agreement is
+published, Contributor may elect to Distribute the Program (including
+its Contributions) under the new version.
+
+Except as expressly stated in Sections 2(a) and 2(b) above, Recipient
+receives no rights or licenses to the intellectual property of any
+Contributor under this Agreement, whether expressly, by implication,
+estoppel or otherwise. All rights in the Program not expressly granted
+under this Agreement are reserved. Nothing in this Agreement is intended
+to be enforceable by any entity that is not a Contributor or Recipient.
+No third-party beneficiary rights are created under this Agreement.
+
+## Exhibit A – Form of Secondary Licenses Notice {#exhibit-a}
+
+“This Source Code may also be made available under the following
+Secondary Licenses when the conditions for such availability set forth
+in the Eclipse Public License, v. 2.0 are satisfied: GNU General Public License v3.0 or later”
+
+> Simply including a copy of this Agreement, including this Exhibit A is
+> not sufficient to license the Source Code under Secondary Licenses.
+>
+> If it is not possible or desirable to put the notice in a particular
+> file, then You may include the notice in a location (such as a LICENSE
+> file in a relevant directory) where a recipient would be likely to
+> look for such a notice.
+>
+> You may add additional accurate notices of copyright ownership.
+```
+
+### GPL-3.0-or-later
+
+From `espeak-ng 1.0.2`, file `LICENSE`.
+
+```text
+GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+                            Preamble
+
+  The GNU General Public License is a free, copyleft license for
+software and other kinds of works.
+
+  The licenses for most software and other practical works are designed
+to take away your freedom to share and change the works.  By contrast,
+the GNU General Public License is intended to guarantee your freedom to
+share and change all versions of a program--to make sure it remains free
+software for all its users.  We, the Free Software Foundation, use the
+GNU General Public License for most of our software; it applies also to
+any other work released this way by its authors.  You can apply it to
+your programs, too.
+
+  When we speak of free software, we are referring to freedom, not
+price.  Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+them if you wish), that you receive source code or can get it if you
+want it, that you can change the software or use pieces of it in new
+free programs, and that you know you can do these things.
+
+  To protect your rights, we need to prevent others from denying you
+these rights or asking you to surrender the rights.  Therefore, you have
+certain responsibilities if you distribute copies of the software, or if
+you modify it: responsibilities to respect the freedom of others.
+
+  For example, if you distribute copies of such a program, whether
+gratis or for a fee, you must pass on to the recipients the same
+freedoms that you received.  You must make sure that they, too, receive
+or can get the source code.  And you must show them these terms so they
+know their rights.
+
+  Developers that use the GNU GPL protect your rights with two steps:
+(1) assert copyright on the software, and (2) offer you this License
+giving you legal permission to copy, distribute and/or modify it.
+
+  For the developers' and authors' protection, the GPL clearly explains
+that there is no warranty for this free software.  For both users' and
+authors' sake, the GPL requires that modified versions be marked as
+changed, so that their problems will not be attributed erroneously to
+authors of previous versions.
+
+  Some devices are designed to deny users access to install or run
+modified versions of the software inside them, although the manufacturer
+can do so.  This is fundamentally incompatible with the aim of
+protecting users' freedom to change the software.  The systematic
+pattern of such abuse occurs in the area of products for individuals to
+use, which is precisely where it is most unacceptable.  Therefore, we
+have designed this version of the GPL to prohibit the practice for those
+products.  If such problems arise substantially in other domains, we
+stand ready to extend this provision to those domains in future versions
+of the GPL, as needed to protect the freedom of users.
+
+  Finally, every program is threatened constantly by software patents.
+States should not allow patents to restrict development and use of
+software on general-purpose computers, but in those that do, we wish to
+avoid the special danger that patents applied to a free program could
+make it effectively proprietary.  To prevent this, the GPL assures that
+patents cannot be used to render the program non-free.
+
+  The precise terms and conditions for copying, distribution and
+modification follow.
+
+                       TERMS AND CONDITIONS
+
+  0. Definitions.
+
+  "This License" refers to version 3 of the GNU General Public License.
+
+  "Copyright" also means copyright-like laws that apply to other kinds of
+works, such as semiconductor masks.
+
+  "The Program" refers to any copyrightable work licensed under this
+License.  Each licensee is addressed as "you".  "Licensees" and
+"recipients" may be individuals or organizations.
+
+  To "modify" a work means to copy from or adapt all or part of the work
+in a fashion requiring copyright permission, other than the making of an
+exact copy.  The resulting work is called a "modified version" of the
+earlier work or a work "based on" the earlier work.
+
+  A "covered work" means either the unmodified Program or a work based
+on the Program.
+
+  To "propagate" a work means to do anything with it that, without
+permission, would make you directly or secondarily liable for
+infringement under applicable copyright law, except executing it on a
+computer or modifying a private copy.  Propagation includes copying,
+distribution (with or without modification), making available to the
+public, and in some countries other activities as well.
+
+  To "convey" a work means any kind of propagation that enables other
+parties to make or receive copies.  Mere interaction with a user through
+a computer network, with no transfer of a copy, is not conveying.
+
+  An interactive user interface displays "Appropriate Legal Notices"
+to the extent that it includes a convenient and prominently visible
+feature that (1) displays an appropriate copyright notice, and (2)
+tells the user that there is no warranty for the work (except to the
+extent that warranties are provided), that licensees may convey the
+work under this License, and how to view a copy of this License.  If
+the interface presents a list of user commands or options, such as a
+menu, a prominent item in the list meets this criterion.
+
+  1. Source Code.
+
+  The "source code" for a work means the preferred form of the work
+for making modifications to it.  "Object code" means any non-source
+form of a work.
+
+  A "Standard Interface" means an interface that either is an official
+standard defined by a recognized standards body, or, in the case of
+interfaces specified for a particular programming language, one that
+is widely used among developers working in that language.
+
+  The "System Libraries" of an executable work include anything, other
+than the work as a whole, that (a) is included in the normal form of
+packaging a Major Component, but which is not part of that Major
+Component, and (b) serves only to enable use of the work with that
+Major Component, or to implement a Standard Interface for which an
+implementation is available to the public in source code form.  A
+"Major Component", in this context, means a major essential component
+(kernel, window system, and so on) of the specific operating system
+(if any) on which the executable work runs, or a compiler used to
+produce the work, or an object code interpreter used to run it.
+
+  The "Corresponding Source" for a work in object code form means all
+the source code needed to generate, install, and (for an executable
+work) run the object code and to modify the work, including scripts to
+control those activities.  However, it does not include the work's
+System Libraries, or general-purpose tools or generally available free
+programs which are used unmodified in performing those activities but
+which are not part of the work.  For example, Corresponding Source
+includes interface definition files associated with source files for
+the work, and the source code for shared libraries and dynamically
+linked subprograms that the work is specifically designed to require,
+such as by intimate data communication or control flow between those
+subprograms and other parts of the work.
+
+  The Corresponding Source need not include anything that users
+can regenerate automatically from other parts of the Corresponding
+Source.
+
+  The Corresponding Source for a work in source code form is that
+same work.
+
+  2. Basic Permissions.
+
+  All rights granted under this License are granted for the term of
+copyright on the Program, and are irrevocable provided the stated
+conditions are met.  This License explicitly affirms your unlimited
+permission to run the unmodified Program.  The output from running a
+covered work is covered by this License only if the output, given its
+content, constitutes a covered work.  This License acknowledges your
+rights of fair use or other equivalent, as provided by copyright law.
+
+  You may make, run and propagate covered works that you do not
+convey, without conditions so long as your license otherwise remains
+in force.  You may convey covered works to others for the sole purpose
+of having them make modifications exclusively for you, or provide you
+with facilities for running those works, provided that you comply with
+the terms of this License in conveying all material for which you do
+not control copyright.  Those thus making or running the covered works
+for you must do so exclusively on your behalf, under your direction
+and control, on terms that prohibit them from making any copies of
+your copyrighted material outside their relationship with you.
+
+  Conveying under any other circumstances is permitted solely under
+the conditions stated below.  Sublicensing is not allowed; section 10
+makes it unnecessary.
+
+  3. Protecting Users' Legal Rights From Anti-Circumvention Law.
+
+  No covered work shall be deemed part of an effective technological
+measure under any applicable law fulfilling obligations under article
+11 of the WIPO copyright treaty adopted on 20 December 1996, or
+similar laws prohibiting or restricting circumvention of such
+measures.
+
+  When you convey a covered work, you waive any legal power to forbid
+circumvention of technological measures to the extent such circumvention
+is effected by exercising rights under this License with respect to
+the covered work, and you disclaim any intention to limit operation or
+modification of the work as a means of enforcing, against the work's
+users, your or third parties' legal rights to forbid circumvention of
+technological measures.
+
+  4. Conveying Verbatim Copies.
+
+  You may convey verbatim copies of the Program's source code as you
+receive it, in any medium, provided that you conspicuously and
+appropriately publish on each copy an appropriate copyright notice;
+keep intact all notices stating that this License and any
+non-permissive terms added in accord with section 7 apply to the code;
+keep intact all notices of the absence of any warranty; and give all
+recipients a copy of this License along with the Program.
+
+  You may charge any price or no price for each copy that you convey,
+and you may offer support or warranty protection for a fee.
+
+  5. Conveying Modified Source Versions.
+
+  You may convey a work based on the Program, or the modifications to
+produce it from the Program, in the form of source code under the
+terms of section 4, provided that you also meet all of these conditions:
+
+    a) The work must carry prominent notices stating that you modified
+    it, and giving a relevant date.
+
+    b) The work must carry prominent notices stating that it is
+    released under this License and any conditions added under section
+    7.  This requirement modifies the requirement in section 4 to
+    "keep intact all notices".
+
+    c) You must license the entire work, as a whole, under this
+    License to anyone who comes into possession of a copy.  This
+    License will therefore apply, along with any applicable section 7
+    additional terms, to the whole of the work, and all its parts,
+    regardless of how they are packaged.  This License gives no
+    permission to license the work in any other way, but it does not
+    invalidate such permission if you have separately received it.
+
+    d) If the work has interactive user interfaces, each must display
+    Appropriate Legal Notices; however, if the Program has interactive
+    interfaces that do not display Appropriate Legal Notices, your
+    work need not make them do so.
+
+  A compilation of a covered work with other separate and independent
+works, which are not by their nature extensions of the covered work,
+and which are not combined with it such as to form a larger program,
+in or on a volume of a storage or distribution medium, is called an
+"aggregate" if the compilation and its resulting copyright are not
+used to limit the access or legal rights of the compilation's users
+beyond what the individual works permit.  Inclusion of a covered work
+in an aggregate does not cause this License to apply to the other
+parts of the aggregate.
+
+  6. Conveying Non-Source Forms.
+
+  You may convey a covered work in object code form under the terms
+of sections 4 and 5, provided that you also convey the
+machine-readable Corresponding Source under the terms of this License,
+in one of these ways:
+
+    a) Convey the object code in, or embodied in, a physical product
+    (including a physical distribution medium), accompanied by the
+    Corresponding Source fixed on a durable physical medium
+    customarily used for software interchange.
+
+    b) Convey the object code in, or embodied in, a physical product
+    (including a physical distribution medium), accompanied by a
+    written offer, valid for at least three years and valid for as
+    long as you offer spare parts or customer support for that product
+    model, to give anyone who possesses the object code either (1) a
+    copy of the Corresponding Source for all the software in the
+    product that is covered by this License, on a durable physical
+    medium customarily used for software interchange, for a price no
+    more than your reasonable cost of physically performing this
+    conveying of source, or (2) access to copy the
+    Corresponding Source from a network server at no charge.
+
+    c) Convey individual copies of the object code with a copy of the
+    written offer to provide the Corresponding Source.  This
+    alternative is allowed only occasionally and noncommercially, and
+    only if you received the object code with such an offer, in accord
+    with subsection 6b.
+
+    d) Convey the object code by offering access from a designated
+    place (gratis or for a charge), and offer equivalent access to the
+    Corresponding Source in the same way through the same place at no
+    further charge.  You need not require recipients to copy the
+    Corresponding Source along with the object code.  If the place to
+    copy the object code is a network server, the Corresponding Source
+    may be on a different server (operated by you or a third party)
+    that supports equivalent copying facilities, provided you maintain
+    clear directions next to the object code saying where to find the
+    Corresponding Source.  Regardless of what server hosts the
+    Corresponding Source, you remain obligated to ensure that it is
+    available for as long as needed to satisfy these requirements.
+
+    e) Convey the object code using peer-to-peer transmission, provided
+    you inform other peers where the object code and Corresponding
+    Source of the work are being offered to the general public at no
+    charge under subsection 6d.
+
+  A separable portion of the object code, whose source code is excluded
+from the Corresponding Source as a System Library, need not be
+included in conveying the object code work.
+
+  A "User Product" is either (1) a "consumer product", which means any
+tangible personal property which is normally used for personal, family,
+or household purposes, or (2) anything designed or sold for incorporation
+into a dwelling.  In determining whether a product is a consumer product,
+doubtful cases shall be resolved in favor of coverage.  For a particular
+product received by a particular user, "normally used" refers to a
+typical or common use of that class of product, regardless of the status
+of the particular user or of the way in which the particular user
+actually uses, or expects or is expected to use, the product.  A product
+is a consumer product regardless of whether the product has substantial
+commercial, industrial or non-consumer uses, unless such uses represent
+the only significant mode of use of the product.
+
+  "Installation Information" for a User Product means any methods,
+procedures, authorization keys, or other information required to install
+and execute modified versions of a covered work in that User Product from
+a modified version of its Corresponding Source.  The information must
+suffice to ensure that the continued functioning of the modified object
+code is in no case prevented or interfered with solely because
+modification has been made.
+
+  If you convey an object code work under this section in, or with, or
+specifically for use in, a User Product, and the conveying occurs as
+part of a transaction in which the right of possession and use of the
+User Product is transferred to the recipient in perpetuity or for a
+fixed term (regardless of how the transaction is characterized), the
+Corresponding Source conveyed under this section must be accompanied
+by the Installation Information.  But this requirement does not apply
+if neither you nor any third party retains the ability to install
+modified object code on the User Product (for example, the work has
+been installed in ROM).
+
+  The requirement to provide Installation Information does not include a
+requirement to continue to provide support service, warranty, or updates
+for a work that has been modified or installed by the recipient, or for
+the User Product in which it has been modified or installed.  Access to a
+network may be denied when the modification itself materially and
+adversely affects the operation of the network or violates the rules and
+protocols for communication across the network.
+
+  Corresponding Source conveyed, and Installation Information provided,
+in accord with this section must be in a format that is publicly
+documented (and with an implementation available to the public in
+source code form), and must require no special password or key for
+unpacking, reading or copying.
+
+  7. Additional Terms.
+
+  "Additional permissions" are terms that supplement the terms of this
+License by making exceptions from one or more of its conditions.
+Additional permissions that are applicable to the entire Program shall
+be treated as though they were included in this License, to the extent
+that they are valid under applicable law.  If additional permissions
+apply only to part of the Program, that part may be used separately
+under those permissions, but the entire Program remains governed by
+this License without regard to the additional permissions.
+
+  When you convey a copy of a covered work, you may at your option
+remove any additional permissions from that copy, or from any part of
+it.  (Additional permissions may be written to require their own
+removal in certain cases when you modify the work.)  You may place
+additional permissions on material, added by you to a covered work,
+for which you have or can give appropriate copyright permission.
+
+  Notwithstanding any other provision of this License, for material you
+add to a covered work, you may (if authorized by the copyright holders of
+that material) supplement the terms of this License with terms:
+
+    a) Disclaiming warranty or limiting liability differently from the
+    terms of sections 15 and 16 of this License; or
+
+    b) Requiring preservation of specified reasonable legal notices or
+    author attributions in that material or in the Appropriate Legal
+    Notices displayed by works containing it; or
+
+    c) Prohibiting misrepresentation of the origin of that material, or
+    requiring that modified versions of such material be marked in
+    reasonable ways as different from the original version; or
+
+    d) Limiting the use for publicity purposes of names of licensors or
+    authors of the material; or
+
+    e) Declining to grant rights under trademark law for use of some
+    trade names, trademarks, or service marks; or
+
+    f) Requiring indemnification of licensors and authors of that
+    material by anyone who conveys the material (or modified versions of
+    it) with contractual assumptions of liability to the recipient, for
+    any liability that these contractual assumptions directly impose on
+    those licensors and authors.
+
+  All other non-permissive additional terms are considered "further
+restrictions" within the meaning of section 10.  If the Program as you
+received it, or any part of it, contains a notice stating that it is
+governed by this License along with a term that is a further
+restriction, you may remove that term.  If a license document contains
+a further restriction but permits relicensing or conveying under this
+License, you may add to a covered work material governed by the terms
+of that license document, provided that the further restriction does
+not survive such relicensing or conveying.
+
+  If you add terms to a covered work in accord with this section, you
+must place, in the relevant source files, a statement of the
+additional terms that apply to those files, or a notice indicating
+where to find the applicable terms.
+
+  Additional terms, permissive or non-permissive, may be stated in the
+form of a separately written license, or stated as exceptions;
+the above requirements apply either way.
+
+  8. Termination.
+
+  You may not propagate or modify a covered work except as expressly
+provided under this License.  Any attempt otherwise to propagate or
+modify it is void, and will automatically terminate your rights under
+this License (including any patent licenses granted under the third
+paragraph of section 11).
+
+  However, if you cease all violation of this License, then your
+license from a particular copyright holder is reinstated (a)
+provisionally, unless and until the copyright holder explicitly and
+finally terminates your license, and (b) permanently, if the copyright
+holder fails to notify you of the violation by some reasonable means
+prior to 60 days after the cessation.
+
+  Moreover, your license from a particular copyright holder is
+reinstated permanently if the copyright holder notifies you of the
+violation by some reasonable means, this is the first time you have
+received notice of violation of this License (for any work) from that
+copyright holder, and you cure the violation prior to 30 days after
+your receipt of the notice.
+
+  Termination of your rights under this section does not terminate the
+licenses of parties who have received copies or rights from you under
+this License.  If your rights have been terminated and not permanently
+reinstated, you do not qualify to receive new licenses for the same
+material under section 10.
+
+  9. Acceptance Not Required for Having Copies.
+
+  You are not required to accept this License in order to receive or
+run a copy of the Program.  Ancillary propagation of a covered work
+occurring solely as a consequence of using peer-to-peer transmission
+to receive a copy likewise does not require acceptance.  However,
+nothing other than this License grants you permission to propagate or
+modify any covered work.  These actions infringe copyright if you do
+not accept this License.  Therefore, by modifying or propagating a
+covered work, you indicate your acceptance of this License to do so.
+
+  10. Automatic Licensing of Downstream Recipients.
+
+  Each time you convey a covered work, the recipient automatically
+receives a license from the original licensors, to run, modify and
+propagate that work, subject to this License.  You are not responsible
+for enforcing compliance by third parties with this License.
+
+  An "entity transaction" is a transaction transferring control of an
+organization, or substantially all assets of one, or subdividing an
+organization, or merging organizations.  If propagation of a covered
+work results from an entity transaction, each party to that
+transaction who receives a copy of the work also receives whatever
+licenses to the work the party's predecessor in interest had or could
+give under the previous paragraph, plus a right to possession of the
+Corresponding Source of the work from the predecessor in interest, if
+the predecessor has it or can get it with reasonable efforts.
+
+  You may not impose any further restrictions on the exercise of the
+rights granted or affirmed under this License.  For example, you may
+not impose a license fee, royalty, or other charge for exercise of
+rights granted under this License, and you may not initiate litigation
+(including a cross-claim or counterclaim in a lawsuit) alleging that
+any patent claim is infringed by making, using, selling, offering for
+sale, or importing the Program or any portion of it.
+
+  11. Patents.
+
+  A "contributor" is a copyright holder who authorizes use under this
+License of the Program or a work on which the Program is based.  The
+work thus licensed is called the contributor's "contributor version".
+
+  A contributor's "essential patent claims" are all patent claims
+owned or controlled by the contributor, whether already acquired or
+hereafter acquired, that would be infringed by some manner, permitted
+by this License, of making, using, or selling its contributor version,
+but do not include claims that would be infringed only as a
+consequence of further modification of the contributor version.  For
+purposes of this definition, "control" includes the right to grant
+patent sublicenses in a manner consistent with the requirements of
+this License.
+
+  Each contributor grants you a non-exclusive, worldwide, royalty-free
+patent license under the contributor's essential patent claims, to
+make, use, sell, offer for sale, import and otherwise run, modify and
+propagate the contents of its contributor version.
+
+  In the following three paragraphs, a "patent license" is any express
+agreement or commitment, however denominated, not to enforce a patent
+(such as an express permission to practice a patent or covenant not to
+sue for patent infringement).  To "grant" such a patent license to a
+party means to make such an agreement or commitment not to enforce a
+patent against the party.
+
+  If you convey a covered work, knowingly relying on a patent license,
+and the Corresponding Source of the work is not available for anyone
+to copy, free of charge and under the terms of this License, through a
+publicly available network server or other readily accessible means,
+then you must either (1) cause the Corresponding Source to be so
+available, or (2) arrange to deprive yourself of the benefit of the
+patent license for this particular work, or (3) arrange, in a manner
+consistent with the requirements of this License, to extend the patent
+license to downstream recipients.  "Knowingly relying" means you have
+actual knowledge that, but for the patent license, your conveying the
+covered work in a country, or your recipient's use of the covered work
+in a country, would infringe one or more identifiable patents in that
+country that you have reason to believe are valid.
+
+  If, pursuant to or in connection with a single transaction or
+arrangement, you convey, or propagate by procuring conveyance of, a
+covered work, and grant a patent license to some of the parties
+receiving the covered work authorizing them to use, propagate, modify
+or convey a specific copy of the covered work, then the patent license
+you grant is automatically extended to all recipients of the covered
+work and works based on it.
+
+  A patent license is "discriminatory" if it does not include within
+the scope of its coverage, prohibits the exercise of, or is
+conditioned on the non-exercise of one or more of the rights that are
+specifically granted under this License.  You may not convey a covered
+work if you are a party to an arrangement with a third party that is
+in the business of distributing software, under which you make payment
+to the third party based on the extent of your activity of conveying
+the work, and under which the third party grants, to any of the
+parties who would receive the covered work from you, a discriminatory
+patent license (a) in connection with copies of the covered work
+conveyed by you (or copies made from those copies), or (b) primarily
+for and in connection with specific products or compilations that
+contain the covered work, unless you entered into that arrangement,
+or that patent license was granted, prior to 28 March 2007.
+
+  Nothing in this License shall be construed as excluding or limiting
+any implied license or other defenses to infringement that may
+otherwise be available to you under applicable patent law.
+
+  12. No Surrender of Others' Freedom.
+
+  If conditions are imposed on you (whether by court order, agreement or
+otherwise) that contradict the conditions of this License, they do not
+excuse you from the conditions of this License.  If you cannot convey a
+covered work so as to satisfy simultaneously your obligations under this
+License and any other pertinent obligations, then as a consequence you may
+not convey it at all.  For example, if you agree to terms that obligate you
+to collect a royalty for further conveying from those to whom you convey
+the Program, the only way you could satisfy both those terms and this
+License would be to refrain entirely from conveying the Program.
+
+  13. Use with the GNU Affero General Public License.
+
+  Notwithstanding any other provision of this License, you have
+permission to link or combine any covered work with a work licensed
+under version 3 of the GNU Affero General Public License into a single
+combined work, and to convey the resulting work.  The terms of this
+License will continue to apply to the part which is the covered work,
+but the special requirements of the GNU Affero General Public License,
+section 13, concerning interaction through a network will apply to the
+combination as such.
+
+  14. Revised Versions of this License.
+
+  The Free Software Foundation may publish revised and/or new versions of
+the GNU General Public License from time to time.  Such new versions will
+be similar in spirit to the present version, but may differ in detail to
+address new problems or concerns.
+
+  Each version is given a distinguishing version number.  If the
+Program specifies that a certain numbered version of the GNU General
+Public License "or any later version" applies to it, you have the
+option of following the terms and conditions either of that numbered
+version or of any later version published by the Free Software
+Foundation.  If the Program does not specify a version number of the
+GNU General Public License, you may choose any version ever published
+by the Free Software Foundation.
+
+  If the Program specifies that a proxy can decide which future
+versions of the GNU General Public License can be used, that proxy's
+public statement of acceptance of a version permanently authorizes you
+to choose that version for the Program.
+
+  Later license versions may give you additional or different
+permissions.  However, no additional obligations are imposed on any
+author or copyright holder as a result of your choosing to follow a
+later version.
+
+  15. Disclaimer of Warranty.
+
+  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
+APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
+HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
+OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
+IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
+ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+
+  16. Limitation of Liability.
+
+  IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR CONVEYS
+THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY
+GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE
+USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS OF
+DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD
+PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS),
+EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGES.
+
+  17. Interpretation of Sections 15 and 16.
+
+  If the disclaimer of warranty and limitation of liability provided
+above cannot be given local legal effect according to their terms,
+reviewing courts shall apply local law that most closely approximates
+an absolute waiver of all civil liability in connection with the
+Program, unless a warranty or assumption of liability accompanies a
+copy of the Program in return for a fee.
+
+                     END OF TERMS AND CONDITIONS
+
+            How to Apply These Terms to Your New Programs
+
+  If you develop a new program, and you want it to be of the greatest
+possible use to the public, the best way to achieve this is to make it
+free software which everyone can redistribute and change under these terms.
+
+  To do so, attach the following notices to the program.  It is safest
+to attach them to the start of each source file to most effectively
+state the exclusion of warranty; and each file should have at least
+the "copyright" line and a pointer to where the full notice is found.
+
+    <one line to give the program's name and a brief idea of what it does.>
+    Copyright (C) <year>  <name of author>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+Also add information on how to contact you by electronic and paper mail.
+
+  If the program does terminal interaction, make it output a short
+notice like this when it starts in an interactive mode:
+
+    <program>  Copyright (C) <year>  <name of author>
+    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions; type `show c' for details.
+
+The hypothetical commands `show w' and `show c' should show the appropriate
+parts of the General Public License.  Of course, your program's commands
+might be different; for a GUI interface, you would use an "about box".
+
+  You should also get your employer (if you work as a programmer) or school,
+if any, to sign a "copyright disclaimer" for the program, if necessary.
+For more information on this, and how to apply and follow the GNU GPL, see
+<https://www.gnu.org/licenses/>.
+
+  The GNU General Public License does not permit incorporating your program
+into proprietary programs.  If your program is a subroutine library, you
+may consider it more useful to permit linking proprietary applications with
+the library.  If this is what you want to do, use the GNU Lesser General
+Public License instead of this License.  But first, please read
+<https://www.gnu.org/licenses/why-not-lgpl.html>.
+```
+
+### ISC
+
+From `@isaacs/fs-minipass 4.0.1`, file `LICENSE`.
+
+```text
+The ISC License
+
+Copyright (c) Isaac Z. Schlueter and Contributors
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -2156,8 +3463,8 @@ WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
 ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
 ### MIT

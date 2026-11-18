@@ -3,7 +3,7 @@ import { packBogenFile, unpackBogenFile } from './bogen-file.ts';
 import type { BrandTransfer } from './brand-store.ts';
 import type { BogenServer } from './http/server.ts';
 import { Storage } from './storage.ts';
-import { atomicWrite, HttpError } from './util.ts';
+import { HttpError } from './util.ts';
 
 /**
  * Getting a design and its brand out as one `.bogen` file, and back in on another device: the one place that knows
@@ -105,7 +105,7 @@ async function adoptInto(app: App, state: Uint8Array | null, carried: { id: stri
 
 async function listFile(app: App, state: Uint8Array, name: string): Promise<{ id: string; name: string }> {
   const id = newId();
-  await atomicWrite(app.storage.docPath(id), state);
+  await app.storage.writeDoc(id, state);
   const entry = app.storage.create(name, id);
   await app.brands.classify(id);
   return { id: entry.id, name: entry.name };

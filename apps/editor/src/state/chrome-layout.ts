@@ -13,6 +13,8 @@ export const CANVAS_MIN = 360;
 export const PANEL_MIN = 200;
 /** What a drawer leaves of the canvas beside it, in window pixels, so a click there closes it. */
 export const DRAWER_GAP = 40;
+/** Below this window width the chat opens across the whole window. */
+export const PHONE_CHAT_FULL = 600;
 /** Below this many UI pixels of height, dialogs and panels use the room more tightly. */
 export const SHORT_HEIGHT = 600;
 
@@ -45,7 +47,7 @@ export interface ChromeLayout {
 
 /** The toolbar's levels by its width in UI pixels (the toolbar is drawn at the UI scale). */
 export function toolbarLevel(uiWidth: number): ToolbarLevel {
-  if (uiWidth >= 1120) return 'full';
+  if (uiWidth >= 1220) return 'full';
   if (uiWidth >= 900) return 'tight';
   if (uiWidth >= 700) return 'compact';
   if (uiWidth >= 560) return 'mini';
@@ -57,19 +59,29 @@ const LEVELS: readonly ToolbarLevel[] = ['full', 'tight', 'compact', 'mini', 'mi
 /**
  * What the toolbar holds at each level beyond its optional parts, in UI pixels, as chrome.css draws it: padding and
  * column gaps, Home, the file name at its smallest (FILE_NAME_MIN), the branch button as its icon, the tools shown
- * inline (28 px each), and the right side's fixed buttons (26 px each, Me 22, the separator, the zoom button 48).
- *   full     28 + (26 + 160 + 26 + 4) + 15 tools 434 + (Me, sep, undo, redo, agent, 5 views, help, zoom) 335
- *   tight    28 + (26 + 140 + 26 + 4) + 15 tools 434 + (Me, sep, undo, redo, agent, more, zoom) 195
- *   compact  28 + (26 + 120 + 26 + 4) + 7 tools and more 231 + the same 195
- *   mini     16 + (26 + 96 + 26 + 4) + 3 tools and more 115 + (Me, sep, undo, redo, agent, more) 141
- *   micro    16 + (26 + 72 + 26 + 4) + more 28 + (agent, more) 54: Me, the panels and history are in More
- * Each with 8 px to spare for the people's empty row and rounding.
+ * inline (28 px each, in groups with a separator between them where all of them show), and the right side's fixed
+ * buttons (26 px each, Me 24, the separators, the zoom button 48).
+ *   tight    28 + (26 + 140 + 26 + 4) + 15 tools in 6 groups 464 + (Me, sep, undo, redo, more, zoom, agent) 197
+ *   compact  28 + (26 + 120 + 26 + 4) + 7 tools and more 231 + the same 197
+ *   mini     16 + (26 + 96 + 26 + 4) + 3 tools and more 115 + (Me, sep, undo, redo, more, agent) 143
+ *   micro    16 + (26 + 72 + 26 + 4) + more 28 + (more, agent) 54: Me, the panels and history are in More
+ * Each with 8 px to spare for the people's empty row and rounding. The full level is not a sum: see fullNeed.
  */
-const TOOLBAR_NEED: Record<ToolbarLevel, number> = { full: 1021, tight: 861, compact: 638, mini: 432, micro: 234 };
+const TOOLBAR_NEED: Record<Exclude<ToolbarLevel, 'full'>, number> = { tight: 893, compact: 640, mini: 434, micro: 234 };
+/**
+ * The full toolbar keeps its tools in the middle of the window, so both sides get the room of the wider one:
+ *   left    Home, the file name at its smallest, the branch button: 26 + 160 + 26 + 4
+ *   tools   15 in 6 groups: 15 x 28, 5 separators of 9, and 19 gaps of 1
+ *   right   Me, sep, undo, redo, sep, 4 views, help, zoom, Preview and Ask agent as icons: 346 with their gaps
+ */
+const FULL_PAD = 28 + 8;
+const FULL_LEFT = 216;
+const FULL_TOOLS = 484;
+const FULL_RIGHT = 346;
 /** The file name's own minimum at each level, in UI pixels (chrome.css). */
 export const FILE_NAME_MIN: Record<ToolbarLevel, number> = { full: 160, tight: 140, compact: 120, mini: 96, micro: 72 };
 /** The widest the parts that come and go may be drawn at each level (chrome.css caps them), in UI pixels. */
-const SYNC_MAX: Record<ToolbarLevel, number> = { full: 200, tight: 140, compact: 110, mini: 18, micro: 18 };
+const SYNC_MAX: Record<ToolbarLevel, number> = { full: 260, tight: 220, compact: 110, mini: 24, micro: 24 };
 /** At the smallest level the follow pill is Stop following in More, and the More button shows the colour followed. */
 const FOLLOW_MAX: Record<ToolbarLevel, number> = { full: 180, tight: 160, compact: 120, mini: 96, micro: 0 };
 const BRANCH_LABEL_MAX: Record<ToolbarLevel, number> = { full: 160, tight: 120, compact: 0, mini: 0, micro: 0 };
@@ -91,11 +103,41 @@ export interface ToolbarContent {
   branchNamed: boolean;
 }
 
+/**
+ * How Preview and Ask agent show in the full toolbar: with their words and the shortcut, with their words, Ask agent
+ * alone with its words, or both as icons.
+ */
+export type ToolbarLabels = 'keys' | 'text' | 'primary' | 'none';
+/** The text widths of those labels in this language, in UI pixels (textWidth in home/head-fit.ts). */
+export interface ToolbarLabelText { preview: number; agent: number; keys: number }
+
+/** What the labels add to the two buttons: the gap after the icon, the words, and the padding a labelled button has. */
+function labelsNeed(labels: ToolbarLabels, w: ToolbarLabelText): number {
+  if (labels === 'none') return 0;
+  if (labels === 'primary') return 19 + w.agent;
+  return 19 + w.preview + 19 + w.agent + (labels === 'keys' ? 14 + w.keys : 0);
+}
+
+function fullNeed(c: ToolbarContent, labels = 0): number {
+  const left = FULL_LEFT + (c.leftDrawer ? 28 : 0) + (c.sync ? SYNC_MAX.full + 2 : 0) + (c.branchNamed ? BRANCH_LABEL_MAX.full + 4 : 0);
+  const shown = Math.min(c.peers, PEERS_SHOWN.full);
+  const right = FULL_RIGHT + (c.rightDrawer ? 28 : 0) + shown * 26 + (c.peers > shown ? 26 : 0) + (c.following ? FOLLOW_MAX.full + 2 : 0) + labels;
+  return FULL_PAD + FULL_TOOLS + 2 * Math.max(left, right);
+}
+
+/** The most the full toolbar can say on Preview and Ask agent at this width; below the full level they are icons. */
+export function toolbarLabels(uiWidth: number, level: ToolbarLevel, c: ToolbarContent, w: ToolbarLabelText): ToolbarLabels {
+  if (level !== 'full') return 'none';
+  for (const labels of ['keys', 'text', 'primary'] as const) if (fullNeed(c, labelsNeed(labels, w)) <= uiWidth) return labels;
+  return 'none';
+}
+
 /** The width in UI pixels the toolbar needs at a level with this content. */
 export function toolbarNeed(level: ToolbarLevel, c: ToolbarContent): number {
+  if (level === 'full') return fullNeed(c);
   const drawers = level === 'micro' ? 0 : (c.leftDrawer ? 28 : 0) + (c.rightDrawer ? 28 : 0);
   const shown = Math.min(c.peers, PEERS_SHOWN[level]);
-  const peers = shown * 24 + (c.peers > shown ? 24 : 0);
+  const peers = shown * 26 + (c.peers > shown ? 26 : 0);
   return TOOLBAR_NEED[level] + drawers + peers
     + (c.sync ? SYNC_MAX[level] + 2 : 0)
     + (c.following && FOLLOW_MAX[level] ? FOLLOW_MAX[level] + 2 : 0)
@@ -152,6 +194,8 @@ export function chatLayout(input: ChromeInput & { chatOpen: boolean; chatWidth: 
     if (width - right - want >= CANVAS_MIN) return { ...base, mode: 'compact', left: 'drawer', right: 'docked', rightPx: Math.round(right), chat: 'docked', chatPx: Math.round(want) };
   }
   const room = width - (base.right === 'docked' ? base.rightPx : 0);
+  // At phone width a strip of canvas beside the chat is too narrow to use: the chat takes the whole width.
+  if (width < PHONE_CHAT_FULL) return { ...base, chat: 'drawer', chatPx: Math.round(room) };
   const px = Math.round(Math.max(Math.min(want, room - DRAWER_GAP), Math.min(PANEL_MIN * s, room)));
   return { ...base, chat: 'drawer', chatPx: px };
 }

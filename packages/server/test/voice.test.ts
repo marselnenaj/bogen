@@ -168,7 +168,8 @@ describe('voice notes from the phone', () => {
     // A phone that is not paired gets nothing.
     expect((await raw(port, `/api/voice/${name}`, { headers: viaServe() })).status).toBe(401);
     // Names are only ever of the shape the server writes.
-    expect((await fetch(`${harness.base}/api/voice/..%2Findex.json`)).status).toBe(404);
+    // An encoded slash never reaches the route: every listener refuses that spelling of a path first.
+    expect((await fetch(`${harness.base}/api/voice/..%2Findex.json`)).status).toBe(400);
     expect((await fetch(`${harness.base}/api/voice/${'a'.repeat(24)}.webm`)).status).toBe(404);
 
     // The comment carries it, through the same route that starts agents.

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, GitBranch, GitMerge, Minus, Plus, X } from 'lucide-react';
+import { ChevronDown, Columns3, CopyPlus, Download, GitBranch, GitMerge, MessageSquareText, Minus, PenLine, Plus, X } from 'lucide-react';
 import { VARIATION_ASPECTS, VARIATION_RANGES, type VariationAspect, type VariationRange } from '@bogen/core';
 import { ASPECT_WORDS, heldLine, RANGE_TITLES, RANGE_WORDS, splitHint, type Mention, type VariationChoice } from './chat-extras-state.ts';
 import { session } from '../doc/session.ts';
@@ -14,12 +14,143 @@ import { editor } from '../state/store.ts';
 import { ui } from '../state/ui.ts';
 import { IconButton, Segmented, SelectField } from '../ui/controls.tsx';
 import { KnowledgeSkill, type PersonalSkill } from './KnowledgeSkill.tsx';
+import { RunChoice } from './RunChoice.tsx';
 import '../styles/chat-extras.css';
 
 /**
  * What the chat adds this round, next to ChatPanel: the range and aspects of Propose and Directions, the `/` and `@`
  * menu, "Save these decisions as a skill", the trace of a run, and the branch a chat has in a linked repository.
  */
+
+// ---------------------------------------------------------------- the composer's two choices: what the agent does, and who answers
+
+/**
+ * A small sheet over the field, opened from a button in the composer. It stays in the page while shut, so what it
+ * holds keeps its state; Esc and a click outside close it, and the focus goes back to its button.
+ */
+function ComposerSheet({ id, open, onClose, anchor, label, testId, className, children }: { id: string; open: boolean; onClose: (refocus: boolean) => void; anchor: React.RefObject<HTMLButtonElement | null>; label: string; testId?: string; className?: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const el = ref.current;
+    el?.querySelector<HTMLElement>('input:checked, select, input, button')?.focus({ preventScroll: true });
+    const down = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (el?.contains(target) || anchor.current?.contains(target)) return;
+      onClose(false);
+    };
+    window.addEventListener('pointerdown', down, true);
+    return () => window.removeEventListener('pointerdown', down, true);
+  }, [open]);
+  return (
+    <div
+      ref={ref} id={id} role="dialog" aria-label={label} className={`chat-sheet ${className ?? ''}`} hidden={!open} data-testid={testId}
+      // Esc closes it from any control inside, even one that keeps its keys to itself (a select).
+      onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onClose(true); } }}
+      // The editor's own shortcuts stay out of the sheet.
+      onKeyDown={(e) => e.stopPropagation()}
+      onBlur={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (next && !e.currentTarget.contains(next) && !anchor.current?.contains(next)) onClose(false);
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export type ChatMode = 'direct' | 'proposal' | 'directions' | 'critique';
+const MODE_ICONS: Record<ChatMode, typeof PenLine> = { direct: PenLine, proposal: CopyPlus, directions: Columns3, critique: MessageSquareText };
+
+/** The words and the one-line meaning of each mode, as the picker and the first asks show them. */
+export function modeWords(mode: ChatMode, lanes: number): { label: string; hint: string } {
+  if (mode === 'proposal') return { label: t('Propose'), hint: t('Works in a copy you accept or discard.') };
+  if (mode === 'directions') return { label: t.n(lanes || 3, '{count} direction', '{count} directions'), hint: t('Several runs, each in its own copy, side by side.') };
+  if (mode === 'critique') return { label: t('Critique'), hint: t('Notes as comments. Nothing changes.') };
+  return { label: t('Change it'), hint: t('Edits the layers. Undo takes the whole run back.') };
+}
+
+export function ModeIcon({ mode, size = 12 }: { mode: ChatMode; size?: number }) {
+  const Icon = MODE_ICONS[mode];
+  return <Icon size={size} aria-hidden="true" />;
+}
+
+/** What the agent does with the message: each mode with what it means, where it is picked. */
+export function ModePicker({ value, onChange, lanes, disabled }: { value: ChatMode; onChange: (mode: ChatMode) => void; lanes: number; disabled?: boolean }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  const close = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) button.current?.focus();
+  };
+  const current = modeWords(value, lanes);
+  return (
+    <>
+      <button
+        ref={button} type="button" className="chat-choice is-mode" disabled={disabled}
+        aria-haspopup="dialog" aria-expanded={open} aria-controls={id} aria-label={t('Mode: {mode}', { mode: current.label })}
+        title={t('What the agent does with your message')} onClick={() => setOpen((o) => !o)} data-testid="prompt-review" data-value={value}
+      >
+        <ModeIcon mode={value} />
+        <span>{current.label}</span>
+        <ChevronDown size={12} aria-hidden="true" className="chat-choice-chevron" />
+      </button>
+      <ComposerSheet id={id} open={open} onClose={close} anchor={button} label={t('What the agent does with your message')} testId="prompt-review-sheet">
+        <fieldset className="chat-sheet-modes" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); close(true); } }}>
+          <legend className="chat-sheet-title">{t('What the agent does with your message')}</legend>
+          {(['direct', 'proposal', 'directions', 'critique'] as const).map((mode) => {
+            const words = modeWords(mode, lanes);
+            return (
+              <label key={mode} className={`chat-sheet-mode${mode === value ? ' is-on' : ''}`} onPointerUp={() => requestAnimationFrame(() => close(true))}>
+                <input type="radio" name={id} value={mode} checked={mode === value} onChange={() => onChange(mode)} data-testid={`prompt-review-${mode}`} />
+                <ModeIcon mode={mode} size={14} />
+                <span className="chat-sheet-mode-text">
+                  <span className="chat-sheet-mode-name">{words.label}</span>
+                  <span className="chat-sheet-mode-hint">{words.hint}</span>
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
+      </ComposerSheet>
+    </>
+  );
+}
+
+/**
+ * Who answers: the CLI, here or on a paired device, with its model and effort. The button says the model in short;
+ * the sheet names each choice.
+ */
+export function AgentPicker({ runner, options, onRunner, choice, summary, note }: { runner: string; options: { value: string; label: string; disabled?: boolean }[]; onRunner: (id: string) => void; choice: string | null; summary: string; note?: string }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  const close = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) button.current?.focus();
+  };
+  return (
+    <>
+      <button
+        ref={button} type="button" className="chat-choice is-agent"
+        aria-haspopup="dialog" aria-expanded={open} aria-controls={id} aria-label={t('Who answers: {who}', { who: summary })}
+        title={t('Who answers, with which model and effort')} onClick={() => setOpen((o) => !o)} data-testid="prompt-agent"
+      >
+        <span>{summary}</span>
+        <ChevronDown size={12} aria-hidden="true" className="chat-choice-chevron" />
+      </button>
+      <ComposerSheet id={id} open={open} onClose={close} anchor={button} label={t('Who answers')} testId="prompt-agent-sheet" className="is-agent">
+        <p className="chat-sheet-title">{t('Who answers')}</p>
+        <SelectField className="prompt-runner" label={t('Agent')} value={runner} options={options} onChange={onRunner} testId="prompt-runner" title={t('Which CLI runs this, here or on a paired device that allows it')} />
+        {choice ? <RunChoice runner={choice} scope="prompt" testId="prompt-choice" labelled /> : null}
+        {note ? <p className="chat-sheet-note">{note}</p> : null}
+      </ComposerSheet>
+    </>
+  );
+}
 
 // ---------------------------------------------------------------- variations
 

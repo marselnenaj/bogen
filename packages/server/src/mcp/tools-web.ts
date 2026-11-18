@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { GOOGLE_FONTS } from '../google-fonts.ts';
 import { findSection, SECTIONS } from '../templates/web-sections.ts';
 import { checkWidths } from '../width-check.ts';
+import { appReview } from './app-checks.ts';
 import { assertUnlocked, fileIdArg, pageIdArg, type ToolDefiner } from './kit.ts';
 
 /** Web craft: fluid type and space, grids and containers that adapt, and the checks a designer runs before shipping. */
@@ -205,7 +206,10 @@ export function registerWebTools(define: ToolDefiner): void {
     file_id: fileIdArg,
   }, async ({ node_id, viewport_width, file_id }, ctx) => {
     const room = await ctx.room(file_id);
-    return designReview(room.doc, node_id, viewport_width);
+    const review = designReview(room.doc, node_id, viewport_width);
+    const fileName = ctx.app.storage.get(room.id)?.name;
+    const app = appReview(room.doc, node_id, review.numbers.sizes ?? 0, fileName);
+    return app ? { ...review, observations: [...app, ...review.observations] } : review;
   });
 
   define('content_stress', { description: 'Preview an artboard with harder content, without changing it: every text longer (1.6 is about English to German), an unbreakable long word, images that fail to load, lists with one item or twice as many. Renders the stressed copy at each width and reports what then sticks out or gets cut off, with layer ids that are the same in the original. The original file is never written.', readOnly: true }, {

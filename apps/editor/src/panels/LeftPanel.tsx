@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Component, Database, Layers, Palette, Stamp, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { usePages } from '../doc/hooks.ts';
 import { session } from '../doc/session.ts';
 import { editor, useEditor } from '../state/store.ts';
@@ -10,7 +10,7 @@ import { BrandFilePanel } from './BrandFilePanel.tsx';
 import { AssetsPanel } from './AssetsPanel.tsx';
 import { DataPanel } from './DataPanel.tsx';
 import { useT } from '../i18n/react.ts';
-import { editDate, recentByPage, useRecentEdits } from '../lib/recent-edits.ts';
+import { editDate, editTime, recentByPage, useRecentEdits } from '../lib/recent-edits.ts';
 
 function PageList() {
   const t = useT();
@@ -104,8 +104,8 @@ function PageList() {
                   if (e.key === 'Escape') { e.currentTarget.value = p.name; e.currentTarget.blur(); }
                 }}
               />
-            ) : <span className="page-name" dir="auto">{p.name}</span>}
-            {recent.has(p.id) && renaming !== p.id ? <time className="page-edit-time" title={`${t('Last edited {date}', { date: editDate(recent.get(p.id)!.at) })} · ${recent.get(p.id)!.actor} · ${recent.get(p.id)!.summary}`} dateTime={new Date(recent.get(p.id)!.at).toISOString()} data-testid="page-last-edit">{editDate(recent.get(p.id)!.at)}</time> : null}
+            ) : <span className="page-name" dir="auto" translate="no">{p.name}</span>}
+            {recent.has(p.id) && renaming !== p.id ? <time className="page-edit-time" title={`${t('Last edited {date}', { date: editDate(recent.get(p.id)!.at) })} · ${recent.get(p.id)!.actor} · ${recent.get(p.id)!.summary}`} dateTime={new Date(recent.get(p.id)!.at).toISOString()} data-testid="page-last-edit">{editTime(recent.get(p.id)!.at)}</time> : null}
             {pages.length > 1 && renaming !== p.id ? (
               <IconButton className="row-action" icon={<Trash2 size={13} />} title={t('Delete {name}', { name: p.name })} onClick={(e) => { e.stopPropagation(); remove(p.id); }} tabIndex={-1} />
             ) : null}
@@ -122,11 +122,11 @@ export function LeftPanel() {
   return (
     <aside className="panel panel-left" aria-label={t('Layers and pages')} data-testid="left-panel">
       <div className="tabs" role="tablist" aria-label={t('Left panel')}>
-        <button type="button" role="tab" aria-selected={tab === 'layers'} title={t('Layers ({shortcut})', { shortcut: 'Alt+1' })} className={`tab${tab === 'layers' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'layers' })} data-testid="tab-layers"><Layers size={14} /> {t('Layers')}</button>
-        <button type="button" role="tab" aria-selected={tab === 'tokens'} title={t('Tokens ({shortcut})', { shortcut: 'Alt+2' })} className={`tab${tab === 'tokens' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'tokens' })} data-testid="tab-tokens"><Palette size={14} /> {t('Tokens')}</button>
-        <button type="button" role="tab" aria-selected={tab === 'assets'} title={t('Assets ({shortcut})', { shortcut: 'Alt+3' })} className={`tab${tab === 'assets' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'assets' })} data-testid="tab-assets"><Component size={14} /> {t('Assets')}</button>
-        <button type="button" role="tab" aria-selected={tab === 'data'} title={t('Data ({shortcut})', { shortcut: 'Alt+4' })} aria-label={t('Data')} className={`tab${tab === 'data' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'data' })} data-testid="tab-data"><Database size={14} /></button>
-        <button type="button" role="tab" aria-selected={tab === 'brand'} title={t('Brand')} className={`tab${tab === 'brand' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'brand' })} data-testid="tab-brand"><Stamp size={14} /> {t('Brand')}</button>
+        <button type="button" role="tab" aria-selected={tab === 'layers'} title={t('Layers ({shortcut})', { shortcut: 'Alt+1' })} className={`tab${tab === 'layers' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'layers' })} data-testid="tab-layers"><span className="tab-label">{t('Layers')}</span></button>
+        <button type="button" role="tab" aria-selected={tab === 'tokens'} title={t('Tokens ({shortcut})', { shortcut: 'Alt+2' })} className={`tab${tab === 'tokens' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'tokens' })} data-testid="tab-tokens"><span className="tab-label">{t('Tokens')}</span></button>
+        <button type="button" role="tab" aria-selected={tab === 'assets'} title={t('Assets ({shortcut})', { shortcut: 'Alt+3' })} className={`tab${tab === 'assets' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'assets' })} data-testid="tab-assets"><span className="tab-label">{t('Assets')}</span></button>
+        <button type="button" role="tab" aria-selected={tab === 'data'} title={t('Data ({shortcut})', { shortcut: 'Alt+4' })} className={`tab${tab === 'data' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'data' })} data-testid="tab-data"><span className="tab-label">{t('Data')}</span></button>
+        <button type="button" role="tab" aria-selected={tab === 'brand'} title={t('Brand')} className={`tab${tab === 'brand' ? ' is-active' : ''}`} onClick={() => editor().set({ leftTab: 'brand' })} data-testid="tab-brand"><span className="tab-label">{t('Brand')}</span></button>
       </div>
       {tab === 'layers' ? (
         <>

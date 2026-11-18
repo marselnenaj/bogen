@@ -1,3 +1,5 @@
+import { BrandsFromUrl } from '../brand-from-url.ts';
+import { BrandEditions } from '../brand-edition.ts';
 import { ScreenPreviews } from '../screen-previews.ts';
 import { allKits, ensureKitLibrary, kitSummary } from '../kits/index.ts';
 import { fillMode, planModeCapture, recordCapture, type ModeReport } from '../capture-modes.ts';
@@ -8,7 +10,7 @@ import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { z } from 'zod';
 import { addFontFaces, cleanRunLanguage, getGlyphFont, newId, setInteractionRecord, Y, BogenDoc } from '@bogen/core';
-import { runInstructions, Runs, type RunEnd } from '../agents.ts';
+import { childEnv, runInstructions, Runs, type RunEnd } from '../agents.ts';
 import { handleBrandRoute } from '../brand-http.ts';
 import { exampleList, runTemplate, EXAMPLES } from '../templates/index.ts';
 import { DesignQuality } from '../design-quality.ts';
@@ -37,12 +39,19 @@ import { RemoteRuns } from '../remote-runs.ts';
 import { DecisionMemory } from '../memory.ts';
 import { ScoreHistory } from '../brand-scores.ts';
 import { Races } from '../race.ts';
-import { RunSettingsStore, EFFORT_ID, MODEL_ID } from '../run-settings.ts';
-import { RUNNER_IDS, MAX_DIRECTION_LANES, cleanVariation, VARIATION_ASPECTS, VARIATION_RANGES } from '@bogen/core';
+import { RunSettingsStore, EFFORT_ID, MODEL_ID, type RunChoice, type SizedChoice } from '../run-settings.ts';
+import { RUNNER_IDS, MAX_DIRECTION_LANES, cleanVariation, classifyRun, RUN_SIZES, VARIATION_ASPECTS, VARIATION_RANGES, type RunSizeVerdict } from '@bogen/core';
 import { agentRoutes } from './agent-routes.ts';
 import { clientRoutes } from './client-routes.ts';
+import { OpenBroker, openRoutes } from './open-routes.ts';
 import { install, type Client, type InstallResult } from '../install.ts';
 import { exportBogen, importBogen } from '../bogen-transfer.ts';
+import { IncomingCalls } from '../incoming-calls.ts';
+import { handleIncomingRoute } from './incoming-routes.ts';
+import { handleImageGenerateRoute } from './imagegen-routes.ts';
+import { ImageGenerator, ImageJobs, type GeneratedPicture } from '../image-generate.ts';
+import { CritiqueJobs } from '../critique-run.ts';
+import { handleCritiqueRoute } from './critique-routes.ts';
 import { CommentRuns } from '../comment-runs.ts';
 import { ReplyTargets } from '../reply-targets.ts';
 import { EventHub, type BogenEvent } from '../events.ts';
@@ -73,18 +82,19 @@ import { Renderer } from '../render.ts';
 import { thumbnailTarget, THEME_THUMBNAIL_REVISION, THUMBNAIL_REVISION } from '../thumbnail-target.ts';
 import { runSavedChecks } from '../custom-checks.ts';
 import { FILE_ID, Storage, type FileEntry } from '../storage.ts';
-import { capturePage, type CaptureResult } from '../capture.ts';
+import { capturePage, settleTokenRefs, type CaptureResult } from '../capture.ts';
+import { componentsFromRepeats } from '../capture-components.ts';
 import type { FontReport } from '../capture-sheets.ts';
 import { resolveRuleLayers } from '../capture-sheets.ts';
 import { agentOrigin, Rooms } from '../sync.ts';
 import { tailscaleCli, type TailscaleCli } from '../tailnet.ts';
 import { nextArtboardX } from '../mcp/kit.ts';
-import { atomicWrite, DEFAULT_PORT, errorMessage, HttpError } from '../util.ts';
+import { DEFAULT_PORT, errorMessage, homeId, HttpError } from '../util.ts';
 import { UpdateWatch } from '../updates.ts';
 import { MAX_COLORS, MIN_COLORS, VECTORIZE_DETAILS, vectorizeAsset } from '../vectorize.ts';
 import { buildGlyphFontInto } from '../glyph-font-build.ts';
 import { FULL_VERSION, VERSION } from '../version.ts';
-import { checkRequest, COOKIE, tokenMatches, type GuardOptions } from './security.ts';
+import { checkRequest, COOKIE, pathRefusal, tokenMatches, type GuardOptions } from './security.ts';
 import { serveEditor } from './static.ts';
 import { receiveAsset, serveAsset } from './assets.ts';
 import { handleTransfer } from './transfer-routes.ts';
@@ -93,6 +103,7 @@ import { handleFolders } from './folder-routes.ts';
 import { handleDesignBranches } from './branch-routes.ts';
 import { handleTomacco } from './tomacco-routes.ts';
 import { handleVoiceRoute, voiceNotes } from '../voice.ts';
+import { callPreferences, handleCallRoute } from '../speech/call.ts';
 import { handlePublishRoute } from './publish-routes.ts';
 import { Publisher } from '../publish.ts';
 import { ghCli, type GhCli } from '../publish-github.ts';
@@ -108,6 +119,8 @@ import { MemoryGauge, type MemoryReading } from '../memory-pressure.ts';
 import { prepareRunIntent, settleRunRevision } from '../run-intent.ts';
 import { prepareRunKnowledge } from '../run-knowledge.ts';
 import { prepareRunLanguage } from '../run-language.ts';
+import { FEATURE_TEAMS, TeamService, tailscaleWhois, teamsEnabled } from '../teams/service.ts';
+import { teamRoutes } from '../teams/routes.ts';
 
 const JSON_LIMIT = 4 * 1024 * 1024;
 const MCP_LIMIT = 8 * 1024 * 1024;
@@ -151,6 +164,10 @@ export interface ServerOptions extends PeerOptions {
   tailscale?: TailscaleCli;
   /** Tests: how a notification reaches the phone's push service. */
   pushFetch?: PushFetch;
+  /** Makes pictures with the Codex CLI; tests pass one that runs a stand-in. */
+  imageGenerator?: ImageGenerator;
+  /** The Claude Code command design_critique starts; tests pass a stand-in. */
+  critiqueCommand?: string;
   /** Tests: the script "Update the other device" runs, and what it gets in its environment. */
   deployScript?: string | null;
   deployEnv?: NodeJS.ProcessEnv;
@@ -228,6 +245,8 @@ const WidthCheckBody = z.object({ fileId: z.string(), nodeId: z.string(), widths
 const UndoBody = z.object({ fileId: z.string(), agent: z.string().min(1).max(60) });
 // These ids end up in the run's system prompt, so they stay plain.
 const Id = z.string().regex(/^[0-9a-zA-Z_-]{1,64}$/);
+/** A layer id, also one inside an instance (`<instance>/<layer in its main>`, nested instances add segments). */
+const LayerId = z.string().max(600).regex(/^[0-9a-zA-Z_-]{1,64}(\/[0-9a-zA-Z_-]{1,64}){0,7}$/);
 const CaptureBody = z.object({
   url: z.string().url().max(2000), fileId: Id.optional(), pageId: Id.optional(), pageName: z.string().min(1).max(200).optional(), name: z.string().min(1).max(200).optional(),
   width: z.number().int().min(200).max(4000).optional(), height: z.number().int().min(200).max(4000).optional(), colorScheme: z.enum(['light', 'dark']).optional(), captureFonts: z.boolean().optional(),
@@ -237,8 +256,10 @@ export const RunLanguage = z.object({
   tag: z.string().trim().max(20).regex(/^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,4}){0,2}$/).optional(),
   mode: z.enum(['write', 'translate', 'add']).optional(),
 }).optional();
+/** A kept call preference that names a model or an effort: the person chose, so the size of a request picks nothing. */
+const MODEL_WISH = /\b(?:opus|sonnet|haiku|fable|gpt-[\w.-]+|model|modell|effort|reasoning)\b/i;
 const RunBody = z.object({
-  fileId: Id, pageId: Id.optional(), nodeIds: z.array(Id).max(200).default([]), prompt: z.string().min(1).max(20_000),
+  fileId: Id, pageId: Id.optional(), nodeIds: z.array(LayerId).max(200).default([]), prompt: z.string().min(1).max(20_000),
   /** What the run is called in the prompt, the queue, the run list and the History, when the prompt is a fuller brief than the person asked. */
   title: z.string().trim().min(1).max(200).optional(),
   runner: z.enum(RUNNER_IDS), model: z.string().regex(MODEL_ID).optional(), effort: z.string().regex(EFFORT_ID).or(z.literal('default')).optional(),
@@ -256,6 +277,10 @@ const RunBody = z.object({
   variation: z.object({ count: z.number().int().min(1).max(6).optional(), range: z.enum(VARIATION_RANGES).default('explore'), vary: z.array(z.enum(VARIATION_ASPECTS)).max(4).default([]) }).optional(),
   /** A design playbook chosen with / in the chat. */
   discipline: z.enum(DISCIPLINE_IDS).optional(),
+  /** Set when the request comes from a live voice call; `steer` continues the call's session after an interruption. */
+  call: z.object({ language: z.enum(['de', 'en']), steer: z.boolean().optional() }).optional(),
+  /** How big the call's talking layer took the request to be, for the model when nobody chose one. */
+  size: z.enum(RUN_SIZES as [RunSizeVerdict['size'], ...RunSizeVerdict['size'][]]).optional(),
   /** Layers, components and tokens mentioned with @, checked against the file before the run starts. */
   mentions: z.array(z.object({ kind: z.enum(['layer', 'component', 'token']), id: z.string().min(1).max(200) })).max(20).optional(),
 });
@@ -272,7 +297,7 @@ const RaceBody = z.object({
 const RebuildBody = z.object({ fileId: Id, nodeId: Id, runner: z.enum(RUNNER_IDS), model: z.string().regex(MODEL_ID).optional(), effort: z.string().regex(EFFORT_ID).or(z.literal('default')).optional(), prompt: z.string().max(4000).optional() });
 const CommentBody = z.object({
   fileId: Id, text: z.string().trim().min(1).max(10_000), author: z.string().trim().min(1).max(80).default('Someone'),
-  threadId: Id.optional(), pageId: Id.optional(), nodeId: Id.optional(), x: z.number().optional(), y: z.number().optional(),
+  threadId: Id.optional(), pageId: Id.optional(), nodeId: LayerId.optional(), x: z.number().optional(), y: z.number().optional(),
   attachments: z.array(z.object({
     src: z.string().regex(/^bogen-asset:[a-f0-9]{64}\.[a-z0-9]{2,5}$|^bogen-voice:[a-f0-9]{24}\.(m4a|aac|webm|ogg|mp3|wav)$/), name: z.string().max(200).optional(), width: z.number().optional(), height: z.number().optional(),
     kind: z.enum(['image', 'audio']).optional(), duration: z.number().min(0).max(3600).optional(), device: z.string().max(100).optional(),
@@ -303,19 +328,33 @@ export function fromOwner(req: IncomingMessage, guard: GuardOptions): boolean {
   return guard.phone === true || fromThisDevice(req, guard);
 }
 
+/** A path as the journal may keep it: a run's MCP address holds its secret, so that part is left out. */
+export function loggedPath(pathname: string): string {
+  return pathname.replace(/^\/live-mcp\/[^/]+/, '/live-mcp/<hidden>');
+}
+
 /** All of the server: storage, rooms, renderer, MCP, runs, and the HTTP and WebSocket front. */
 export class BogenServer {
   readonly storage: Storage;
   readonly knowledge: KnowledgeLibrary;
   readonly hub = new EventHub();
+  /** `bogen open` and the launchers ask the windows on this machine before a new one opens (open-routes.ts). */
+  readonly opens = new OpenBroker((e) => this.hub.sendLocal(e));
   readonly fileEvents = new FileEvents();
   readonly rooms: Rooms;
   readonly renderer: Renderer;
   readonly designQuality: DesignQuality;
   readonly runs: Runs;
   readonly commentRuns: CommentRuns;
+  readonly incomingCalls: IncomingCalls;
+  readonly imageGenerator: ImageGenerator;
+  readonly imageJobs: ImageJobs;
+  readonly critiques: CritiqueJobs;
   readonly replyTargets: ReplyTargets;
   readonly brands: Brands;
+  /** Brands made from a website address on Home, as jobs the editor asks about. */
+  readonly brandsFromUrl: BrandsFromUrl;
+  readonly brandEditions: BrandEditions;
   readonly scores: ScoreHistory;
   readonly libraries: Libraries;
   /** Browser extensions the person paired, which may add captures and nothing else. */
@@ -326,6 +365,8 @@ export class BogenServer {
   /** What Settings, Add to agent, runs to connect a client: `bogen install`. Tests put a stand-in here. */
   connectClients: (clients: Client[]) => Promise<InstallResult[]> = (clients) => install(clients);
   readonly peers: PeerManager;
+  /** Teams, behind the feature teams-1 (BOGEN_FEATURES=teams-1). Null when it is off: nothing listens or shows. */
+  readonly teams: TeamService | null;
   /** Commits of files. Not to be confused with `history`, which is about agent runs. */
   readonly commits: History;
   /** Every change to a file, by whom, and how to turn it around. */
@@ -418,9 +459,11 @@ export class BogenServer {
     this.gitBindings = new GitBindings(options.home);
     this.rooms = new Rooms(this.storage, this.hub, { idleMs: options.idleMs, agentExpiryMs: options.agentExpiryMs, onChange: (id) => { this.screenPreviews?.invalidate(id); this.scheduleThumbnail(id); this.commits.noteChange(id); }, onUpdate: (id, update, origin) => {
         this.peers.onRoomUpdate(id, update, origin);
+        this.teams?.onRoomUpdate(id, update, origin);
         this.noteAway(id, origin);
       },
       onRoomLoaded: (room) => {
+        this.teams?.bindDoc(room.id, room.doc.y);
         this.fileEvents.watch(room);
         this.timeline.watch(room);
         // Older logs lack location hints. Enrich only the file being opened, once, without rendering it.
@@ -449,14 +492,18 @@ export class BogenServer {
       void this.pulls.runEnded(end);
       this.fileEvents.append(end.fileId, 'agent_finished', { source: 'agent', actor: end.runner }, { agent: end.runner, run_id: end.runId, status: end.status, ...(end.error ? { error: end.error.slice(0, 500) } : {}), ...(end.threadId ? { thread_id: end.threadId } : {}) });
       this.commentRuns.runEnded(end);
+      void this.incomingCalls.runEnded(end).catch((e) => console.error(`bogen: incoming call for run ${end.runId}: ${errorMessage(e)}`));
       this.clientRuns.runEnded(end);
       this.races.runEnded(end);
       void this.brands.runEnded(end);
+      this.brandEditions.runEnded(end);
       void this.commitRun(end);
       void settleRunRevision(this, end).catch((e) => console.error(`bogen: revision of run ${end.runId}: ${errorMessage(e)}`));
     });
     this.scores = new ScoreHistory(options.home);
     this.brands = new Brands({ storage: this.storage, rooms: this.rooms, hub: this.hub, fileEvents: this.fileEvents, renderer: this.renderer, scores: this.scores, peers: () => this.peers, forgetFile: (id) => { this.fileEvents.forget(id); this.commentRuns.forget(id); this.away.forget(id); this.peers.conflicts.forget(id); this.races?.forget(id); void this.history.forget(id); void this.conversations.forget(id); void this.replyTargets.forget(id); void this.runSummaries?.forget(id); } });
+    this.brandsFromUrl = new BrandsFromUrl(this);
+    this.brandEditions = new BrandEditions(this);
     // Every run passes the intent check before its CLI starts: a redo opens (or continues) a revision with a checkpoint.
     // The design language comes before the intent: adding a language version decides where the run works.
     this.runs.prepare = async (req) => prepareRunKnowledge(this, await this.conversations.prepare(await prepareRunIntent(this, await prepareRunLanguage(this, await this.brands.prepareRun({ ...req, ...(req.language ? { language: cleanRunLanguage(req.language) } : {}) })))));
@@ -553,6 +600,21 @@ export class BogenServer {
         return server;
       },
     });
+    this.imageGenerator = options.imageGenerator ?? new ImageGenerator({ env: () => childEnv() });
+    this.imageJobs = new ImageJobs(this.imageGenerator);
+    this.critiques = new CritiqueJobs(this, options.critiqueCommand);
+    this.incomingCalls = new IncomingCalls({
+      home: options.home,
+      broadcast: (event) => this.hub.broadcast(event),
+      fileName: (fileId) => this.storage.get(fileId)?.name,
+      replyOf: async (end) => {
+        if (!end.threadId) return end.reply;
+        const thread = (await this.rooms.get(end.fileId)).doc.getComments().find((t) => t.id === end.threadId);
+        const last = thread?.messages.at(-1);
+        return last?.by === 'agent' ? last.text : end.reply;
+      },
+      notifyPhones: (call) => this.push.incomingCall(call.runner, call.fileId, call.fileName),
+    });
     this.push = new PushNotices({
       home: options.home, storage: this.storage, fileEvents: this.fileEvents, activeRun: (id) => Boolean(this.runs.activeFor(id)),
       paired: (id) => this.phone.isPaired(id), ...(options.pushFetch ? { fetch: options.pushFetch } : {}),
@@ -608,12 +670,53 @@ export class BogenServer {
       timelineSync: () => this.timelineSync,
       remoteRuns: (peer, req, res, parts) => this.remoteRuns.handlePeer(peer, req, res, parts),
       phoneUrl: () => (this.phone.listening ? this.phone.url : null),
+      teams: () => this.teams,
       createTailnetServer: () => {
         const server = createServer((req, res) => void this.onRequest(req, res, this.peers.guard));
         server.on('upgrade', (req, socket, head) => this.onUpgrade(req, socket, head, this.peers.guard));
         return server;
       },
     }, options);
+    this.teams = teamsEnabled() ? new TeamService({
+      home: options.home, deviceName: () => this.peers.device().name,
+      doc: async (file) => (await this.rooms.get(file)).doc.y,
+      ensureFile: (file, name) => {
+        if (this.storage.get(file)) return;
+        this.storage.create(name, file);
+        this.hub.broadcast({ t: 'files' });
+      },
+      fileExists: (file) => Boolean(this.storage.get(file)),
+      onTeamFile: () => this.hub.broadcast({ t: 'files' }),
+      onUnsent: (fileId, count) => this.hub.broadcast({ t: 'team-unsent', fileId, count }),
+      resetFile: async (fileId, state) => {
+        // The replica goes without saving (it holds the unsigned items), the team's copy is written, and open
+        // editors drop their copy of the file and load it again.
+        this.rooms.drop(fileId);
+        await this.storage.writeDoc(fileId, state);
+        this.hub.broadcast({ t: 'file-reset', fileId });
+      },
+      fileName: (file) => this.storage.get(file)?.name,
+      whois: tailscaleWhois,
+    }) : null;
+  }
+
+  /** Today's paired devices become this person's devices in their teams (teams-1). */
+  private async addPairedDevicesToTeams(): Promise<number> {
+    const teams = this.teams;
+    if (!teams) return 0;
+    const cards: { id: string; card: { ed: string; x: string; name: string; person: string } }[] = [];
+    for (const peer of this.peers.status()) {
+      try {
+        const raw = await this.peers.request(peer.id, '/api/peer/team/device');
+        cards.push({ id: peer.id, card: JSON.parse(raw.toString('utf8')) as { ed: string; x: string; name: string; person: string } });
+      } catch {
+        // Offline, or an older build without teams: it is added the next time.
+      }
+    }
+    return teams.addDevices(cards.map((c) => c.card), async (card, body) => {
+      const peer = cards.find((c) => c.card.ed === card.ed);
+      if (peer) await this.peers.request(peer.id, '/api/peer/team/adopt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    });
   }
 
   localUrl(): string {
@@ -659,7 +762,9 @@ export class BogenServer {
     this.port = typeof address === 'object' && address ? address.port : 0;
     this.http.on('error', (e) => console.error(`bogen: ${errorMessage(e)}`));
     await this.peers.start().catch((e) => console.error(`bogen: device sync is off: ${errorMessage(e)}`));
+    await this.teams?.start().catch((e) => console.error(`bogen: teams are off: ${errorMessage(e)}`));
     await this.push.load();
+    await this.incomingCalls.load();
     await this.phone.start().catch((e) => console.error(`bogen: the phone listener is off: ${errorMessage(e)}`));
     await this.publisher.load();
     await this.shares.load();
@@ -682,12 +787,33 @@ export class BogenServer {
     }
   }
 
+  /**
+   * A generated picture into the asset store, as a WebP of at most 2048 px when the browser can make one that is
+   * smaller, else as it came. Like an upload: identical bytes give the same src.
+   */
+  async storeGenerated(picture: GeneratedPicture): Promise<{ src: string; width: number; height: number }> {
+    let bytes = picture.bytes;
+    let mime = picture.mime;
+    let { width, height } = picture;
+    const webp = await this.renderer.transcode({ bytes, mime }, { type: 'image/webp', quality: 0.86, maxDimension: 2048 }).catch(() => null);
+    if (webp && webp.bytes.length < bytes.length) {
+      ({ bytes, width, height } = webp);
+      mime = 'image/webp';
+    }
+    const asset = await this.storage.putAsset(bytes, mime);
+    return { src: asset.src, width, height };
+  }
+
   async close(): Promise<void> {
     await this.screenPreviews.close();
     if (this.closing) return;
     this.closing = true;
+    await this.teams?.stop().catch(() => {});
     await this.peers.close();
     await this.phone.close();
+    this.incomingCalls.close();
+    this.imageJobs.cancelAll();
+    this.critiques.cancelAll();
     await this.push.close();
     await this.siteListener.close();
     await this.reviewListener.close();
@@ -716,6 +842,7 @@ export class BogenServer {
     await this.timeline.close();
     await this.commits.close();
     await Promise.resolve(this.omarchy?.close()).catch(() => {});
+    this.opens.close();
     this.hub.close();
     await this.rooms.close();
     await this.storage.flushAll();
@@ -761,6 +888,22 @@ export class BogenServer {
     this.requireFile(id);
     this.storage.update(id, { name, updatedAt: Date.now() });
     this.hub.broadcast({ t: 'files' });
+  }
+
+  /**
+   * The model and effort of a prompt run: what the person chose wins, and where nobody chose, the size of the request
+   * picks one (run-settings.ts). A change said in a call while the agent works keeps the model of the run it changes.
+   */
+  private async sizedChoice(body: z.infer<typeof RunBody>): Promise<{ choice: RunChoice; sized?: SizedChoice }> {
+    const asked: RunChoice = { ...(body.model ? { model: body.model } : {}), ...(body.effort ? { effort: body.effort } : {}) };
+    if (body.call?.steer && body.conversationId && !asked.model && !asked.effort) {
+      const before = this.runs.sessionChoice(body.fileId, body.conversationId);
+      if (before) return { choice: await this.runSettings.resolve(body.runner, 'prompt', before) };
+    }
+    // "Use Opus for this", said once in a call and kept: a choice like any other.
+    const preferred = body.call ? (await callPreferences(this).list().catch(() => [])).some((p) => MODEL_WISH.test(p.text)) : false;
+    const verdict = classifyRun({ prompt: body.prompt, selected: body.nodeIds.length, ...(body.size ? { hint: body.size } : {}), ...(body.intent ? { intent: body.intent } : {}), ...(body.review ? { review: body.review } : {}), images: body.images?.length ?? 0 });
+    return this.runSettings.resolveBySize(body.runner, asked, verdict, preferred);
   }
 
   requireFile(id: string): FileEntry {
@@ -895,6 +1038,8 @@ export class BogenServer {
   // HTTP
 
   private async onRequest(req: IncomingMessage, res: ServerResponse, guard: GuardOptions = this.guard): Promise<void> {
+    const refused = pathRefusal(req.url);
+    if (refused) return sendJson(res, 400, { error: refused });
     const url = new URL(req.url ?? '/', 'http://bogen.invalid');
     if (guard.phone) return this.onPhoneRequest(req, res, url, guard);
     if (isPeerPath(url.pathname)) return this.peers.handleHttp(req, res, url);
@@ -917,7 +1062,7 @@ export class BogenServer {
         return;
       }
       const status = e instanceof HttpError ? e.status : 500;
-      if (status === 500) console.error(`bogen: ${req.method} ${url.pathname}: ${errorMessage(e)}`);
+      if (status === 500) console.error(`bogen: ${req.method} ${loggedPath(url.pathname)}: ${errorMessage(e)}`);
       sendJson(res, status, { error: errorMessage(e) });
     }
   }
@@ -939,7 +1084,7 @@ export class BogenServer {
         return;
       }
       const status = e instanceof HttpError ? e.status : 500;
-      if (status === 500) console.error(`bogen: phone ${req.method} ${url.pathname}: ${errorMessage(e)}`);
+      if (status === 500) console.error(`bogen: phone ${req.method} ${loggedPath(url.pathname)}: ${errorMessage(e)}`);
       sendJson(res, status, { error: errorMessage(e) });
     }
   }
@@ -985,11 +1130,39 @@ export class BogenServer {
       }
       catch (error) { throw new HttpError(400, errorMessage(error)); }
     }
+    if (a === 'teams') {
+      if (!this.teams) throw new HttpError(404, 'No such route.');
+      // The Yjs id an editor tab (here, or on a paired phone) writes a team file with: its own, derived from this
+      // device's key, so members can tell it is this device's (docs/teams.md, N6).
+      if (parts[1] === 'writer' && !parts[2] && req.method === 'POST') {
+        if (!fromOwner(req, guard)) throw new HttpError(403, 'Only from this machine or a paired phone.');
+        const body = await jsonBody(req, z.object({ file: z.string().regex(/^[a-z0-9]{10}$/) }));
+        return sendJson(res, 200, { ...await this.teams.writerIds(body.file), unsent: this.teams.unsentCount(body.file) });
+      }
+      // Writer ids ahead of time for every team file, for a phone or tab to keep for opening one offline later.
+      if (parts[1] === 'spares' && !parts[2] && req.method === 'POST') {
+        if (!fromOwner(req, guard)) throw new HttpError(403, 'Only from this machine or a paired phone.');
+        return sendJson(res, 200, { spares: this.teams.spares() });
+      }
+      // Changes to a team file that could not be signed: try them again (written anew as this device's), or let go.
+      if (parts[1] === 'unsent' && !parts[2] && req.method === 'POST') {
+        if (!fromOwner(req, guard)) throw new HttpError(403, 'Only from this machine or a paired phone.');
+        const body = await jsonBody(req, z.object({ file: z.string().regex(/^[a-z0-9]{10}$/), action: z.enum(['retry', 'drop']) }));
+        if (body.action === 'drop') {
+          await this.teams.dropUnsent(body.file);
+          return sendJson(res, 200, { unsent: 0 });
+        }
+        return sendJson(res, 200, { unsent: await this.teams.retryUnsent(body.file) });
+      }
+      if (!fromThisDevice(req, guard)) throw new HttpError(403, 'Teams are managed on this machine only.');
+      return teamRoutes(this.teams, req, res, parts, (r, schema) => jsonBody(r, schema), sendJson, () => this.addPairedDevicesToTeams());
+    }
     if (await agentRoutes(this, req, res, url, parts, { json: jsonBody, send: sendJson, local: (r) => fromThisDevice(r, guard), owner: (r) => fromOwner(r, guard) })) return;
     if (await clientRoutes(req, res, parts, { send: sendJson, local: (r) => fromThisDevice(r, guard) }, this.connectClients)) return;
+    if (await openRoutes(req, res, parts, this.opens, { send: sendJson, json: jsonBody, local: (r) => fromThisDevice(r, guard) })) return;
 
     if (a === 'status' && method === 'GET') {
-      return sendJson(res, 200, { version: this.options.reportVersion ?? FULL_VERSION, port: this.port, pid: process.pid, files: this.storage.list().length, agents: this.rooms.agentInfos(), device: this.peers.device(), peers: this.peers.status(), conflicts: this.peers.conflicts.all().length, update: this.updates.note() });
+      return sendJson(res, 200, { version: this.options.reportVersion ?? FULL_VERSION, port: this.port, pid: process.pid, home: homeId(this.options.home), files: this.storage.list().length, agents: this.rooms.agentInfos(), device: this.peers.device(), peers: this.peers.status(), features: this.teams ? [FEATURE_TEAMS] : [], conflicts: this.peers.conflicts.all().length, update: this.updates.note() });
     }
 
     if (await handleDesignBranches(this, req, res, parts)) return;
@@ -1039,7 +1212,13 @@ export class BogenServer {
       }
       throw new HttpError(405, 'Method not allowed.');
     }
-    if (a === 'peers') return this.peers.handleAdmin(req, res, parts);
+    if (a === 'peers') {
+      // Pairing devices and turning the tailnet listener on or off configure this machine: the person at it only.
+      // The tailnet and phone listeners refuse the path already (isLocalOnlyPath, phoneRefusedPath); a token server
+      // behind a proxy reaches this point, so it is checked here too.
+      if (!fromThisDevice(req, guard)) throw new HttpError(403, 'Only at this machine.');
+      return this.peers.handleAdmin(req, res, parts);
+    }
     if (a === 'inbox' && !b && method === 'GET') return sendJson(res, 200, await inbox(this));
     // A phone's edits from while it was offline, compared with what changed here before they merge.
     if (a === 'files' && b && c === 'catch-up' && !d) {
@@ -1098,7 +1277,7 @@ export class BogenServer {
     }
 
     if (a === 'code') return handleCodeRoute(this, req, res, url, parts, fromThisDevice(req, guard), { json: jsonBody, send: sendJson });
-    if (a === 'brands' || (a === 'files' && c === 'brand')) return handleBrandRoute(this, req, res, url, parts, fromOwner(req, guard));
+    if (a === 'brands' || (a === 'files' && c === 'brand')) return handleBrandRoute(this, req, res, url, parts, fromOwner(req, guard), fromThisDevice(req, guard));
 
     if (a === 'kits') {
       // The kit registry for the Assets panel. The editor links the library and writes the tokens itself, as its own undo step.
@@ -1206,7 +1385,15 @@ export class BogenServer {
       }
     }
 
+    if (a === 'call' && b === 'incoming') return handleIncomingRoute(this.incomingCalls, req, res, parts, fromOwner(req, guard), sendJson, (r) => jsonBody(r, z.record(z.string(), z.unknown())));
+    if (a === 'call') return handleCallRoute(this, req, res, url, parts, { owner: fromOwner(req, guard), thisDevice: fromThisDevice(req, guard) }, sendJson, (r) => jsonBody(r, z.record(z.string(), z.unknown())));
     if (a === 'voice') return handleVoiceRoute(this, req, res, url, parts, fromOwner(req, guard), sendJson);
+    if (a === 'images' && b === 'generate') {
+      return handleImageGenerateRoute({ generator: this.imageGenerator, jobs: this.imageJobs, store: (p) => this.storeGenerated(p), fileExists: (id) => Boolean(this.storage.get(id)) }, req, res, url, parts.slice(0), fromOwner(req, guard), sendJson, (r) => jsonBody(r, z.record(z.string(), z.unknown())));
+    }
+    if (a === 'critique') {
+      return handleCritiqueRoute({ jobs: this.critiques, room: (id) => this.rooms.get(id), fileExists: (id) => Boolean(this.storage.get(id)) }, req, res, parts, fromOwner(req, guard), sendJson, (r) => jsonBody(r, z.record(z.string(), z.unknown())));
+    }
     if (a === 'assets' && !b && method === 'POST') return sendJson(res, 201, await receiveAsset(req, res, this.storage, String(req.headers['content-type'] ?? '')));
     // A PDF or SVG dropped on the canvas: the layers it makes, for the editor to place as one undo step of its own.
     if (a === 'layers' && b === 'import' && !c && method === 'POST') {
@@ -1272,13 +1459,13 @@ export class BogenServer {
           return sendJson(res, 201, await this.remoteRuns.start(device, asked));
         }
         try {
-          const choice = await this.runSettings.resolve(body.runner, 'prompt', { ...(body.model ? { model: body.model } : {}), ...(body.effort ? { effort: body.effort } : {}) });
-          const { model: _model, effort: _effort, device: _device, images: sources, mentions: asked, variation: varied, ...rest } = body;
+          const { choice, sized } = await this.sizedChoice(body);
+          const { model: _model, effort: _effort, device: _device, images: sources, mentions: asked, variation: varied, size: _size, ...rest } = body;
           const images = sources?.length ? await runImages(this.storage, sources) : [];
           const mentions = asked?.length ? resolveMentions((await this.rooms.get(body.fileId)).doc, asked) : [];
           const variation = varied ? { ...cleanVariation(varied)!, ...(varied.count ? { count: varied.count } : {}) } : undefined;
-          const runId = await this.runs.start({ ...rest, ...choice, fileName: entry.name, ...(images.length ? { images } : {}), ...(mentions.length ? { mentions } : {}), ...(variation ? { variation } : {}) });
-          return sendJson(res, 201, { runId });
+          const runId = await this.runs.start({ ...rest, ...choice, fileName: entry.name, ...(images.length ? { images } : {}), ...(mentions.length ? { mentions } : {}), ...(variation ? { variation } : {}), ...(sized ? { sized } : {}) });
+          return sendJson(res, 201, { runId, ...(sized ? { sized } : {}) });
         } catch (e) {
           throw e instanceof HttpError ? e : new HttpError(409, errorMessage(e));
         }
@@ -1289,7 +1476,8 @@ export class BogenServer {
         return sendJson(res, 201, await rebuildRun(this, await jsonBody(req, RebuildBody)));
       }
       if (b && c === 'stop' && method === 'POST') {
-        if (!this.runs.stop(b) && !(await this.remoteRuns.stop(b).catch((e) => { throw new HttpError(502, errorMessage(e)); }))) throw new HttpError(404, 'No such run is active.');
+        const gentle = url.searchParams.get('gentle') === '1';
+        if (!this.runs.stop(b, gentle) && !(await this.remoteRuns.stop(b).catch((e) => { throw new HttpError(502, errorMessage(e)); }))) throw new HttpError(404, 'No such run is active.');
         return sendJson(res, 200, { ok: true });
       }
     }
@@ -1361,7 +1549,7 @@ export class BogenServer {
     const copyId = newId();
     const live = this.rooms.peek(id);
     if (live) {
-      await atomicWrite(this.storage.docPath(copyId), Y.encodeStateAsUpdate(live.doc.y));
+      await this.storage.writeDoc(copyId, Y.encodeStateAsUpdate(live.doc.y));
     } else await this.storage.duplicateDoc(id, copyId);
     const copy = this.storage.create(`${source.name} copy`, copyId);
     this.hub.broadcast({ t: 'files' });
@@ -1378,7 +1566,7 @@ export class BogenServer {
     let pageId = options.pageId;
     if (!pageId && options.pageName) pageId = doc.getPages().find((p) => p.name === options.pageName)?.id ?? doc.createPage(options.pageName, origin);
     pageId ??= doc.getPages()[0]!.id;
-    const { nodeId } = this.placeCapture(fileId, doc, capture, { name: options.name, pageId, url: options.url }, origin);
+    const { nodeId } = this.placeCapture(fileId, doc, capture, { name: options.name, pageId, url: options.url, components: true }, origin);
     recordCapture(doc, nodeId, options.url, options.colorScheme ?? 'dark', origin);
     const original = await this.storage.putAsset(capture.original, 'image/png');
     return { ...(modes ? { modes } : {}), pageId, nodeId, ...capture.stats, tokens: doc.getTokens().length, title: capture.title, original: original.url, fonts: capture.fonts, interactionRules: capture.rules.length };
@@ -1393,16 +1581,23 @@ export class BogenServer {
   }
 
   /** One artboard from a finished capture, with its fonts and interaction rules. */
-  placeCapture(_fileId: string, doc: BogenDoc, capture: CaptureResult, options: { name?: string; pageId: string; url: string }, origin: unknown): { nodeId: string } {
+  placeCapture(_fileId: string, doc: BogenDoc, capture: CaptureResult, options: { name?: string; pageId: string; url: string; components?: boolean }, origin: unknown): { nodeId: string } {
     const nodeId = doc.transact(() => {
       this.adoptCaptureTokens(doc, capture, origin);
+      settleTokenRefs(capture.root, new Set(doc.getTokens().map((t) => t.name)), new Map(capture.tokens.map((t) => [t.name, t.value])));
       capture.root.name = options.name ?? (capture.title || new URL(options.url).hostname);
       capture.root.style = { ...capture.root.style, left: `${nextArtboardX(doc, options.pageId)}px`, top: '0px' };
       addFontFaces(doc, capture.fontFaces);
       return doc.insert(options.pageId, capture.root);
     }, origin);
     // After the transaction, as the tree can only be read back once it has ended.
-    const rules = resolveRuleLayers(doc, nodeId, capture.root, capture.rules);
+    let rules = resolveRuleLayers(doc, nodeId, capture.root, capture.rules);
+    // What the page repeats becomes components again. A hover rule that named a copy names its instance now; what was
+    // inside a copy is inside the main, which the rule names already.
+    if (options.components) {
+      const joined = componentsFromRepeats(doc, nodeId, new Set(), origin);
+      if (joined.size) rules = rules.map((r) => ({ ...r, layers: r.layers.map((id) => joined.get(id) ?? id) }));
+    }
     if (rules.length) setInteractionRecord(doc, nodeId, { url: capture.url, rules }, origin);
     return { nodeId };
   }
@@ -1434,6 +1629,7 @@ export class BogenServer {
       socket.end(`HTTP/1.1 ${status} ${message}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
     };
     socket.on('error', () => socket.destroy());
+    if (pathRefusal(req.url)) return refuse(400, 'Bad Request');
     const url = new URL(req.url ?? '/', 'http://bogen.invalid');
     let phone: PhoneDevice | null = null;
     if (guard.phone) {
@@ -1450,9 +1646,10 @@ export class BogenServer {
       if (phone) this.phone.attach(phone, ws);
     };
     if (url.pathname === '/events') {
+      const onThisMachine = !phone && fromThisDevice(req, guard);
       this.sockets.handleUpgrade(req, socket, head, (ws) => {
         accepted(ws);
-        this.hub.add(ws);
+        this.hub.add(ws, onThisMachine);
       });
       return;
     }

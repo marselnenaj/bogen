@@ -238,6 +238,37 @@ describe('paths on a static listener', () => {
 });
 
 describe('publishing', () => {
+  it('gives a brand site its one script of its own, under a policy that allows only that, and no other page any', async () => {
+    await boot();
+    const { fileId, boardId } = await designWithSecrets();
+    const room = await h!.server.rooms.get(fileId);
+    const site = room.doc.insert(room.doc.pageOf(boardId)!, { type: 'frame', tag: 'div', name: 'Brand site', artboard: true, style: { position: 'absolute', left: '2000px', top: '0px', width: '800px', height: '400px' }, attrs: { 'data-bogen-brand-site': '{}' } });
+    room.doc.insertMany(site, [
+      { type: 'frame', tag: 'button', name: 'Copy', attrs: { type: 'button', value: '#2B3CAE', 'aria-label': 'Copy Stamp HEX' }, children: [{ type: 'text', tag: 'span', name: 'Label', text: '#2B3CAE' }] },
+      { type: 'frame', tag: 'input', name: 'Size', attrs: { type: 'range', min: '16', max: '200', value: '120', 'aria-controls': 'type-sample' } },
+      { type: 'frame', tag: 'input', name: 'Face', attrs: { type: 'radio', name: 'face', value: 'serif', checked: 'checked', 'aria-controls': 'type-sample' } },
+    ]);
+    const made = await local('/api/publish/prepare', 'POST', { fileId, nodeId: site });
+    expect(made.status).toBe(201);
+    const files = await h!.server.publisher.files(made.json().version.id);
+    const names = [...files.keys()];
+    expect(names.filter((n) => n.endsWith('.js'))).toEqual(['brand-site.js']);
+    const html = Buffer.from(files.get('index.html')!).toString();
+    expect(html).toMatch(/<script src="brand-site.js" defer><\/script><\/body>/);
+    expect(html.match(/<script/g)).toHaveLength(1);
+    expect(html).toMatch(/type="range"[^>]*min="16"|min="16"[^>]*type="range"/);
+    expect(html).toMatch(/name="face"/);
+    expect(html).toMatch(/aria-label="Copy Stamp HEX"/);
+    const manifest = JSON.parse(readFileSync(join(h!.server.publisher.versionDir(made.json().version.id), 'manifest.json'), 'utf8')) as { files: Record<string, { csp?: string }> };
+    expect(manifest.files['index.html']!.csp).toMatch(/script-src 'self'; frame-ancestors 'none'$/);
+    expect(manifest.files['index.html']!.csp).toMatch(/^default-src 'none'/);
+    // An ordinary page of the same file still has no script and no script-src.
+    const plain = await local('/api/publish/prepare', 'POST', { fileId, nodeId: boardId });
+    const plainFiles = await h!.server.publisher.files(plain.json().version.id);
+    expect([...plainFiles.keys()].some((n) => n.endsWith('.js'))).toBe(false);
+    expect(Buffer.from(plainFiles.get('index.html')!).toString()).not.toMatch(/<script|script-src/);
+  });
+
   it('exports static files with no ids, tokens or metadata', async () => {
     await boot();
     const { fileId, boardId, hiddenId } = await designWithSecrets();

@@ -5,16 +5,20 @@ import { editDate, locationName, useRecentEdits, visitEdit } from '../lib/recent
 import { useT } from '../i18n/react.ts';
 import { openTab } from './ChromePanels.tsx';
 import { Popover } from '../ui/controls.tsx';
+import { AwayNotice, type Away } from './FileBanners.tsx';
 import '../styles/recent-edits.css';
 
-export function RecentChanges() {
+export function RecentChanges({ away }: { away?: Away }) {
   const t = useT(), edits = useRecentEdits(), pages = usePages();
   const [open, setOpen] = useState(false), anchor = useRef<HTMLButtonElement>(null);
   const latest = edits[0], location = latest?.locations.find(l => pages.some(p => p.id === l.pageId));
   const showHistory = () => { setOpen(false); openTab('right', { rightTab: 'history' }); };
-  return <div className="recent-changes" data-testid="recent-changes">
+  const noticed = Boolean(away?.note && !away.texts);
+  const latestName = location ? locationName({ ...location, pageName: pages.find(p => p.id === location.pageId)?.name ?? location.pageName }) : '';
+  return <div className={`recent-changes${noticed ? ' has-notice' : ''}`} data-testid="recent-changes">
     <button ref={anchor} type="button" className="recent-toggle" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="dialog" data-testid="recent-toggle"><History size={13} /><span>{t('Recent changes')}</span><ChevronDown size={12} /></button>
-    {location ? <button type="button" className="recent-latest" onClick={() => visitEdit(location)} title={`${latest!.actor} · ${latest!.summary}`} data-testid="recent-latest">{locationName({ ...location, pageName: pages.find(p => p.id === location.pageId)?.name ?? location.pageName })}</button> : latest ? <span className="recent-latest">{latest.summary}</span> : null}
+    {away ? <AwayNotice away={away} onReview={() => setOpen(true)} /> : null}
+    {location ? <button type="button" className="recent-latest" translate="no" onClick={() => visitEdit(location)} title={`${latestName}\n${latest!.actor}: ${latest!.summary}`} data-testid="recent-latest">{latestName}</button> : latest ? <span className="recent-latest" title={latest.summary}>{latest.summary}</span> : null}
     {latest ? <time className="recent-time" dateTime={new Date(latest.at).toISOString()} title={t('Last edited {date}', { date: editDate(latest.at) })}>{editDate(latest.at)}</time> : null}
     {open ? <Popover anchor={anchor.current} side="below" width={420} className="recent-popover" onClose={() => setOpen(false)} focus>
       <section className="recent-list" role="dialog" aria-label={t('Recent changes')} data-testid="recent-list">

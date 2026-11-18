@@ -1,25 +1,55 @@
-.checks-scrim { padding: 16px; place-items: center; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
-.checks-dialog { width: 1080px; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; }
-.checks-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 0; overflow: hidden; }
-.checks-list { padding: 16px; border-right: 1px solid var(--ui-border); overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-.checks-list h3 { font-size: 12px; margin: 14px 0 5px; color: var(--ui-fg-2); }
-.checks-list > button:not(.btn) { text-align: left; padding: 9px; border-radius: 4px; background: transparent; border: 0; color: inherit; cursor: pointer; }
-.checks-list > button.is-active { background: var(--ui-accent); color: var(--ui-accent-fg); }
-.checks-list p, .checks-edit > p, .check-transfer span { font-size: 12px; line-height: 1.5; color: var(--ui-fg-2); }
-.checks-edit { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-.check-fields { border: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.checks-edit label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; min-width: 0; }
-.checks-edit input:not([type=checkbox]), .checks-edit select, .checks-edit textarea { width: 100%; min-height: 32px; padding: 6px 8px; border: 1px solid var(--ui-border); background: var(--ui-bg-2); border-radius: 4px; color: inherit; font: inherit; }
-.checks-edit textarea { font-family: var(--ui-mono); resize: vertical; }
-.check-row { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+.checks-scrim { padding: var(--space-lg); place-items: center; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
+.checks-dialog { width: min(960px, 100%); height: min(680px, 100%); max-height: 100%; display: flex; flex-direction: column; }
+.checks-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); flex: 1 1 auto; min-height: 0; overflow: hidden; }
+
+/* The list: one way to start, the checks Bogen brings, the checks saved with the file. */
+.checks-list { padding: var(--space-md); background: var(--ui-bg-2); border-right: 1px solid var(--ui-border); overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-2xs); }
+.checks-list h3 { font-size: var(--text-lg); font-weight: 600; margin: var(--space-md) var(--space-sm) var(--space-xs); color: var(--ui-fg); }
+.checks-list .checks-new { justify-content: flex-start; padding: 0 var(--space-sm); }
+.checks-item { display: flex; align-items: center; min-height: 32px; padding: var(--space-xs) var(--space-sm); border-radius: var(--radius); text-align: start; color: var(--ui-fg); overflow-wrap: anywhere; }
+.checks-item:hover { background: var(--hover); }
+.checks-item[aria-current] { background: var(--accent-soft); color: var(--ui-fg); font-weight: 600; box-shadow: inset 2px 0 0 var(--ui-accent); }
+.checks-list p { margin: 0; padding: 0 var(--space-sm); font-size: var(--text-sm); line-height: 1.5; color: var(--ui-fg-2); }
+.checks-list .checks-other { margin-top: auto; color: var(--ui-fg-2); border-top: 1px solid var(--ui-border); border-radius: 0; }
+.checks-list .checks-other:hover { color: var(--ui-fg); }
+
+/* The chosen check, and its actions in a footer that stays in view. */
+.checks-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.checks-edit { flex: 1 1 auto; overflow-y: auto; padding: var(--space-xl); display: flex; flex-direction: column; gap: var(--space-lg); }
+.checks-edit-head { display: flex; align-items: flex-start; gap: var(--space-md); }
+.checks-edit-title { flex: 1 1 auto; min-width: 0; }
+.checks-edit-title h3 { margin: 0; font-size: var(--text-lg); line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
+.checks-edit-title p { margin: var(--space-xs) 0 0; font-size: var(--text-md); line-height: 1.5; color: var(--ui-fg-2); }
+.checks-edit-tools { display: flex; flex-wrap: wrap; gap: var(--space-xs); flex: none; }
+.checks-edit > p, .check-transfer span { margin: 0; font-size: var(--text-sm); line-height: 1.5; color: var(--ui-fg-2); }
+.check-facts { display: grid; grid-template-columns: 180px minmax(0, 1fr); margin: 0; border-top: 1px solid var(--ui-border); }
+.check-facts dt, .check-facts dd { margin: 0; padding: var(--space-sm) 0; border-bottom: 1px solid var(--ui-border); }
+.check-facts dt { color: var(--ui-fg-2); }
+.check-fields { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; }
+.checks-edit label { display: flex; flex-direction: column; gap: var(--space-xs); font-size: var(--text-sm); color: var(--ui-fg-2); min-width: 0; }
+.checks-pane input:not([type=checkbox]), .checks-pane select, .checks-edit textarea { width: 100%; min-height: 32px; padding: 0 var(--space-sm); border: 1px solid var(--ui-border); background: var(--ui-bg-2); border-radius: var(--radius); color: var(--ui-fg); font: inherit; font-size: var(--text-md); }
+.checks-edit textarea { padding: var(--space-sm); font-family: var(--ui-mono); resize: vertical; }
+.checks-pane input[type=checkbox] { margin: 0; }
+.check-row { display: flex; align-items: end; gap: var(--space-md); flex-wrap: wrap; }
 .check-row > label { flex: 1 1 130px; }
-.check-row .check-toggle { flex: 0 0 auto; flex-direction: row; align-items: center; min-height: 32px; }
-.check-rule { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--ui-border); border-radius: 5px; padding: 12px; min-width: 0; }
-.check-rule legend { font-size: 12px; padding: 0 5px; }
-.check-actions { border-top: 1px solid var(--ui-border); padding-top: 14px; }
-.check-error { color: var(--ui-danger) !important; }
-.check-transfer { display: flex; flex-direction: column; gap: 8px; }
-.check-finding { display: flex; width: 100%; flex-direction: column; gap: 4px; background: transparent; color: inherit; text-align: left; border: 0; border-bottom: 1px solid var(--ui-border); padding: 12px 0; cursor: pointer; }
-.check-finding strong, .check-finding small { font-size: 11px; color: var(--ui-fg-2); }
-.check-results h3, .check-inherited h3 { font-size: 13px; margin: 6px 0; }
-@media (max-width: 720px) { .checks-layout { grid-template-columns: 145px minmax(0, 1fr); } .checks-edit { padding: 12px; } .checks-list { padding: 10px; } }
+.check-row .check-toggle { flex: 0 0 auto; flex-direction: row; align-items: center; gap: var(--space-sm); min-height: 32px; color: var(--ui-fg); }
+.check-rule { display: flex; flex-direction: column; gap: var(--space-md); border: 1px solid var(--ui-border); border-radius: var(--radius); padding: var(--space-md); margin: 0; min-width: 0; }
+.check-rule legend { font-size: var(--text-sm); padding: 0 var(--space-xs); }
+.check-add-rule { align-self: flex-start; }
+.check-error { margin: 0; color: var(--ui-danger) !important; }
+.check-transfer { display: flex; flex-direction: column; gap: var(--space-sm); }
+.check-actions { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm); padding: var(--space-md) var(--space-xl); border-top: 1px solid var(--ui-border); }
+.check-actions .check-delete { color: var(--ui-danger); }
+.check-note { font-size: var(--text-sm); color: var(--ui-fg-2); }
+.check-grow { flex: 1 1 auto; }
+.check-actions .check-target { display: flex; flex-direction: row; align-items: center; gap: var(--space-sm); color: var(--ui-fg-2); font-size: var(--text-md); }
+.check-actions .check-target select { width: 240px; max-width: 100%; }
+.check-finding { display: flex; width: 100%; flex-direction: column; gap: var(--space-xs); background: transparent; color: inherit; text-align: left; border: 0; border-bottom: 1px solid var(--ui-border); padding: var(--space-md) 0; cursor: pointer; }
+.check-finding strong, .check-finding small { font-size: var(--text-sm); color: var(--ui-fg-2); }
+.check-results h4, .check-inherited h4 { font-size: var(--text-lg); margin: var(--space-sm) 0; }
+@media (max-width: 720px) {
+  .checks-layout { grid-template-columns: 160px minmax(0, 1fr); }
+  .checks-edit { padding: var(--space-md); }
+  .check-actions { padding: var(--space-md); }
+  .checks-list { padding: var(--space-sm); }
+}

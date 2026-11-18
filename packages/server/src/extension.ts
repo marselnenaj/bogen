@@ -348,7 +348,7 @@ async function placeExtensionCapture(app: BogenServer, body: z.output<typeof Ext
   const pageId = doc.getPages().find((p) => p.name === host)?.id ?? doc.createPage(host, origin);
   const label = body.mode === 'page' ? '' : body.mode === 'region' ? ', region' : ', element';
   const name = `${(body.title || body.capture.title || host).slice(0, 160)}${label}`;
-  const { nodeId } = app.placeCapture(fileId, doc, result, { name, pageId, url: body.url }, origin);
+  const { nodeId } = app.placeCapture(fileId, doc, result, { name, pageId, url: body.url, components: true }, origin);
   recordCapture(doc, nodeId, body.url, body.colorScheme ?? 'light', origin);
   const original = shot ? await app.storage.putAsset(shot.bytes, shot.mime) : null;
   let reference: Reference | undefined;

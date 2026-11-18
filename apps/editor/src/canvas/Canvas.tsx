@@ -9,6 +9,7 @@ import { camera } from '../state/camera.ts';
 import { useEditor } from '../state/store.ts';
 import { setWorldEl } from './measure.ts';
 import { PageLayers } from './PageLayers.tsx';
+import { ArtboardDescription, DesignLandmarks } from './NodeView.tsx';
 import { Overlay } from './Overlay.tsx';
 import { FindBar } from './FindBar.tsx';
 import { TextRangeBar } from './TextRangeBar.tsx';
@@ -150,7 +151,12 @@ export function Canvas() {
       <div ref={world} className="bogen-world" data-mode={pageMode && isModeName(pageMode) ? pageMode : undefined}>
         <WorldStyles />
         <DocumentFonts />
-        {pageId ? <PageLayers key={pageId} pageId={pageId} previewRoot={previewRoot} /> : null}
+        {/* The stage is the editor's one main landmark; the design's own main elements are drawn as plain boxes here. */}
+        <DesignLandmarks.Provider value={false}>
+          <ArtboardDescription.Provider value={t('Artboard')}>
+            {pageId ? <PageLayers key={pageId} pageId={pageId} previewRoot={previewRoot} /> : null}
+          </ArtboardDescription.Provider>
+        </DesignLandmarks.Provider>
       </div>
       <div className="capture" style={editingText ? { pointerEvents: 'none' } : undefined} />
       <Overlay rootRef={overlay} previewRef={setPreviewRoot} />

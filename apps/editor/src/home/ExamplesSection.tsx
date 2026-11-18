@@ -40,10 +40,12 @@ export function ExamplesSection({ fileCount }: { fileCount: number }) {
   return (
     <section className="examples" data-testid="examples" aria-label={t('Examples')}>
       <div className="brands-head">
-        <button type="button" className="examples-toggle" onClick={toggle} aria-expanded={open} data-testid="examples-toggle">
-          {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-          <span className="brands-title">{t('Start from an example')}</span>
-        </button>
+        <h2 className="brands-title">
+          <button type="button" className="examples-toggle" onClick={toggle} aria-expanded={open} data-testid="examples-toggle">
+            {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            {t('Start from an example')}
+          </button>
+        </h2>
         {failed ? <span className="examples-error" role="alert">{failed}</span> : null}
       </div>
       {open ? (

@@ -476,7 +476,7 @@ export class Publisher {
     if (isHtml && options.html) bytes = Buffer.from(options.html(Buffer.from(bytes).toString('utf8'), path), 'utf8');
     res.writeHead(200, baseHeaders({
       'Content-Type': type, 'Content-Length': String(bytes.length), 'Content-Security-Policy': csp, 'Cache-Control': options.cache,
-      ...(isHtml && !entry.csp ? { 'X-Frame-Options': 'DENY' } : {}), ...(entry.csp ? { 'X-Frame-Options': 'SAMEORIGIN' } : {}), ...options.extraHeaders,
+      ...(isHtml && (!entry.csp || !path.startsWith('frames/')) ? { 'X-Frame-Options': 'DENY' } : {}), ...(entry.csp && path.startsWith('frames/') ? { 'X-Frame-Options': 'SAMEORIGIN' } : {}), ...options.extraHeaders,
     }));
     res.end(req.method === 'HEAD' ? undefined : bytes);
   }

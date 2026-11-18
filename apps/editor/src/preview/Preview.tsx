@@ -8,6 +8,7 @@ import { useSnapVersion } from '../doc/hooks.ts';
 import { copyText, IconButton, NumberField, Segmented } from '../ui/controls.tsx';
 import { interactionCss, neighbour, type ArtboardEntry } from './preview-model.ts';
 import { usePrototype } from './prototype-run.ts';
+import { useT } from '../i18n/react.ts';
 
 const DEVICES: { value: string; label: string; title: string; width: number | null }[] = [
   { value: 'window', label: 'Window', title: 'Follow the browser window width', width: null },
@@ -30,6 +31,14 @@ function artboardsOf(s: Session): ArtboardEntry[] {
     }
   }
   return out;
+}
+
+/** Whether a board brings its own main landmark: then it is the page's main, and the stage around it is not one. */
+function hasMain(s: Session, id: string): boolean {
+  const node = s.snap.nodes.get(id);
+  if (!node) return false;
+  if (node.tag?.toLowerCase() === 'main' || node.attrs?.role === 'main') return true;
+  return s.snap.children(id).some((kid) => hasMain(s, kid));
 }
 
 interface Shown { id: string; key: number }
@@ -132,6 +141,8 @@ function PreviewBody({ session, fileId, initial }: { session: Session; fileId: s
   };
 
   const css = useMemo(() => interactionCss(session.snap.nodes.values()), [session, version]);
+  const t = useT();
+  const ownMain = useMemo(() => (shown ? hasMain(session, shown.id) : false), [session, shown, version]);
   const copyLink = () => void copyText(location.href);
 
   return (
@@ -140,7 +151,7 @@ function PreviewBody({ session, fileId, initial }: { session: Session; fileId: s
         <header className="pv-bar" data-testid="preview-bar">
           <a className="icon-btn" href={`#/file/${fileId}`} title="Back to the editor (Esc)" aria-label="Back to the editor" data-testid="preview-back"><ArrowLeft size={15} /></a>
           <IconButton icon={<ChevronLeft size={15} />} title="Previous artboard (←)" disabled={!prevId} onClick={() => prevId && go(prevId, 'fade', 200)} testId="preview-prev" />
-          <select className="pv-select" aria-label="Artboard" value={shown?.id ?? ''} data-testid="preview-artboard" onChange={(e) => go(e.target.value)}>
+          <select className="pv-select" aria-label="Artboard" translate="no" value={shown?.id ?? ''} data-testid="preview-artboard" onChange={(e) => go(e.target.value)}>
             {boards.map((b) => <option key={b.id} value={b.id}>{b.pageName} / {b.name}</option>)}
           </select>
           <IconButton icon={<ChevronRight size={15} />} title="Next artboard (→)" disabled={!nextId} onClick={() => nextId && go(nextId, 'fade', 200)} testId="preview-next" />
@@ -150,7 +161,7 @@ function PreviewBody({ session, fileId, initial }: { session: Session; fileId: s
           <span className="pv-spacer" />
           {run.stateful ? (
             <>
-              <span className="pv-state" title={run.summary} data-testid="preview-state">{run.summary}</span>
+              {run.variables ? <span className="pv-state" title={run.summary} data-testid="preview-state">{t.n(run.variables, '{count} variable', '{count} variables')}</span> : null}
               <IconButton icon={<RotateCcw size={15} />} title="Start the prototype again, from its first screen and its variables' starting values" onClick={run.restart} testId="preview-restart" />
             </>
           ) : null}
@@ -159,8 +170,9 @@ function PreviewBody({ session, fileId, initial }: { session: Session; fileId: s
           <a className="icon-btn" href={`#/file/${fileId}`} title="Close preview (Esc)" aria-label="Close preview"><X size={15} /></a>
         </header>
       ) : null}
-      <main
+      <div
         className="pv-stage"
+        role={ownMain ? undefined : 'main'}
         data-testid="preview-stage"
         tabIndex={-1}
         onClick={onClick}
@@ -177,7 +189,7 @@ function PreviewBody({ session, fileId, initial }: { session: Session; fileId: s
           {shown ? <div key={shown.key} className={`pv-frame${enter ? ` is-entering pv-${enter.transition}` : ''}`} style={enter ? ({ '--pv-ms': `${enter.ms}ms` } as React.CSSProperties) : undefined} data-testid="preview-frame" data-artboard={shown.id}><NodeView id={shown.id} /></div> : null}
         </div>
         {!boards.length ? <div className="pv-empty">This file has nothing to preview yet.</div> : null}
-      </main>
+      </div>
       {present ? <div className="pv-count" data-testid="preview-count">{samePage.findIndex((b) => b.id === current?.id) + 1} / {samePage.length}</div> : null}
     </div>
   );

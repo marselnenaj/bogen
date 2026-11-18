@@ -64,7 +64,7 @@ export function Files() {
                 <span className="phone-thumb">{f.thumbnail && !away ? <img src={f.thumbnail} alt="" /> : null}</span>
                 <span className="phone-row-body">
                   <span className="phone-file-name" dir="auto">{f.name}</span>
-                  {f.lastEdit ? <span className="phone-row-sub" data-testid="phone-file-recent">{f.lastEdit.locations[0] ? locationName(f.lastEdit.locations[0]) : f.lastEdit.summary}</span> : null}
+                  {f.lastEdit ? <span className="phone-row-sub phone-row-where" translate="no" data-testid="phone-file-recent">{f.lastEdit.locations[0] ? locationName(f.lastEdit.locations[0]) : f.lastEdit.summary}</span> : null}
                   <span className="phone-row-sub" data-testid="phone-file-sync">{missing ? t('Only on {host}', { host }) : [copy?.kept ? t('On this phone') : '', t('edited {when}', { when: when(f.updatedAt) }), rowSyncWords(copy)].filter(Boolean).join(' · ')}</span>
                 </span>
               </button>

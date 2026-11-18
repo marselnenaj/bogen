@@ -171,3 +171,29 @@ describe('server-enforced completion with fake processes, no paid model calls', 
     expect(out.checks).toBe(1); expect(out.end.status).toBe('failed'); expect(out.end.error).toContain('after 0 repair turns');
   });
 });
+
+describe('critique scores do not gate completion (no rendering)', () => {
+  it.each([undefined, 0, 7.6, 9])('allows a completed screen with critique score %s', async (score) => {
+    const { BogenDoc, addCritique } = await import('@bogen/core');
+    const { DesignQuality, critiqueGate } = await import('../src/design-quality.ts');
+    const doc = new BogenDoc(); doc.ensureFirstPage();
+    const board = doc.insert(doc.getPages()[0]!.id, { type: 'frame', name: 'Today (iOS)', artboard: true, style: { width: '393px', height: '852px' } });
+    if (score !== undefined) addCritique(doc, {
+      id: 'review', at: 0, screens: [{ id: board, name: 'Today' }], series: 'abcdefabcdef', round: 1, maxRounds: 3, until: 8,
+      reviewer: 'Fable', score, dimensions: {}, verdict: '', defects: [], taste: [], keep: [], ruleFindings: 0, durationMs: 1,
+    });
+    const app = { rooms: { get: async () => ({ doc }) }, critiques: { status: vi.fn(), start: vi.fn() } };
+    const quality = new DesignQuality(app as unknown as import('../src/http/server.ts').BogenServer);
+    const review = vi.spyOn(quality, 'review').mockResolvedValue({
+      node_id: board, discipline: 'mobile-apps', fingerprint: reviewFingerprint(doc, board),
+      automated: { state: 'passed', findings: [], total: 0 }, visual: { state: 'self-assessed' }, rubric: { state: 'scored' },
+      critique: critiqueGate(doc, board, true),
+    } as unknown as import('../src/design-quality.ts').QualityReport);
+    const req = { runner: 'codex' as const, fileId: 'fixture', fileName: 'Today', prompt: 'Improve this iOS app', nodeIds: [board] };
+    expect((await quality.beforeFinish(req, 'run', [board])).ok).toBe(true);
+    expect(review).toHaveBeenCalledOnce();
+    expect(app.critiques.status).not.toHaveBeenCalled();
+    expect(app.critiques.start).not.toHaveBeenCalled();
+    review.mockRestore();
+  });
+});

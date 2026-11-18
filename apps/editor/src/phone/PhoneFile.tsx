@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
-import { Redo2, Undo2 } from 'lucide-react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Layers, MessageSquare, Redo2, SlidersHorizontal, Sparkles, Undo2, type LucideIcon } from 'lucide-react';
 import { Editor } from '../Editor.tsx';
+import { DesignLandmarks } from '../canvas/NodeView.tsx';
 import { zoomAt } from '../canvas/geometry.ts';
 import { elOf, rectOf } from '../canvas/measure.ts';
 import { hitAt, resolveTarget } from '../canvas/pointer.ts';
@@ -20,6 +21,8 @@ import { boardAt, classifySwipe, keyboardInset, phoneFile, resizePhoneCamera, st
 import { LayersSheet, PagesSheet } from './FileSheets.tsx';
 import { ConflictNotes } from './PhoneSync.tsx';
 import { PhotoSheet } from './PhotoSheet.tsx';
+import { FileSwitcher } from '../tabs/FileSwitcher.tsx';
+import { useTabs } from '../tabs/tabs-state.ts';
 import { backTarget, OpenThread } from './PhoneCanvas.tsx';
 import { useT } from '../i18n/react.ts';
 import { WorkspaceView } from './WorkspaceView.tsx';
@@ -57,10 +60,13 @@ export function PhoneFile({ fileId, threadId, forceFull = false }: { fileId: str
       {live ? <ConflictNotes fileId={fileId} /> : null}
       <div className="pf-middle">
         <div ref={canvas} className="pf-canvas" data-testid="phone-canvas">
+          {/* The screen has its main (the canvas); the boards' own main elements are drawn as plain boxes here. */}
+          <DesignLandmarks.Provider value={false}>
           <Editor fileId={fileId} layout={full ? 'full' : 'bare'}>
             {threadId ? <OpenThread threadId={threadId} /> : null}
             {!full ? <><BoardTracker fileId={fileId} fitOnOpen={!threadId} /><SheetBridge /><KeepInView /><CanvasChrome /></> : null}
           </Editor>
+          </DesignLandmarks.Provider>
         </div>
         {/* Keep the sheet mounted while using the full workspace, including unsent text and attachments. */}
         <div style={{ display: full ? 'none' : 'contents' }}>
@@ -81,41 +87,54 @@ function SheetFor({ kind, fileId }: { kind: SheetKind; fileId: string }) {
     case 'comment': return <CommentSheet onClose={close} />;
     case 'ask': return <AskSheet fileId={fileId} onClose={close} />;
     case 'photo': return <PhotoSheet onClose={close} />;
+    case 'files': return <FileSwitcher onClose={close} />;
   }
 }
 
+/**
+ * The way back, the file with its page under it (a tap opens the pages and boards), and the view. Done while editing.
+ * The file's name and page share one button, so neither is cut down to a few letters at 390 wide.
+ */
 function TopBar({ fileId, live, full, onViewChange }: { fileId: string; live: boolean; full: boolean; onViewChange: (view: PhoneWorkspaceView) => void }) {
   const t = useT();
   const name = useEditor((s) => (s.fileId === fileId ? s.fileName : ''));
   const stored = useStoredFiles().get(fileId)?.name;
   const sheet = usePhoneFile((s) => s.sheet);
   const back = backTarget();
+  const open = useTabs((s) => s.tabs.length);
+  const title = <span className="pf-title" data-testid="pf-title" dir="auto">{name || stored || ''}</span>;
   return (
     <header className="pf-top">
       <button type="button" className="pf-back" onClick={() => {
         if (back.label === 'Thread') askAbout(fileId);
         location.hash = back.hash;
-      }} data-testid="phone-back">‹ {t(back.label)}</button>
-      <span className="pf-title" data-testid="pf-title" dir="auto">{name || stored || ''}</span>
-      <WorkspaceView full={full} onChange={onViewChange} />
-      {full ? null : sheet === 'edit' ? <button type="button" className="pf-right" onClick={() => openSheet(null)} data-testid="pf-done">{t('Done')}</button>
-        : live ? <PageButton /> : <span className="pf-right" />}
+      }} data-testid="phone-back"><ChevronLeft size={22} strokeWidth={2.4} aria-hidden="true" />{t(back.label)}</button>
+      {live && !full ? <PageButton title={title} /> : <span className="pf-heading">{title}</span>}
+      {open > 1 ? <button type="button" className="pf-files" aria-expanded={sheet === 'files'} onClick={() => openSheet(toggleSheet(sheet, 'files'))} data-testid="pf-files">{t.n(open, '{count} file', '{count} files')}<ChevronDown size={14} strokeWidth={2.6} aria-hidden="true" /></button> : null}
+      {full ? <WorkspaceView full={full} onChange={onViewChange} /> : <WorkspaceView full={full} onChange={onViewChange} variant="icon" />}
+      {!full && sheet === 'edit' ? <button type="button" className="pf-right" onClick={() => openSheet(null)} data-testid="pf-done">{t('Done')}</button> : null}
     </header>
   );
 }
 
-function PageButton() {
+function PageButton({ title }: { title: ReactNode }) {
+  const t = useT();
   const pages = usePages();
   const pageId = useEditor((s) => s.pageId);
   const sheet = usePhoneFile((s) => s.sheet);
   const open = sheet === 'pages';
   return (
-    <button type="button" className="pf-right pf-page" aria-expanded={open} onClick={() => openSheet(toggleSheet(sheet, 'pages'))} data-testid="pf-page">
-      <span className="pf-page-name" dir="auto">{pages.find((p) => p.id === pageId)?.name ?? ''}</span>
-      <span className="pf-caret" aria-hidden="true">{open ? '▴' : '▾'}</span>
+    <button type="button" className="pf-heading pf-page" aria-expanded={open} title={t('Pages and boards')} onClick={() => openSheet(toggleSheet(sheet, 'pages'))} data-testid="pf-page">
+      {title}
+      <span className="pf-page-line">
+        <span className="pf-page-name" dir="auto" translate="no" title={pages.find((p) => p.id === pageId)?.name ?? ''}>{pages.find((p) => p.id === pageId)?.name ?? ''}</span>
+        {open ? <ChevronUp size={16} strokeWidth={2.6} aria-hidden="true" /> : <ChevronDown size={16} strokeWidth={2.6} aria-hidden="true" />}
+      </span>
     </button>
   );
 }
+
+const TOOL_ICONS: Record<string, LucideIcon> = { layers: Layers, edit: SlidersHorizontal, photo: Camera, comment: MessageSquare, ask: Sparkles };
 
 function ToolBar({ live }: { live: boolean }) {
   const t = useT();
@@ -124,7 +143,8 @@ function ToolBar({ live }: { live: boolean }) {
     <nav className="pf-tools" aria-label={t('Tools')}>
       {TOOLS.map((tool) => (
         <button key={tool.id} type="button" className={`pf-tool${sheet === tool.id ? ' is-active' : ''}`} aria-pressed={sheet === tool.id} disabled={!live} onClick={() => openSheet(toggleSheet(sheet, tool.id))} data-testid={`pf-tool-${tool.id}`}>
-          {t(tool.label)}
+          {(() => { const Icon = TOOL_ICONS[tool.id]; return Icon ? <Icon size={22} strokeWidth={2} aria-hidden="true" /> : null; })()}
+          <span>{t(tool.label)}</span>
         </button>
       ))}
     </nav>
@@ -254,9 +274,9 @@ function CanvasChrome() {
       <UndoRedo />
       <div className="pf-chrome" data-ui>
         <div className="pf-steps">
-          <button type="button" className="pf-step" disabled={!prev || boards.length < 2} onClick={() => prev && showBoard(prev)} aria-label={t('The board before')} data-testid="pf-prev">‹</button>
-          <span className="pf-where" data-testid="pf-where" dir="auto">{where}</span>
-          <button type="button" className="pf-step" disabled={!next || boards.length < 2} onClick={() => next && showBoard(next)} aria-label={t('The next board')} data-testid="pf-next">›</button>
+          <button type="button" className="pf-step" disabled={!prev || boards.length < 2} onClick={() => prev && showBoard(prev)} aria-label={t('The board before')} data-testid="pf-prev"><ChevronLeft size={24} strokeWidth={2.6} aria-hidden="true" /></button>
+          <span className="pf-where" data-testid="pf-where" dir="auto" translate="no" title={where}>{where}</span>
+          <button type="button" className="pf-step" disabled={!next || boards.length < 2} onClick={() => next && showBoard(next)} aria-label={t('The next board')} data-testid="pf-next"><ChevronRight size={24} strokeWidth={2.6} aria-hidden="true" /></button>
         </div>
         <div className="pf-zoom">
           <button type="button" className="pf-sq" onClick={() => zoomBy(-1)} aria-label={t('Zoom out')} data-testid="pf-zoom-out">−</button>

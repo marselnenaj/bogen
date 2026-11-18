@@ -1,8 +1,8 @@
-import { randomBytes } from 'node:crypto';
-import { chmodSync, closeSync, fsyncSync, lstatSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from 'node:fs';
-import { open, rename, rm } from 'node:fs/promises';
+import { createHash, randomBytes } from 'node:crypto';
+import { chmodSync, closeSync, fsyncSync, lstatSync, mkdirSync, openSync, realpathSync, renameSync, rmSync, writeSync } from 'node:fs';
+import { open, readdir, rename, rm, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 export const DEFAULT_PORT = 29990;
 
@@ -10,6 +10,21 @@ export function bogenHome(env: NodeJS.ProcessEnv = process.env): string {
   if (env.BOGEN_HOME) return env.BOGEN_HOME;
   if (env.XDG_DATA_HOME) return join(env.XDG_DATA_HOME, 'bogen');
   return join(homedir(), '.local', 'share', 'bogen');
+}
+
+/**
+ * A short fingerprint of a data folder, so a client can tell which folder the server on a port
+ * serves without the server telling anyone its path. The same folder gives the same id through a
+ * symlink or a relative path.
+ */
+export function homeId(home: string): string {
+  let path = resolve(home);
+  try {
+    path = realpathSync(path);
+  } catch {
+    // A folder that does not exist yet is compared by the path it will have.
+  }
+  return createHash('sha256').update(path).digest('hex').slice(0, 16);
 }
 
 /**
@@ -25,6 +40,31 @@ export function ensurePrivateHome(home: string): void {
   if (!info.isDirectory()) throw new Error(`${home} is not a folder.`);
   if (info.uid !== uid && uid !== 0) throw new Error(`${home} belongs to another user. Set BOGEN_HOME to a folder of your own.`);
   if ((info.mode & 0o077) !== 0) chmodSync(home, 0o700);
+}
+
+/** The name `atomicWrite` gives its temp file: the target, a dot, 12 hex digits, `.tmp`. */
+const TEMP_NAME = /\.[0-9a-f]{12}\.tmp$/;
+
+/**
+ * Removes temp files that an `atomicWrite` left behind when the process died between writing and renaming. Only
+ * names of that exact shape, only older than `minAgeMs` (so a write in flight elsewhere is never touched), only in the
+ * data folder and the folders right under it. Answers how many went.
+ */
+export async function sweepTempFiles(home: string, minAgeMs = 10 * 60_000, now = Date.now()): Promise<number> {
+  let removed = 0;
+  const sweep = async (dir: string, depth: number): Promise<void> => {
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory() && depth > 0) await sweep(path, depth - 1);
+      else if (entry.isFile() && TEMP_NAME.test(entry.name)) {
+        const info = await stat(path).catch(() => null);
+        if (info && now - info.mtimeMs >= minAgeMs && (await rm(path, { force: true }).then(() => true, () => false))) removed++;
+      }
+    }
+  };
+  await sweep(home, 1);
+  return removed;
 }
 
 /** Writes to a temp file in the same folder, syncs it, then renames over the target. */

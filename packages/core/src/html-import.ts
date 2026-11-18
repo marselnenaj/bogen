@@ -24,7 +24,7 @@ const WEB_ATTRS: Record<string, RegExp> = {
   id: NAME, name: NAME, form: NAME, list: NAME, popovertarget: NAME, headers: /^[A-Za-z][\w -]{0,200}$/,
   tabindex: /^-?\d{1,3}$/, popover: /^(|auto|manual|hint)$/, popovertargetaction: /^(show|hide|toggle)$/,
   loading: /^(lazy|eager)$/, decoding: /^(async|sync|auto)$/, fetchpriority: /^(high|low|auto)$/, width: /^\d{1,5}$/, height: /^\d{1,5}$/,
-  lang: /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3}$/, dir: /^(ltr|rtl|auto)$/, scope: /^(row|col|rowgroup|colgroup)$/,
+  lang: /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3}$/, dir: /^(ltr|rtl|auto)$/, translate: /^(yes|no)$/, scope: /^(row|col|rowgroup|colgroup)$/,
   required: /^(|required)$/, disabled: /^(|disabled)$/, readonly: /^(|readonly)$/, checked: /^(|checked)$/, selected: /^(|selected)$/, multiple: /^(|multiple)$/,
   reversed: /^(|reversed)$/, start: /^-?\d{1,6}$/, min: NUMBER, max: NUMBER, step: /^(any|\d{1,6}(\.\d{1,4})?)$/, minlength: /^\d{1,6}$/, maxlength: /^\d{1,6}$/,
   autocomplete: /^[a-z0-9 -]{1,60}$/, inputmode: /^(none|text|decimal|numeric|tel|search|email|url)$/, enterkeyhint: /^(enter|done|go|next|previous|search|send)$/,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Command as CommandIcon, FileText, Layers, Palette, Rows3 } from 'lucide-react';
-import { COMMANDS, displayKeys } from '../commands/registry.ts';
+import { FileText, Layers, Palette, Rows3, Search } from 'lucide-react';
+import { COMMANDS } from '../commands/registry.ts';
 import { session } from '../doc/session.ts';
 import { api, type FileEntry } from '../lib/api.ts';
 import { fuzzyMatch } from '../lib/fuzzy.ts';
@@ -9,13 +9,15 @@ import { goToLayer } from '../ops/reveal.ts';
 import { editor } from '../state/store.ts';
 import { ui, useUi } from '../state/ui.ts';
 import { copyText } from '../ui/controls.tsx';
+import { Key, Keys } from '../ui/Keys.tsx';
 import { t } from '../i18n/store.ts';
 import { useT } from '../i18n/react.ts';
 
 type Kind = 'command' | 'layer' | 'page' | 'file' | 'token';
 interface Item { key: string; kind: Kind; title: string; hint?: string; keys?: string; score: number; indices: number[]; run: () => void }
 
-const KIND_ICON = { command: CommandIcon, layer: Layers, page: Rows3, file: FileText, token: Palette };
+/** Commands carry no icon: one shared symbol on every row says nothing. The other kinds are told apart by theirs. */
+const KIND_ICON = { command: null, layer: Layers, page: Rows3, file: FileText, token: Palette };
 const KIND_WEIGHT: Record<Kind, number> = { command: 12, page: 8, file: 4, token: 2, layer: 0 };
 const PREFIXES: Record<string, Kind> = { '>': 'command', '@': 'layer', '#': 'token', '/': 'page', '~': 'file' };
 const RECENT_KEY = 'bogen-palette-recent';
@@ -66,7 +68,7 @@ function search(query: string, files: FileEntry[]): Item[] {
   const hasSelection = state.selection.length > 0;
   for (const c of COMMANDS) {
     if ((c.needsSelection && !hasSelection) || (c.when && !c.when())) continue;
-    add('command', `c:${c.id}`, t(c.title), () => { remember(c.id); c.run(); }, { hint: t(c.group), keys: displayKeys(c), also: t(c.group) });
+    add('command', `c:${c.id}`, t(c.title), () => { remember(c.id); c.run(); }, { hint: t(c.group), keys: c.keys?.[0], also: t(c.group) });
   }
   if (q || only) {
     for (const p of snap.pages) add('page', `p:${p.id}`, p.name, () => state.set({ pageId: p.id, selection: [], hoverId: null }), { hint: t('Page') });
@@ -132,6 +134,7 @@ function PaletteBody() {
     return () => { if (returnFocus.current instanceof HTMLElement && returnFocus.current.isConnected) returnFocus.current.focus({ preventScroll: true }); };
   }, []);
   const items = useMemo(() => search(query, files), [query, files, t]);
+  const mixed = items.some((it) => it.kind !== 'command');
   useEffect(() => setActive(0), [query]);
   useEffect(() => {
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -146,9 +149,12 @@ function PaletteBody() {
   return (
     <div className="dialog-scrim" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }} data-ui>
       <div className="dialog palette" role="dialog" aria-label={t('Command palette')} data-testid="palette">
+        <div className="palette-search">
+        <Search size={16} className="palette-search-icon" aria-hidden="true" />
         <input
           ref={inputRef}
           className="palette-input"
+          aria-label={t('Search commands, layers, pages, files, tokens')}
           role="combobox"
           aria-expanded="true"
           aria-controls="palette-list"
@@ -169,6 +175,7 @@ function PaletteBody() {
             if (!(e.ctrlKey && e.key.toLowerCase() === 'p')) e.stopPropagation();
           }}
         />
+        </div>
         <div ref={listRef} id="palette-list" className="palette-list" role="listbox" aria-label={t('Results')} data-testid="palette-list">
           {!items.length ? <div className="palette-empty" dir="auto">{t('Nothing matches "{query}".', { query })}</div> : null}
           {items.map((it, i) => {
@@ -185,15 +192,23 @@ function PaletteBody() {
                 onPointerMove={() => { if (i !== active) setActive(i); }}
                 onPointerDown={(e) => { e.preventDefault(); choose(it); }}
               >
-                <Icon size={14} className="palette-icon" aria-hidden="true" />
+                {mixed ? (Icon ? <Icon size={14} className="palette-icon" aria-hidden="true" /> : <span className="palette-icon" aria-hidden="true" />) : null}
                 <span className="palette-title" dir="auto"><Marked text={it.title} indices={it.indices} /></span>
                 {it.hint ? <span className="palette-hint">{it.hint}</span> : null}
-                {it.keys ? <kbd className="palette-keys">{it.keys}</kbd> : null}
+                {it.keys ? <Keys combo={it.keys} className="palette-keys" /> : <span className="keys palette-keys" />}
               </div>
             );
           })}
         </div>
-        <div className="palette-foot"><span>{t('{key} runs', { key: 'Enter' })}</span><span>{t('{keys} moves', { keys: '↑↓' })}</span><span>{t('{prefix} commands', { prefix: '>' })}</span><span>{t('{prefix} layers', { prefix: '@' })}</span><span>{t('{prefix} tokens', { prefix: '#' })}</span><span>{t('{prefix} pages', { prefix: '/' })}</span><span>{t('{prefix} files', { prefix: '~' })}</span></div>
+        <div className="palette-foot keys">
+          <span>{t.rich('{key} runs', { key: <Key name="Enter" /> })}</span>
+          <span>{t.rich('{keys} moves', { keys: <><Key name="arrowup" /><Key name="arrowdown" /></> })}</span>
+          <span>{t.rich('{prefix} commands', { prefix: <Key name=">" /> })}</span>
+          <span>{t.rich('{prefix} layers', { prefix: <Key name="@" /> })}</span>
+          <span>{t.rich('{prefix} tokens', { prefix: <Key name="#" /> })}</span>
+          <span>{t.rich('{prefix} pages', { prefix: <Key name="/" /> })}</span>
+          <span>{t.rich('{prefix} files', { prefix: <Key name="~" /> })}</span>
+        </div>
       </div>
     </div>
   );

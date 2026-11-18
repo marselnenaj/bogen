@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronsLeftRight } from 'lucide-react';
 import { loadUser } from '../lib/user.ts';
 import { askAbout } from './ask-state.ts';
 import { decide, layerPicture, loadInbox, runnerName, type InboxItem } from './phone-api.ts';
@@ -25,7 +26,7 @@ function Split({ before, after }: { before: string; after: string }) {
     >
       <img className="phone-split-after" src={after} alt={t('After')} draggable={false} />
       <img className="phone-split-before" src={before} alt={t('Before')} draggable={false} />
-      <span className="phone-split-line" aria-hidden="true"><span className="phone-split-handle">‹›</span></span>
+      <span className="phone-split-line" aria-hidden="true"><span className="phone-split-handle"><ChevronsLeftRight size={16} /></span></span>
     </div>
   );
 }
@@ -53,9 +54,10 @@ export function Review({ fileId, proposalId }: { fileId: string; proposalId: str
 
   return (
     <main className="phone-main phone-review" data-testid="phone-review">
-      <header className="phone-bar">
-        <a href="#/" className="phone-back">{t('‹ Inbox')}</a>
-        <span className="phone-bar-meta">{item ? `${item.pageName ?? item.fileName} · ${item.ofName || item.name}` : ''}</span>
+      <header className="phone-review-head">
+        <a href="#/" className="phone-back"><ChevronLeft size={20} aria-hidden="true" />{t('Inbox')}</a>
+        {item ? <h1 className="phone-review-title" dir="auto">{item.ofName || item.name}</h1> : null}
+        {item ? <p className="phone-review-where" dir="auto">{item.pageName ? `${item.fileName}, ${item.pageName}` : item.fileName}</p> : null}
       </header>
       <div className="phone-review-stage">
         {item === null ? <p className="phone-empty">{t('This proposal was decided already, or the PC cannot be reached.')}</p> : null}

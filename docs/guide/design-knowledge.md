@@ -2,7 +2,7 @@
 
 Bogen includes its own design operating guidance, written for agents and directly usable without web research or external reading. Open **Settings → Design knowledge** to choose a playbook, search its decisions, browse compositions, edit your own `SKILL.md` or download it. [Settings](settings.md) shows the exact controls. Reference content is English; this does not change the language requested for a design.
 
-There are 16 playbooks, 128 conditional decisions and 32 composition briefs: visual foundations, websites, mobile apps, desktop workspaces, forms, commerce, dashboards, pitch decks, social graphics, email, documentation, brands, motion, localization, OS themes and sidebar widgets. The content is authored guidance, not a claim of empirical proof, conversion uplift or an automatic taste score.
+There are 17 playbooks, 136 conditional decisions and 39 composition briefs: visual foundations, websites, mobile apps, desktop workspaces, forms, commerce, dashboards, pitch decks, social graphics, email, documentation, brands, brand guidelines books, motion, localization, OS themes and sidebar widgets. The content is authored guidance, not a claim of empirical proof, conversion uplift or an automatic taste score.
 
 ## What an agent reads first
 
@@ -21,7 +21,8 @@ default:
    form its content has, and the states the task has. Every section and screen is held to this, not
    only the first.
 4. **Check**: `design_lint`, `design_review` and `responsive_check`, every objective defect fixed, then
-   `design_verify` with the scored rubric.
+   `design_critique`, an independent reviewer in a fresh session that judges the pictures against the brief and
+   the brand, and `design_verify` with the scored rubric.
 
 `guide_get design` adds a direction written out in full, worked examples (each a default next to the
 decision made for its subject), what the checks measure, the copy rules and the rubric. The Claude Code

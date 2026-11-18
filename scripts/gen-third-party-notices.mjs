@@ -147,6 +147,11 @@ Other material from third parties:
   with \`woff2-encoder\` (MIT), which is Google's woff2 and Brotli (both MIT) compiled to WebAssembly; both listed
   below, neither builds anything native. \`packages/server/src/ofl.ts\` holds the SIL Open Font License 1.1 verbatim,
   as the licence allows, so that a font derived from an OFL font carries it.
+- **English phonemizer.** \`packages/server/src/speech/dizione/\` is a port to TypeScript of dizione 0.1.0
+  (Apache-2.0, Muhammed Nazeem, <https://github.com/n4ze3m/dizione>), the phonemizer of the tiny-voca voices: its
+  Python modules translated one for one, and \`data.ts\` holding its hand-written tables unchanged. It is not a
+  dependency, so its notice is here; the Apache-2.0 text is under License texts below. The voice model and the
+  phonemizer data it reads are downloaded on request and listed in ASSET_PROVENANCE.md.
 - **Accessibility engine.** \`compliance_check\` runs \`axe-core\` (MPL-2.0, Deque Systems) in the headless renderer,
   bundled into the CLI. MPL-2.0 section 3.3 allows a Larger Work that contains it to be distributed under the GNU GPL
   as a Secondary License, because axe-core is not marked "Incompatible With Secondary Licenses". Its files stay under

@@ -11,7 +11,11 @@ import { filteredRows, isEmptyQuery, LAYER_KINDS, parseLayerQuery, type LayerKin
 import { useT } from '../i18n/react.ts';
 
 const ROW = 26;
-const INDENT = 14;
+/** One level deeper is 16px, from an 8px start: every indent stays on the spacing scale. */
+const INDENT = 16;
+const INSET = 8;
+/** The same indent said with the tokens, so the row stays bound to the spacing scale wherever it is read. */
+const indent = (depth: number) => (depth ? `calc(var(--space-sm) + ${depth} * var(--space-lg))` : 'var(--space-sm)');
 
 const TYPE_ICONS: Partial<Record<NodeType, typeof Frame>> = { text: Type, image: ImageIcon, svg: PenTool, shader: Sparkles, video: Video, embed: Globe };
 
@@ -108,7 +112,7 @@ const Row = memo(function Row({ id, depth, closed: collapsed, dim, selected, isH
       aria-setsize={total}
       aria-label={node.name || node.tag}
       className={`layer-row${selected ? ' is-selected' : ''}${isHover ? ' is-hover' : ''}${node.hidden || parentHidden ? ' is-hidden' : ''}${node.locked ? ' is-locked' : ''}${dropInside ? ' drop-inside' : ''}${dim ? ' is-context' : ''}${node.component ? ' is-main' : ''}${node.instanceOf !== undefined ? ' is-instance' : ''}${node.virtual && node.virtual.path ? ' is-inside' : ''}${node.slotName !== undefined ? ' is-slot' : ''}`}
-      style={{ paddingLeft: 4 + depth * INDENT, height: ROW }}
+      style={{ paddingLeft: indent(depth), height: 'var(--row)' }}
       onPointerDown={(e) => onDown(e, id)}
       onDoubleClick={() => editor().set({ renamingLayerId: id })}
       onMouseEnter={() => editor().set({ hoverId: id })}
@@ -147,7 +151,7 @@ const Row = memo(function Row({ id, depth, closed: collapsed, dim, selected, isH
             if (e.key === 'Escape') { e.currentTarget.value = node.name; e.currentTarget.blur(); }
           }}
         />
-      ) : <span className="layer-name" dir="auto">{node.name || node.tag}</span>}
+      ) : <span className="layer-name" dir="auto" translate="no">{node.name || node.tag}</span>}
       <span className="layer-actions" onPointerDown={(e) => e.stopPropagation()}>
         <IconButton className={node.locked ? 'is-on' : ''} icon={node.locked ? <Lock size={13} /> : <LockOpen size={13} />} title={node.locked ? t('Unlock ({shortcut})', { shortcut: 'Ctrl+Shift+L' }) : t('Lock ({shortcut})', { shortcut: 'Ctrl+Shift+L' })} onClick={(e) => { e.stopPropagation(); setFields([id], { locked: node.locked ? undefined : true }); }} tabIndex={-1} testId="layer-lock" />
         <IconButton className={node.hidden ? 'is-on' : ''} icon={node.hidden ? <EyeOff size={13} /> : <Eye size={13} />} title={node.hidden ? t('Show ({shortcut})', { shortcut: 'Ctrl+Shift+H' }) : t('Hide ({shortcut})', { shortcut: 'Ctrl+Shift+H' })} onClick={(e) => { e.stopPropagation(); setFields([id], { hidden: node.hidden ? undefined : true }); }} tabIndex={-1} testId="layer-hide" />
@@ -168,7 +172,7 @@ const PseudoRow = memo(function PseudoRow({ owner, pseudo, depth, selected, onDo
       aria-selected={selected}
       aria-label={t('{pseudo} of {name}', { pseudo, name: node?.name ?? '' })}
       className={`layer-row is-pseudo${selected ? ' is-selected' : ''}`}
-      style={{ paddingLeft: 4 + depth * INDENT, height: ROW }}
+      style={{ paddingLeft: indent(depth), height: 'var(--row)' }}
       onPointerDown={(e) => onDown(e, owner)}
       data-testid="layer-pseudo-row"
       data-layer={owner}
@@ -424,7 +428,7 @@ export function LayerTree() {
                 : <Row id={r.id} depth={r.depth} closed={r.closed} dim={r.dim} position={first + i + 1} total={rows.length} selected={selected.has(r.id)} isHover={hoverId === r.id} onDown={onDown} dropInside={drop?.id === r.id && drop.where === 'inside'} />}
             </div>
           ))}
-          {drop && drop.where !== 'inside' ? <div className="layer-drop-line" style={{ top: drop.top - 1, left: 8 + drop.depth * INDENT }} data-testid="layer-drop-line" /> : null}
+          {drop && drop.where !== 'inside' ? <div className="layer-drop-line" style={{ top: drop.top - 1, left: INSET + 4 + drop.depth * INDENT }} data-testid="layer-drop-line" /> : null}
         </div>
       </div>
     </div>

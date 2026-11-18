@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EllipsisVertical, Settings2, Shapes, Check, ChevronDown, ChevronRight, Copy, Download, Folder, FolderInput, FolderPlus, Layers, LayoutGrid, List, MoreHorizontal, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { EllipsisVertical, Palette, Settings2, Shapes, Check, ChevronDown, ChevronRight, Copy, Download, Folder, FolderInput, FolderPlus, Layers, LayoutGrid, List, MoreHorizontal, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { api, type FileEntry, type UpdateNote } from '../lib/api.ts';
 import { phoneOrigin, useReachable } from '../lib/phone.ts';
 import { setKept, useStoredFiles, type StoredFile } from '../doc/offline.ts';
-import { onServerEvent } from '../lib/events.ts';
+import { onEventsReconnect, onServerEvent } from '../lib/events.ts';
 import { BrandsSection } from './BrandsSection.tsx';
+import { Composer } from './Composer.tsx';
+import { brandApi, type BrandListItem } from '../lib/brand-api.ts';
 import { ExamplesSection } from './ExamplesSection.tsx';
 import { OmarchyThemesSection } from './OmarchyThemesSection.tsx';
 import { ThemePresetItem } from './ThemePresetItem.tsx';
@@ -27,6 +29,42 @@ import { useT } from '../i18n/react.ts';
 import { formatDate } from '../i18n/format.ts';
 import { editLink, locationName } from '../lib/recent-edits.ts';
 import '../styles/recent-edits.css';
+import '../styles/home.css';
+
+/**
+ * A clock for the times written as "5 min ago": it moves every half minute, and when the window comes back to the
+ * front, so that an open Home does not keep saying "Just now" of an edit an hour old. Only the times re-render.
+ */
+const clock = { now: Date.now(), listeners: new Set<() => void>(), stop: null as (() => void) | null };
+function subscribeClock(fn: () => void): () => void {
+  clock.listeners.add(fn);
+  if (!clock.stop) {
+    const tick = () => {
+      clock.now = Date.now();
+      for (const l of clock.listeners) l();
+    };
+    const visible = () => { if (document.visibilityState === 'visible') tick(); };
+    const timer = window.setInterval(tick, 30_000);
+    document.addEventListener('visibilitychange', visible);
+    clock.stop = () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', visible);
+      clock.stop = null;
+    };
+  }
+  return () => {
+    clock.listeners.delete(fn);
+    if (!clock.listeners.size) clock.stop?.();
+  };
+}
+
+/** When a file was last changed, in words that keep up with the time. */
+function When({ at, kept }: { at: number | string; kept?: boolean }) {
+  const t = useT();
+  useSyncExternalStore(subscribeClock, () => clock.now);
+  const text = when(at);
+  return <span className="file-time" data-testid="file-time" data-at={String(at)}>{kept ? t('On this phone · {time}', { time: text }) : text}</span>;
+}
 
 function when(at: number | string): string {
   const d = new Date(at);
@@ -61,7 +99,7 @@ function MoveMenu({ anchor, folders, onPick, onClose }: { anchor: HTMLElement | 
       <div data-testid="move-menu">
         <button type="button" className="menu-item" onClick={() => onPick('')} data-testid="move-to-root"><span className="menu-with-icon"><Layers size={13} /> {t('No folder')}</span></button>
         {folders.map((f) => (
-          <button key={f} type="button" className="menu-item" onClick={() => onPick(f)} data-testid="move-to" data-folder-target={f} style={{ paddingLeft: 8 + (f.split('/').length - 1) * 12 }}>
+          <button key={f} type="button" className="menu-item" onClick={() => onPick(f)} data-testid="move-to" data-folder-target={f} style={{ paddingLeft: (f.split('/').length - 1) ? `calc(var(--space-sm) + ${(f.split('/').length - 1)} * var(--space-md))` : 'var(--space-sm)' }}>
             <span className="menu-with-icon" dir="auto"><Folder size={13} /> {f.split('/').at(-1)}</span>
           </button>
         ))}
@@ -91,11 +129,13 @@ function FileThemeLine({ theme, kept, badge }: { theme: NonNullable<FileEntry['t
   const n = theme.branches.filter((b) => b.id !== 'main').length;
   const on = theme.branch && theme.branch !== 'main' ? theme.branchName ?? theme.branch : null;
   if (!badge && !n && !kept?.length) return null;
+  const branches = on ? t.n(n, 'On {branch}, {count} branch', 'On {branch}, {count} branches', { branch: on }) : t.n(n, '{count} branch', '{count} branches');
+  const keptWords = t.n(kept?.length ?? 0, '{count} copy kept', '{count} copies kept');
   return (
     <span className="file-theme" data-testid="file-theme">
       {badge ? <span className="file-theme-badge">{t('Theme')}</span> : null}
-      {n ? <span className="file-theme-branches" dir="auto" data-testid="file-theme-branches">{on ? t.n(n, 'On {branch}, {count} branch', 'On {branch}, {count} branches', { branch: on }) : t.n(n, '{count} branch', '{count} branches')}</span> : null}
-      {kept?.length ? <span className="file-theme-branches" data-testid="file-theme-kept" title={kept.map((k) => k.name).join(', ')}>{t.n(kept.length, '{count} copy kept', '{count} copies kept')}</span> : null}
+      {n ? <span className="file-theme-branches" dir="auto" data-testid="file-theme-branches" data-title-if-cut="">{branches}</span> : null}
+      {kept?.length ? <span className="file-theme-branches" data-testid="file-theme-kept" title={`${keptWords}: ${kept.map((k) => k.name).join(', ')}`}>{keptWords}</span> : null}
     </span>
   );
 }
@@ -154,10 +194,10 @@ function FileItem({ file, view, selected, selecting, folders, onChanged, onSelec
             }}
           />
         ) : (
-          <button type="button" className="file-title" onClick={press} title={file.name} tabIndex={-1} dir="auto">{file.name}</button>
+          <button type="button" className="file-title" translate="no" onClick={press} data-title-if-cut="" tabIndex={-1} dir="auto">{file.name}</button>
         )}
-        <span className="file-time">{stored?.kept ? t('On this phone · {time}', { time: when(file.updatedAt) }) : when(file.updatedAt)}</span>
-        {file.lastEdit ? file.lastEdit.locations[0] ? <a className="file-recent" href={editLink(file.id, file.lastEdit.locations[0])} title={`${file.lastEdit.actor} · ${file.lastEdit.summary}`} onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} data-testid="file-recent">{locationName(file.lastEdit.locations[0])}</a> : <span className="file-recent" title={file.lastEdit.actor} data-testid="file-recent">{file.lastEdit.summary}</span> : null}
+        <When at={file.updatedAt} kept={Boolean(stored?.kept)} />
+        {file.lastEdit ? file.lastEdit.locations[0] ? <a className="file-recent" translate="no" href={editLink(file.id, file.lastEdit.locations[0])} data-title-if-cut="" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} data-testid="file-recent">{locationName(file.lastEdit.locations[0])}</a> : <span className="file-recent" data-title-if-cut="" data-testid="file-recent">{file.lastEdit.summary}</span> : null}
         {kind ? <span className="file-kind" data-testid="file-kind" title={file.project?.source === 'person' ? t('You set this') : t('Read from the file')}>{kind}</span> : null}
         {file.theme ? <FileThemeLine theme={file.theme} badge={!kind} {...(file.keptCopies ? { kept: file.keptCopies } : {})} /> : null}
         {view === 'list' ? <span className="file-folder" dir="auto">{file.folder ?? ''}</span> : null}
@@ -185,6 +225,44 @@ function FileItem({ file, view, selected, selecting, folders, onChanged, onSelec
   );
 }
 
+/** The width a card in the file grid takes, and the gap between cards (home.css). */
+const CARD = 208;
+const CARD_GAP = 12;
+
+/**
+ * The files edited last, one row of them, so that what the person most likely came back for is the first thing on
+ * Home. As many as fit across; the full list with folders and sorting stays below.
+ */
+function RecentFiles({ files }: { files: FileEntry[] }) {
+  const t = useT();
+  const ref = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(6);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setCols(Math.max(1, Math.floor((el.clientWidth + CARD_GAP) / (CARD + CARD_GAP))));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const recent = useMemo(() => sortFiles(files, 'edited').slice(0, cols), [files, cols]);
+  return (
+    <section className="home-section home-recent" aria-labelledby="home-recent-title" data-testid="home-recent">
+      <div className="brands-head"><h2 className="brands-title" id="home-recent-title">{t('Recent')}</h2></div>
+      <div ref={ref} className="home-recent-row" role="list" aria-labelledby="home-recent-title" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        {recent.map((file) => (
+          <a key={file.id} role="listitem" className="home-recent-file" href={`#/file/${file.id}`} data-testid="home-recent-file" data-file-id={file.id}>
+            <span className="file-thumb">{file.thumbnail ? <img src={file.thumbnail} alt="" draggable={false} /> : <span className="file-thumb-empty"><svg width={28} height={28} viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14C2 7.4 7.4 2 14 2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></span>}</span>
+            <span className="home-recent-name" dir="auto" translate="no" data-title-if-cut="">{file.name}</span>
+            <When at={file.updatedAt} />
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function FolderRow({ node, depth, current, open, dropping, templateCounts, onOpen, onToggle, onChanged, onRequestNew }: { templateCounts: ReadonlyMap<string, number>; node: FolderNode; depth: number; current: string | null; open: Record<string, boolean>; dropping: string | null; onOpen: (path: string) => void; onToggle: (path: string) => void; onChanged: () => void; onRequestNew: (parent: string) => void }) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -194,7 +272,7 @@ function FolderRow({ node, depth, current, open, dropping, templateCounts, onOpe
   const t = useT();
   return (
     <>
-      <div className={`folder-row${current === node.path ? ' is-active' : ''}${dropping === node.path ? ' is-drop' : ''}`} role="treeitem" aria-selected={current === node.path} aria-level={depth + 1} aria-expanded={node.children.length ? isOpen : undefined} data-testid="folder-row" data-folder={node.path} style={{ paddingLeft: 4 + depth * 12 }}>
+      <div className={`folder-row${current === node.path ? ' is-active' : ''}${dropping === node.path ? ' is-drop' : ''}`} role="treeitem" aria-selected={current === node.path} aria-level={depth + 1} aria-expanded={node.children.length ? isOpen : undefined} data-testid="folder-row" data-folder={node.path} style={{ paddingLeft: depth ? `calc(var(--space-xs) + ${depth} * var(--space-md))` : 'var(--space-xs)' }}>
         {node.children.length ? <button type="button" className="layer-toggle" aria-label={isOpen ? t('Collapse') : t('Expand')} tabIndex={-1} onClick={() => onToggle(node.path)}>{isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</button> : <span className="layer-toggle" />}
         {renaming ? (
           <input
@@ -292,7 +370,7 @@ function HomeHead({ update, searchRef, query, setQuery, onFigma, onOpen, onCreat
   );
 }
 
-export function Home() {
+export function Home({ place = 'files' }: { /** Files is Home as it was; Brands lists the brands (#/brands). */ place?: 'files' | 'brands' } = {}) {
   const t = useT();
   const [figmaOpen, setFigmaOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -358,6 +436,17 @@ export function Home() {
     api.folders().then((list) => { setFolders(list); setFoldersLoaded(true); }).catch(() => setFolders([]));
   }, []);
 
+  // The brands, for the prompt box's brand choice and the count beside Brands.
+  const [brands, setBrands] = useState<BrandListItem[] | null>(null);
+  const loadBrands = useCallback(() => { brandApi.list().then(setBrands).catch(() => setBrands([])); }, []);
+  useEffect(() => {
+    loadBrands();
+    const off = onServerEvent((e) => { if (e.t === 'brand' || e.t === 'files') loadBrands(); });
+    // Events sent while the socket was down (a restart of the server) never come: read anew once it is back.
+    const offReconnect = onEventsReconnect(loadBrands);
+    return () => { off(); offReconnect(); };
+  }, [loadBrands]);
+
   // Quiet on purpose: one line in the header, only when the server's own check found a newer release.
   const [update, setUpdate] = useState<UpdateNote | null>(null);
   useEffect(() => {
@@ -367,7 +456,9 @@ export function Home() {
   useEffect(() => {
     load();
     document.title = 'Bogen';
-    return onServerEvent((e) => { if (e.t === 'files') load(); });
+    const off = onServerEvent((e) => { if (e.t === 'files') load(); });
+    const offReconnect = onEventsReconnect(load);
+    return () => { off(); offReconnect(); };
   }, [load]);
 
   const openWelcome = async () => {
@@ -546,13 +637,18 @@ export function Home() {
       <ExtensionApproval />
       {away ? <div className="banner" role="status" data-testid="home-offline">{stored.size ? t.n(stored.size, 'Offline. {count} file is on this phone and open without the computer.', 'Offline. {count} files are on this phone and open without the computer.') : t('Offline. No files are on this phone yet.')}</div> : null}
       <div className="home-split">
-        <nav className="home-side" aria-label={t('Folders')}>
+        <nav className="home-side" aria-label={t('Places')}>
+          <div className="home-places" data-testid="home-places">
+            <a className={`home-place${place === 'files' ? ' is-active' : ''}`} href="#/" aria-current={place === 'files' ? 'page' : undefined} data-testid="place-files"><Layers size={14} aria-hidden="true" /><span>{t('Files')}</span>{listed?.length ? <span className="folder-count">{listed.length}</span> : null}</a>
+            <a className={`home-place${place === 'brands' ? ' is-active' : ''}`} href="#/brands" aria-current={place === 'brands' ? 'page' : undefined} data-testid="place-brands"><Palette size={14} aria-hidden="true" /><span>{t('Brands')}</span>{brands?.length ? <span className="folder-count">{brands.length}</span> : null}</a>
+          </div>
+          {place === 'files' ? <>
           <div className="home-side-head">
             <span className="panel-title">{t('Folders')}</span>
             <IconButton icon={<FolderPlus size={14} />} title={t('New folder')} onClick={() => setNewIn(prefs.folder ?? '')} testId="folder-new" />
           </div>
           <div role="tree" aria-label={t('Folders')} className="home-tree">
-            <div className={`folder-row${prefs.folder === null ? ' is-active' : ''}${drag?.over === '' ? ' is-drop' : ''}`} role="treeitem" aria-selected={prefs.folder === null} data-testid="folder-all" data-folder="" style={{ paddingLeft: 4 }}>
+            <div className={`folder-row${prefs.folder === null ? ' is-active' : ''}${drag?.over === '' ? ' is-drop' : ''}`} role="treeitem" aria-selected={prefs.folder === null} data-testid="folder-all" data-folder="" style={{ paddingLeft: 'var(--space-xs)' }}>
               <span className="layer-toggle" />
               <button type="button" className="folder-open" onClick={() => setPref({ folder: null })}><Layers size={13} aria-hidden="true" /><span className="folder-name">{t('All files')}</span></button>
               {listed?.length ? <span className="folder-count">{listed.length}</span> : null}
@@ -575,6 +671,7 @@ export function Home() {
           </div>
           <div className="home-side-head home-kinds-head"><span className="panel-title">{t('Kinds')}</span></div>
           <KindList files={inFolder} scope={scope} presets={availablePresets} query={query} themeFolder={themeFolder} onScope={(s) => { setPref({ kind: s.kind, platform: s.platform }); setSelection([]); }} />
+          </> : null}
         </nav>
         <main className="home-body">
         <DropZone onFiles={(list) => void openFiles(list)}>
@@ -586,10 +683,16 @@ export function Home() {
             <IconButton icon={<X size={13} />} title={t('Close')} onClick={() => setImportNote(null)} />
           </div>
         ) : null}
-          {/* Examples and brands introduce an unfiltered Home. Theme starts also stay visible in a theme scope. */}
+          {place === 'brands' ? <BrandsSection place /> : <>
+          <h1 className="visually-hidden">{t('Your files')}</h1>
+          {!error && files && !narrowed ? <Composer folder={prefs.folder} brands={brands} onBrands={loadBrands} /> : null}
+          {/* The files edited last come first; then the ways to start, the brands and the themes, then every file. */}
+          {!error && listed && !narrowed && listed.length > 6 ? <RecentFiles files={listed} /> : null}
           {!error && files && !narrowed ? <ExamplesSection fileCount={listed?.length ?? 0} /> : null}
           {!error && files && !narrowed ? <BrandsSection /> : null}
           {!error && files && showThemes && !themeGrid ? <OmarchyThemesSection folder={prefs.folder} query={query} platform={null} /> : null}
+          <section className="home-files" aria-labelledby="home-files-title">
+          <h2 className="visually-hidden" id="home-files-title">{t('All files')}</h2>
           <div className="home-tools">
             {selecting ? (
               <div className="bulk-bar" role="toolbar" aria-label={t('Selected files')} data-testid="bulk-bar">
@@ -651,9 +754,11 @@ export function Home() {
               ? <ThemePresetItem key={item.id} preset={item.preset} folder={prefs.folder} hasProject={presetProjects.has(presetSource(item.preset.id))} view={prefs.view} selecting={selecting} />
               : <FileItem key={item.id} file={item.file} view={prefs.view} selected={selection.includes(item.id)} selecting={selecting} folders={folders} onChanged={load} onSelect={select} onDragStart={onDragStart} stored={stored.get(item.id)} away={away} />)}
           </div>
+          </section>
           {!error && files && themeGrid ? <OmarchyThemesSection folder={prefs.folder} query={query} platform={scope.platform} /> : null}
           {/* Narrowed to brand systems, the records follow the files. Theme starts stay above the file list. */}
           {!error && files && narrowed && scope.kind === 'brand' ? <BrandsSection /> : null}
+          </>}
         </DropZone>
         </main>
         {figmaOpen ? <FigmaDialog onClose={() => setFigmaOpen(false)} onOpened={(id) => { setFigmaOpen(false); location.hash = `#/file/${id}`; }} /> : null}

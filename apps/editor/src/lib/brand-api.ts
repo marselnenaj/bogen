@@ -1,10 +1,13 @@
 import type { BrandData } from '@bogen/core';
 import { t } from '../i18n/store.ts';
+import { putActivity } from './activity.ts';
 
 /** REST client for brands. See "Brand" in docs/SPEC.md. */
 
-export interface BrandListItem { id: string; name: string; updatedAt: number; positioning: string; colors: string[]; isDefault: boolean; linkedFiles: number; version: number; suggestions: number; draft: boolean }
+export interface BrandListItem { id: string; name: string; updatedAt: number; positioning: string; colors: string[]; isDefault: boolean; linkedFiles: number; version: number; suggestions: number; draft: boolean; /** Changes since the latest version. */ changes?: number }
 export interface BrandFull { id: string; name: string; data: BrandData; counts: { suggestions: number; flagged: number }; linkedFiles: { id: string; name: string }[]; versions: { id: string; n: number; at: number; by: string; note: string }[]; draftChanges: number; /** The brand this one was duplicated from, as it was then. */ duplicatedFrom?: { id: string; name: string; version: number; at: number } | null }
+/** A brand from a website address, as the server's job reports it (brand-from-url.ts). */
+export interface UrlJob { id: string; url: string; brandId: string; brandName: string; madeBrand: boolean; state: 'running' | 'ready' | 'partial' | 'failed' | 'cancelled'; step: 'capture' | 'read' | 'save'; startedAt: number; endedAt?: number; found?: { colors: number; families: number; typeSteps: number; spacing: number; radius: number; logos: number; families_named: string[] }; added?: number; notes: string[]; error?: string }
 export interface BrandFix { description: string; safe: boolean; block?: string }
 export interface BrandViolation { rule: string; category: string; severity: 'hard' | 'soft'; node_id: string; layer: string; message: string; rule_text?: string; fix: BrandFix }
 export interface BrandLever { kind: 'rule' | 'quality'; key: string; category?: string; label: string; gain: number; safe?: number; node_ids: string[]; how: string }
@@ -85,9 +88,44 @@ export const brandApi = {
   useTemplate: (id: string, template: string, fileId?: string) => json<{ file_id: string; page_id: string; boards: { id: string; name: string }[]; gaps: string[]; slots: { id: string; board: string; name: string; hint: string }[] }>(`/api/brands/${id}/template`, send('POST', { template, ...(fileId ? { fileId } : {}) })),
   drift: (id: string, by: string) => json<BrandDrift>(`/api/brands/${id}/drift`, send('POST', { by })),
   scores: (id: string) => json<BrandScores>(`/api/brands/${id}/scores`),
+  fromUrl: (url: string, into?: string) => json<UrlJob>('/api/brands/from-url', send('POST', { url, ...(into ? { into } : {}) })).then((job) => { followBrandJob(job); return job; }),
+  job: (id: string) => json<UrlJob>(`/api/brands/jobs/${id}`),
+  cancelJob: (id: string) => json<UrlJob>(`/api/brands/jobs/${id}`, send('DELETE')),
   ofFile: (fileId: string) => json<FileBrand>(`/api/files/${fileId}/brand`),
   link: (fileId: string, brandId: string | null) => json(`/api/files/${fileId}/brand`, send('PUT', { brandId })),
   check: (fileId: string, body: { mode?: 'rendered' | 'static'; fix?: boolean; nodeId?: string; pageId?: string }) => json<BrandReport>(`/api/files/${fileId}/brand/check`, send('POST', body)),
   waive: (fileId: string, body: { nodeId: string; rule: string; reason: string; by: string }) => json<{ waivers: FileBrand['waivers'] }>(`/api/files/${fileId}/brand/waivers`, send('POST', body)),
   unwaive: (fileId: string, body: { nodeId: string; rule: string }) => json<{ waivers: FileBrand['waivers'] }>(`/api/files/${fileId}/brand/waivers`, send('DELETE', body)),
 };
+
+/**
+ * A brand being taken from a website goes on when the person leaves Home: its pill in the dock says how far it is,
+ * with Open and Stop, and steps aside while Home's own card shows it.
+ */
+function followBrandJob(first: UrlJob): void {
+  const id = `brand:${first.id}`;
+  let host = first.url;
+  try { host = new URL(first.url).hostname.replace(/^www\./, ''); } catch { /* the address as given */ }
+  const covered = () => Boolean(document.querySelector('[data-testid="from-website-job"]'));
+  const show = (job: UrlJob) => {
+    const stage = job.step === 'capture' ? t('Loading the page') : job.step === 'read' ? t('Reading what the page uses') : t('Saving the suggestions');
+    const done = job.state === 'ready' || job.state === 'partial';
+    putActivity({
+      id, kind: 'brand', state: job.state === 'running' ? 'running' : done ? 'done' : job.state === 'cancelled' ? 'stopped' : 'failed',
+      title: host,
+      detail: job.state === 'running' ? `${t('Brand')} · ${stage}` : done ? t('{brand} is ready to review', { brand: job.brandName }) : job.state === 'cancelled' ? t('Cancelled. Nothing was kept.') : job.error ?? t('Could not take the brand from {host}.', { host }),
+      startedAt: job.startedAt, ...(job.endedAt ? { endedAt: job.endedAt } : {}),
+      open: () => { location.hash = done ? `#/brand/${job.brandId}/review` : '#/brands'; },
+      ...(job.state === 'running' ? { stop: () => void brandApi.cancelJob(job.id).then(show, () => undefined), stopLabel: t('Stop taking the brand') } : {}),
+      covered,
+    });
+  };
+  show(first);
+  if (first.state !== 'running') return;
+  const timer = window.setInterval(() => {
+    void brandApi.job(first.id).then((job) => {
+      show(job);
+      if (job.state !== 'running') window.clearInterval(timer);
+    }, () => window.clearInterval(timer));
+  }, 1000);
+}

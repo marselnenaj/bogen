@@ -42,11 +42,20 @@ export function startPrompt(): void {
   } else setChatOpen(true);
 }
 
+/** Opens the chat with words already in its field. Nothing is sent until the person sends it. */
+export function draftPrompt(text: string, review: 'direct' | 'proposal' = 'direct'): void {
+  const state = editor();
+  if (state.minimal) state.set({ minimal: false });
+  if (state.fileId) rememberChatOpen(state.fileId, true);
+  state.set({ prompt: { ...state.prompt, open: true, nodeIds: state.selection, redo: undefined, draft: { id: crypto.randomUUID(), text, review } } });
+  focusChat();
+}
+
 /** What goes with a person's message in the chat, besides its words. */
-export interface SentWith { context?: string[]; runnerLabel?: string; review?: string }
+export interface SentWith { context?: string[]; runnerLabel?: string; review?: string; /** What the chat shows as the person's message, when the request sent is a fuller brief (a voice call). */ display?: string }
 
 /** `device`: a paired device to run it on, which has the CLI. Its changes come back by sync. */
-export async function sendPrompt(text: string, runner: string, options: { model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; device?: string; language?: RunLanguageChoice; images?: string[]; discipline?: string; mentions?: { kind: 'layer' | 'component' | 'token'; id: string }[]; variation?: { count: number; range: string; vary: string[] } } = {}, sent: SentWith = {}): Promise<void> {
+export async function sendPrompt(text: string, runner: string, options: { model?: string; effort?: string; review?: string; intent?: 'edit' | 'revise' | 'new_page'; device?: string; language?: RunLanguageChoice; images?: string[]; discipline?: string; mentions?: { kind: 'layer' | 'component' | 'token'; id: string }[]; variation?: { count: number; range: string; vary: string[] }; title?: string; call?: { language: 'de' | 'en'; steer?: boolean }; size?: 'small' | 'large' | 'answer' } = {}, sent: SentWith = {}): Promise<void> {
   const state = editor();
   const fileId = state.fileId;
   const pageId = state.pageId;
@@ -54,14 +63,14 @@ export async function sendPrompt(text: string, runner: string, options: { model?
   const conversationId = conversationFor(fileId);
   ++chatRead;
   const nodeIds = state.prompt.nodeIds;
-  const mine: PromptMessage = { role: 'user', text, at: Date.now(), runner: sent.runnerLabel ?? runner, ...(sent.review ? { review: sent.review } : {}), ...(sent.context?.length ? { context: sent.context } : {}), ...(options.images?.length ? { images: options.images } : {}) };
+  const mine: PromptMessage = { role: 'user', text: sent.display ?? text, at: Date.now(), runner: sent.runnerLabel ?? runner, ...(sent.review ? { review: sent.review } : {}), ...(sent.context?.length ? { context: sent.context } : {}), ...(options.images?.length ? { images: options.images } : {}) };
   state.set({ prompt: { ...state.prompt, running: true, messages: [...state.prompt.messages, mine], runId: null, startedAt: Date.now() } });
   try {
     // The server puts the earlier turns of this chat ahead of the message, so a follow-up knows what came before.
-    const { runId } = await api.startRun({ fileId, pageId, nodeIds, prompt: text, runner, conversationId, ...options });
+    const { runId, sized } = await api.startRun({ fileId, pageId, nodeIds, prompt: text, runner, conversationId, ...options });
     const s = editor();
     if (s.fileId !== fileId || conversationFor(fileId) !== conversationId || !s.prompt.running || !s.prompt.messages.includes(mine)) return;
-    s.set({ prompt: { ...s.prompt, runId } });
+    s.set({ prompt: { ...s.prompt, runId, ...(sized ? { messages: s.prompt.messages.map((m) => (m === mine ? { ...m, sized } : m)) } : {}) } });
   } catch (err) {
     const s = editor();
     if (s.fileId !== fileId || conversationFor(fileId) !== conversationId || !s.prompt.running || !s.prompt.messages.includes(mine)) return;
@@ -81,7 +90,7 @@ export function newChat(): void {
 /** A chat as the server kept it, as messages for the panel. */
 export function turnMessages(turns: ConversationTurn[]): PromptMessage[] {
   return turns.flatMap((turn): PromptMessage[] => [
-    { role: 'user', text: turn.message, at: turn.at, runner: turn.runner, ...(turn.review ? { review: turn.review } : {}) },
+    { role: 'user', text: turn.message, at: turn.at, runner: turn.runner, ...(turn.review ? { review: turn.review } : {}), ...(turn.sized ? { sized: turn.sized } : {}) },
     ...(turn.reply ? [{ role: 'agent' as const, text: turn.reply, runId: turn.runId, at: turn.at }] : []),
     ...(turn.status === 'failed' || turn.status === 'interrupted' ? [{ role: 'error' as const, text: turn.status === 'failed' ? t('The run failed.') : t('The run was cut off.') }] : []),
     ...(turn.status === 'stopped' ? [{ role: 'note' as const, text: t('Stopped. What it changed so far stays, and Undo this run takes it back.') }] : []),
@@ -204,9 +213,10 @@ export async function rebuildStoredImage(src: string, note: string, runner: stri
   }
 }
 
-export function stopPrompt(): void {
+/** `gentle`: end the run the way Ctrl+C does, so a voice call can continue its session with a change. */
+export function stopPrompt(gentle = false): void {
   const { runId } = editor().prompt;
-  if (runId) void api.stopRun(runId);
+  if (runId) void api.stopRun(runId, gentle);
 }
 
 function onAgent(e: Extract<ServerEvent, { t: 'agent' }>): void {

@@ -2,7 +2,7 @@ import { MAX_PARALLEL_RUNS } from '@bogen/core';
 import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { EFFORT_ID, MODEL_ID, RUNNER_IDS, RUNNERS, isRunnerId, type RunnerId } from '@bogen/core';
+import { EFFORT_ID, MODEL_ID, RUNNER_IDS, RUNNERS, isRunnerId, type RunnerId, type RunSize, type RunSizeVerdict } from '@bogen/core';
 import { RunnerProbes } from './runner-probe.ts';
 import { readClaudeCatalog } from './claude-catalog.ts';
 import { atomicWrite, errorMessage, HttpError } from './util.ts';
@@ -10,6 +10,11 @@ import { atomicWrite, errorMessage, HttpError } from './util.ts';
 export { EFFORT_ID, MODEL_ID };
 
 export interface RunChoice { model?: string; effort?: string }
+/**
+ * The model Bogen picked for a run by the size of its request, because nobody chose one: what it is called and why.
+ * `label` is the model's name as the CLI lists it, when it is known.
+ */
+export interface SizedChoice { size: RunSize; reason: string; model?: string; effort?: string; label?: string }
 export type RunScope = 'prompt' | 'comment';
 export interface RunnerSettings { prompt: RunChoice; comment: RunChoice }
 /** `limits`: how many runs of each runner may go at once in a race. A plan has its own limits, and runs share it. */
@@ -289,6 +294,29 @@ export class RunSettingsStore {
       }
     }
     return base;
+  }
+
+  /**
+   * What a prompt run uses, with the model picked by the size of the request when nobody chose one: not for this
+   * request (the chat's picker sends its choice), not in the run settings, and not in a call preference
+   * (`chosenElsewhere`). Only Claude Code: the other CLIs keep their own default. Saved settings are only read.
+   * Small changes go to Sonnet at medium effort (Opus at low effort without Sonnet), answers to Sonnet at low effort,
+   * and large or unclear requests keep the CLI's default model and effort.
+   */
+  async resolveBySize(runner: RunnerId, asked: RunChoice, verdict: RunSizeVerdict, chosenElsewhere = false): Promise<{ choice: RunChoice; sized?: SizedChoice }> {
+    const choice = await this.resolve(runner, 'prompt', asked);
+    const saved = this.settings.runners[runner].prompt;
+    if (runner !== 'claude' || chosenElsewhere || asked.model || asked.effort || saved.model || saved.effort) return { choice };
+    const catalog = await this.catalog('claude').catch(() => null);
+    const models = catalog?.models ?? [];
+    if (verdict.size === 'large') return { choice, sized: { ...verdict, ...(catalog?.defaultModel ? { label: catalog.defaultModel } : {}) } };
+    const find = (family: string) => models.find((m) => m.id === family) ?? models.find((m) => new RegExp(`^claude-${family}-`).test(m.id));
+    const sonnet = find('sonnet');
+    const pick: RunnerModel = sonnet ?? find('opus') ?? { id: 'opus', label: 'Opus' };
+    const wanted = sonnet && verdict.size === 'small' ? 'medium' : 'low';
+    // A model that lists its effort levels and lacks this one gets none, rather than a flag the CLI refuses.
+    const effort = !pick.efforts || pick.efforts.includes(wanted) ? wanted : undefined;
+    return { choice: { model: pick.id, ...(effort ? { effort } : {}) }, sized: { ...verdict, model: pick.id, ...(effort ? { effort } : {}), label: pick.label } };
   }
 
   /**

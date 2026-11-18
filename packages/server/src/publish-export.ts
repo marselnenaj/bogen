@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { absoluteUrl, cleanPublishedPage, contentLanguageOf, exportDocument, googleFontsHrefs, languageDirection, proposalMark, publishSlug, publishUrls, readCodeRef, webPageMeta, type BogenDoc, type PublishHead, type PublishLayer } from '@bogen/core';
+import { BRAND_SITE_SCRIPT, BRAND_SITE_SCRIPT_PATH } from './brand-site-script.ts';
 import { imageSize } from './image-raster.ts';
 import type { CodeBuilder } from './code-build.ts';
 import { fetchPublic } from './net-guard.ts';
@@ -58,8 +59,21 @@ export function pageCsp(frames: boolean, form = false): string {
   ].join('; ');
 }
 
+/**
+ * A brand site's page: the same policy, plus scripts of the site itself. Only brand sites get it, and the only script
+ * such a site has is Bogen's own brand-site.js; nothing a design holds can become a script file of the site.
+ */
+export function brandSiteCsp(frames: boolean): string {
+  return [...pageCsp(frames).split('; '), "script-src 'self'"].join('; ');
+}
+
+/** Whether a layer is the root of a brand site made by brand_site. */
+export function isBrandSite(doc: BogenDoc, id: string): boolean {
+  return Boolean(doc.getNode(id)?.attrs?.['data-bogen-brand-site']);
+}
+
 const TYPES: Record<string, string> = {
-  html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
+  html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', js: 'text/javascript; charset=utf-8', png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
   avif: 'image/avif', svg: 'image/svg+xml', ico: 'image/x-icon', mp4: 'video/mp4', webm: 'video/webm', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', otf: 'font/otf',
 };
 
@@ -238,12 +252,19 @@ export async function buildSite(doc: BogenDoc, target: BuildTarget, deps: BuildD
     };
     if (head.ogImage === undefined) delete head.ogImage;
     if (head.favicon === undefined) delete head.favicon;
+    const brandSite = isBrandSite(doc, root);
+    const csp = brandSite ? brandSiteCsp(frames.size > 0) : pageCsp(frames.size > 0);
     const page = cleanPublishedPage(source, {
       title, layer, url: (u) => map.get(u) ?? null, stylesheet: `${slug}.css`, fit: target.fit ?? 'fluid',
-      csp: pageCsp(frames.size > 0), forbidden, head,
+      csp, forbidden, head,
     });
     for (const n of page.notes) notes.add(n);
-    add(`${slug}.html`, Buffer.from(page.html, 'utf8'));
+    if (brandSite) {
+      add(BRAND_SITE_SCRIPT_PATH, Buffer.from(BRAND_SITE_SCRIPT, 'utf8'));
+      const html = page.html.replace('</body>', `<script src="${BRAND_SITE_SCRIPT_PATH}" defer></script></body>`);
+      // Its own policy in the manifest, so the server sends script-src with it; nobody may frame it.
+      add(`${slug}.html`, Buffer.from(html, 'utf8'), `${csp}; frame-ancestors 'none'`);
+    } else add(`${slug}.html`, Buffer.from(page.html, 'utf8'));
     add(`${slug}.css`, Buffer.from([fontCss, page.css].filter(Boolean).join('\n'), 'utf8'));
     pages.push({ file: `${slug}.html`, title, rootId: root, pageId: target.pageId });
   }

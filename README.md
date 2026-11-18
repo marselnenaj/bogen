@@ -2,7 +2,7 @@
 
 **Give your agent a canvas.**
 
-<a href="https://github.com/marselnenaj/bogen/releases/latest"><img src="https://img.shields.io/badge/version-0.3.0-2b3df2" alt="Version 0.3.0"></a>
+<a href="https://github.com/marselnenaj/bogen/releases/latest"><img src="https://img.shields.io/badge/version-0.4.0-2b3df2" alt="Version 0.4.0"></a>
 
 Bogen is an open-source design tool where you and your coding agent edit the same canvas. Every layer is real
 HTML and CSS. Connect Claude Code, Codex or another MCP client, then work on a website, an app interface or an
@@ -88,7 +88,7 @@ Link designs to the brand to share its tokens, fonts and rules. Review an agent'
 them binding. The book can be exported as editable Markdown; the PDF contains the visual foundation and chapter
 index. [Brands and brand books](docs/guide/brand.md)
 
-The agent's design guidance is editable too. Bogen includes **16 design playbooks** for different kinds of work.
+The agent's design guidance is editable too. Bogen includes **17 design playbooks** for different kinds of work.
 Change their `SKILL.md` files in Settings when you want your agents to follow different instructions. Built-in
 canvas runs receive the relevant playbook before they start; external agents can read it through MCP.
 [Design guidance](docs/guide/design-knowledge.md)

@@ -37,8 +37,13 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   },
   {
     title: 'Images',
-    intro: 'Crop and filter images as CSS, and trace them into editable SVG.',
-    tools: ['image_crop', 'image_filter', 'image_vectorize'],
+    intro: 'Crop and filter images as CSS, trace them into editable SVG, give photos a brand\'s look, find free photos with their credits, and read what a shader takes.',
+    tools: ['image_crop', 'image_filter', 'image_vectorize', 'image_treatment', 'image_search', 'image_generate', 'image_credits', 'shader_params'],
+  },
+  {
+    title: 'Brand applications',
+    intro: 'A brand beyond its logo: graphic devices drawn as pattern layers, and designs placed onto photos and objects as mockups.',
+    tools: ['pattern_set', 'mockup_list', 'mockup_place', 'brand_presentation', 'brand_site', 'presentation_check'],
   },
   {
     title: 'Designs from data',
@@ -63,7 +68,7 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Making fonts',
     intro: 'A font of your own: glyph cells on a page, drawn from SVG paths, built into OTF and WOFF2 that the file uses. guide_get fonts has the method.',
-    tools: ['font_create', 'font_glyphs_set', 'font_kerning_set', 'font_update', 'font_build', 'fonts_made', 'font_specimen'],
+    tools: ['font_create', 'font_glyphs_set', 'font_kerning_set', 'font_update', 'font_build', 'fonts_made', 'font_specimen', 'text_outline'],
   },
   {
     title: 'Components and libraries',
@@ -83,7 +88,7 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Brands',
     intro: 'Brands as documents: their content, versions, assets, extraction and the brand check.',
-    tools: ['brand_list', 'brand_create', 'brand_rename', 'brand_duplicate', 'brand_delete', 'brand_export', 'brand_link', 'brand_default', 'brand_get', 'brand_book_get', 'brand_book_update', 'brand_update', 'brand_confirm', 'brand_publish', 'brand_versions', 'brand_diff', 'brand_impact', 'brand_apply', 'brand_check', 'voice_check', 'brand_drift', 'brand_extract', 'brand_asset_add', 'brand_asset_list', 'brand_asset_use', 'brand_template_use', 'brand_example_get', 'brand_sheet'],
+    tools: ['brand_list', 'brand_create', 'brand_rename', 'brand_duplicate', 'brand_delete', 'brand_export', 'brand_link', 'brand_default', 'brand_get', 'brand_book_get', 'brand_book_update', 'brand_book_design', 'brand_update', 'brand_confirm', 'brand_publish', 'brand_versions', 'brand_diff', 'brand_impact', 'brand_apply', 'brand_check', 'voice_check', 'brand_drift', 'brand_extract', 'brand_asset_add', 'brand_asset_list', 'brand_asset_use', 'brand_template_use', 'brand_example_get', 'brand_sheet'],
   },
   {
     title: 'Templates',
@@ -98,7 +103,7 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   {
     title: 'Checks',
     intro: 'Measure a design: lint, widths, pixel differences, drift from its live site, against the real app, and saved checks of the file.',
-    tools: ['design_lint', 'a11y_audit', 'compliance_check', 'compliance_statement', 'responsive_check', 'visual_diff', 'drift_check', 'tomacco_compare', 'check_list', 'check_set', 'check_delete', 'check_run'],
+    tools: ['design_lint', 'design_critique', 'a11y_audit', 'compliance_check', 'compliance_statement', 'responsive_check', 'visual_diff', 'drift_check', 'tomacco_compare', 'check_list', 'check_set', 'check_delete', 'check_run'],
   },
   {
     title: 'Responsive variants and prototypes',

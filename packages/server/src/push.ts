@@ -329,6 +329,11 @@ export class PushNotices {
     }
   }
 
+  /** An agent rings the person: who and which file, as every notice here, never its question. To phones that take run notices. */
+  incomingCall(agent: string, fileId: string, fileName: string): void {
+    this.notify('run', { kind: 'run', title: `${agentName(agent)} needs you`, body: fileName.slice(0, NAME_LIMIT), url: `#/file/${fileId}`, tag: `bogen-call-${fileId}` });
+  }
+
   private notify(kind: PushKind, payload: PushPayload): void {
     this.notifyFirst([[kind, payload]]);
   }

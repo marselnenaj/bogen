@@ -2,7 +2,7 @@ import { parseDocument } from 'htmlparser2';
 import render from 'dom-serializer';
 import { Element, isTag, isText, type ChildNode } from 'domhandler';
 import { escapeAttr, escapeHtml, parseStyle, styleToCss } from './css.ts';
-import { KEPT_ATTRS, safeUrl } from './html-import.ts';
+import { KEPT_ATTRS, keptAttr, safeUrl } from './html-import.ts';
 
 /**
  * The last pass over a page before it is published as a website or shared with a client. It takes the
@@ -272,7 +272,9 @@ export function cleanPublishedPage(source: string, options: CleanOptions): Clean
         if (!/[<>]/.test(v) && !/javascript:/i.test(v)) attrs[k] = v;
         continue;
       }
-      if (KEPT_ATTRS.has(key) || EXTRA_ATTRS.has(key) || /^aria-[a-z]+$/.test(key)) attrs[key] = v;
+      // The structural attributes a layer may hold (popovers, exclusive details, form controls, focus order) work on
+      // a published page without script, so they stay, each checked by value again.
+      if (KEPT_ATTRS.has(key) || EXTRA_ATTRS.has(key) || /^aria-[a-z]+$/.test(key) || keptAttr(key, v)) attrs[key] = v;
     }
     if (name === 'iframe') {
       if (!info.frame) {

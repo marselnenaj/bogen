@@ -1,8 +1,8 @@
-import { BRAND_BOOK_CHAPTERS, brandBookMarkdown, brandBookReadiness } from './brand-book.ts';
+import { brandBookMarkdown, brandBookReadiness } from './brand-book.ts';
 import { ALL_LANGUAGES, brandLanguages, brandLanguagesLine, itemLanguage, itemsForLanguage, writeInLine, type BrandLanguages } from './brand-language.ts';
 import { voiceProfile, voiceProfileLines } from './brand-voice.ts';
-import { bindingFields, confirmed, contrastRatio, familyStack, luminance, normalizeColor, pairingTable, resolveBrandColor, type BrandData, type BrandFamily, type BrandRule, type BrandVoiceExample, type BrandWord } from './brand.ts';
-import { escapeAttr, escapeHtml } from './css.ts';
+import { bindingFields, confirmed, familyStack, pairingTable, resolveBrandColor, type BrandData, type BrandRule, type BrandVoiceExample, type BrandWord } from './brand.ts';
+import { brandBookHtml } from './brand-book-html.ts';
 
 /**
  * What a brand says, in the forms that leave the document: a short summary for tool results, a brief for runs,
@@ -130,6 +130,8 @@ export function brandCompact(data: BrandData, options: { writeIn?: { tag: string
     },
     ...(data.book ? { brandbook: { ...brandBookReadiness(data), chapters: data.book.chapters.map((c) => ({ id: c.id, status: c.status, ...(c.status === 'confirmed' ? { guidance: clip(c.markdown, 480) } : {}) })) } } : {}),
     examples: confirmed(data.artboards).map((a) => ({ id: a.id, layer: a.nodeId, name: a.name, verdict: a.verdict, ...(a.template ? { template: true } : {}), ...(a.note ? { note: a.note } : {}) })),
+    ...(confirmed(data.treatments).length ? { image_treatments: confirmed(data.treatments).map((tr) => ({ preset: tr.name, mode: tr.mode, inks: tr.inks, ...(tr.ground ? { ground: tr.ground } : {}), ...(tr.note ? { note: tr.note } : {}) })) } : {}),
+    ...(confirmed(data.devices ?? []).length ? { graphic_devices: confirmed(data.devices).map((d) => ({ id: d.id, name: d.name, use: d.use || undefined, draw_with: `pattern_set with preset "${d.name}"` })) } : {}),
   };
   return compact;
 }
@@ -158,6 +160,7 @@ export function brandBrief(data: BrandData, info: { id: string; version?: number
     `- The brand's tokens are already in this file, and its type scale is there as text styles, named as in type_scale. Style with var(--name) rather than literal values, and set the body font on the artboard so that nothing falls back to a default font. Sizes come from type_scale, gaps from spacing_px, corners from radius_px.`,
     `- Place logos with brand_asset_use. It picks the variant for the background and keeps minimum size and clear space. Do not draw or retype a logo.`,
     `- Write copy in the brand's voice and invent no claims or numbers. The examples list what good looks like: look at one with brand_example_get. brand_template_use copies a template.`,
+    ...(confirmed(data.treatments).length ? ['- Photos take the brand\'s look through image_treatment with one of image_treatments as preset, never through a filter of your own.'] : []),
     ...(languages ? [`- Languages: ${languages} Set lang on an artboard whose copy is in another language than the file's, so that the checks judge it in that language.`] : []),
     `- Before you finish, call brand_check on the file and fix every hard violation; fix true applies the safe ones. Look at what it lists as a checklist in a canvas_screenshot, since no machine can check those.`,
     ...(data.book ? ['- Read relevant full chapters with brand_book_get before substantial work. Only confirmed chapters are guidance; drafts and open questions are proposals. Current user instructions and structured brand tokens/rules take precedence. Brandbook readiness is documentation coverage, not proof of visual quality or accessibility.'] : []),
@@ -277,6 +280,10 @@ export function brandMarkdown(data: BrandData, info: { version?: number } = {}):
   if (layout) out.push('## Spacing and layout', md(layout.split('\n').slice(1).join('\n')));
   const imagery = brandRulesText(data, 'imagery');
   if (imagery) out.push('## Imagery and iconography', md(imagery.split('\n').slice(1).join('\n')));
+  if (data.treatments.length) {
+    out.push('## Image treatment', 'Photos take the brand\'s colours through these treatments. Agents apply one with image_treatment and its preset, so every photo has the same look.');
+    out.push(table(['Treatment', 'Mode', 'Inks', 'Ground', 'Settings'], data.treatments.map((tr) => [`${md(tr.name)}${mark(tr)}`, tr.mode, md(tr.inks.join(', ')), md(tr.ground || 'none'), md(Object.entries(tr.params).map(([k, v]) => `${k} ${v}`).join(', '))])));
+  }
   const voice = brandRulesText(data, 'voice');
   if (voice) out.push('## Voice', md(voice.split('\n').slice(1).join('\n')));
   const rules = brandRulesText(data, 'rules');
@@ -298,99 +305,7 @@ function table(head: string[], rows: string[][]): string {
 
 // ---------------------------------------------------------------- the sheet
 
-const SHEET_WIDTH = 1200;
-const SHEET_INK = '#1c1c1a';
-const SHEET_DIM = '#6b6a66';
-const SHEET_BG = '#ffffff';
-const SHEET_RULE = '#e4e3e0';
-
-function onColor(bg: string): string {
-  return luminance(bg) > 0.4 ? '#111111' : '#ffffff';
-}
-
-function css(style: Record<string, string | number>): string {
-  return escapeAttr(Object.entries(style).map(([k, v]) => `${k}:${v}`).join(';'));
-}
-
-function fontOf(data: BrandData, role: string): BrandFamily | undefined {
-  return data.families.find((f) => f.role === role) ?? data.families[0];
-}
-
-/**
- * The brand sheet as HTML with inline styles, generated from the data and nothing else. It goes through `importHtml`
- * like any other HTML, so it is one artboard and shows up as what the canvas draws.
- */
+/** The brand sheet is the brand book (brand-book-html.ts): kept under its old name for callers that use it. */
 export function brandSheetHtml(data: BrandData): string {
-  const f = data.fields;
-  const body = fontOf(data, 'body');
-  const display = fontOf(data, 'display');
-  const bodyStack = body ? familyStack(body) : 'system-ui, sans-serif';
-  const displayStack = display ? familyStack(display) : bodyStack;
-  const head = (title: string) => `<h2 style="${css({ margin: 0, 'font-size': '20px', 'font-weight': 600, color: SHEET_INK, 'font-family': bodyStack, 'padding-bottom': '8px', 'border-bottom': `1px solid ${SHEET_RULE}` })}">${escapeHtml(title)}</h2>`;
-  const label = (value: string) => `<p style="${css({ margin: 0, 'font-size': '13px', 'line-height': '18px', color: SHEET_DIM, 'font-family': bodyStack })}">${escapeHtml(value)}</p>`;
-  const section = (title: string, inner: string) => `<section style="display:flex;flex-direction:column;gap:16px">${head(title)}${inner}</section>`;
-  const parts: string[] = [];
-
-  parts.push(`<header style="display:flex;flex-direction:column;gap:8px"><h1 style="${css({ margin: 0, 'font-size': '64px', 'line-height': '68px', 'font-weight': 700, color: SHEET_INK, 'font-family': displayStack })}">${escapeHtml(f.name || 'Brand')}</h1>${f.positioning ? `<p style="${css({ margin: 0, 'font-size': '20px', 'line-height': '28px', color: SHEET_INK, 'font-family': bodyStack, 'max-width': '760px' })}">${escapeHtml(f.positioning)}</p>` : ''}${f.audience ? label(`For ${f.audience}`) : ''}</header>`);
-
-  if (data.logos.length) {
-    const cells = data.logos.map((l) => {
-      const bg = resolveBrandColor(data, l.background)?.value ?? normalizeColor(l.background) ?? (l.background === 'dark' ? '#111111' : '#ffffff');
-      const pic = l.asset
-        ? `<img src="${escapeAttr(l.asset)}" alt="${escapeAttr(l.name)}" style="width:120px;height:80px;object-fit:contain">`
-        : `<div style="width:120px;height:80px">${l.svg ?? ''}</div>`;
-      return `<div style="display:flex;flex-direction:column;gap:6px;width:270px"><div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'center', height: '160px', background: bg, border: `1px solid ${SHEET_RULE}` })}">${pic}</div>${label(`${l.name}${l.suggested ? ' (suggestion)' : ''}. For ${logoBackground(data, l.background)}. At least ${l.minWidth}px wide, ${l.clearSpace}px clear space.`)}</div>`;
-    }).join('');
-    parts.push(section('Logos', `<div style="display:flex;flex-wrap:wrap;gap:24px">${cells}</div>`));
-  }
-
-  if (data.colors.length) {
-    const swatches = data.colors.map((c) => `<div style="display:flex;flex-direction:column;gap:6px;width:174px"><div style="${css({ height: '96px', background: c.value, border: `1px solid ${SHEET_RULE}`, display: 'flex', 'align-items': 'flex-end', padding: '8px' })}"><span style="${css({ 'font-size': '13px', color: onColor(c.value), 'font-family': bodyStack })}">${escapeHtml(c.value)}</span></div>${label(`${c.name}${c.suggested ? ' (suggestion)' : ''}${c.role ? `, ${c.role}` : ''}. --${c.token}`)}</div>`).join('');
-    parts.push(section('Colour', `<div style="display:flex;flex-wrap:wrap;gap:16px">${swatches}</div>`));
-    const pairs = pairingTable(data);
-    if (pairs.length) {
-      const cells = pairs.map((p) => `<div style="display:flex;flex-direction:column;gap:6px;width:174px"><div style="${css({ height: '64px', background: p.bg.value, color: p.fg.value, 'font-size': '24px', 'font-weight': 600, display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': displayStack, border: `1px solid ${SHEET_RULE}` })}">Aa</div>${label(`${p.verdict === 'allow' ? 'Allowed' : 'Forbidden'}: ${p.fg.name} on ${p.bg.name}, ${contrastRatio(p.fg.value, p.bg.value)}:1`)}</div>`).join('');
-      parts.push(section('Pairings', `<div style="display:flex;flex-wrap:wrap;gap:16px">${cells}</div>`));
-    }
-  }
-
-  if (data.families.length || data.typeScale.length) {
-    const fams = data.families.map((x) => `<div style="display:flex;flex-direction:column;gap:4px"><p style="${css({ margin: 0, 'font-size': '32px', 'line-height': '40px', 'font-family': familyStack(x), color: SHEET_INK })}">${escapeHtml(x.family)}</p>${label(`${x.role}${x.weights.length ? `, weights ${x.weights.join(', ')}` : ''}${x.license ? `. Licence: ${x.license}` : ''}${x.suggested ? ' (suggestion)' : ''}`)}</div>`).join('');
-    const steps = data.typeScale.map((t) => {
-      const fam = data.families.find((x) => x.id === t.family || x.family === t.family);
-      const size = Math.min(t.size, 96);
-      return `<div style="display:flex;align-items:baseline;gap:24px"><div style="width:220px;flex:none">${label(`${t.name}. ${t.size}px${t.weight ? `, ${t.weight}` : ''}${t.lineHeight ? `, ${t.lineHeight}` : ''}${t.tracking ? `, ${t.tracking}` : ''}`)}</div><p style="${css({ margin: 0, 'font-size': `${size}px`, ...(t.weight ? { 'font-weight': t.weight } : {}), ...(t.tracking ? { 'letter-spacing': t.tracking } : {}), 'line-height': t.lineHeight || '1.15', 'font-family': fam ? familyStack(fam) : bodyStack, color: SHEET_INK })}">${escapeHtml(f.name || 'Brand')}</p></div>`;
-    }).join('');
-    parts.push(section('Typography', `<div style="display:flex;flex-direction:column;gap:16px">${fams}${steps}</div>`));
-  }
-
-  if (data.spacing.length || data.radius.length || f.shadows === 'none' || f.gradients === 'none' || f.grid || f.layoutNotes) {
-    const spacing = data.spacing.map((s) => `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start"><div style="${css({ width: `${Math.min(s.value, 200)}px`, height: '16px', background: SHEET_INK })}"></div>${label(`${s.value}px`)}</div>`).join('');
-    const radius = data.radius.map((s) => `<div style="display:flex;flex-direction:column;gap:4px"><div style="${css({ width: '64px', height: '64px', background: SHEET_RULE, 'border-radius': `${Math.min(s.value, 999)}px` })}"></div>${label(`${s.value}px`)}</div>`).join('');
-    const notes = [f.shadows === 'none' ? 'No shadows.' : '', f.gradients === 'none' ? 'No gradients.' : '', f.grid && `Grid: ${f.grid}`, f.layoutNotes].filter(Boolean).map((n) => label(n as string)).join('');
-    parts.push(section('Spacing and layout', `<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end">${spacing}</div><div style="display:flex;flex-wrap:wrap;gap:16px">${radius}</div>${notes}`));
-  }
-
-  if (data.book) parts.push(section('Brandbook chapters', label('This PDF is the visual foundation and chapter index. Export Markdown for the full editable book, sources and open questions.') + BRAND_BOOK_CHAPTERS.map((def) => {
-    const c = data.book?.chapters.find((c) => c.id === def.id);
-    return label(`${def.title}: ${c?.status ?? 'open'}${c?.questions ? ' — open questions' : ''}`);
-  }).join('')));
-
-  const ruleList = (title: string, rules: BrandRule[]) => (rules.length ? `<div style="display:flex;flex-direction:column;gap:8px;flex:1 1 0"><h3 style="${css({ margin: 0, 'font-size': '15px', 'font-weight': 600, color: SHEET_INK, 'font-family': bodyStack })}">${escapeHtml(title)}</h3>${rules.map((r) => `<p style="${css({ margin: 0, 'font-size': '15px', 'line-height': '22px', color: SHEET_INK, 'font-family': bodyStack })}">${r.severity === 'hard' ? 'Must. ' : 'Should. '}${escapeHtml(r.text)}${r.suggested ? ' (suggestion)' : ''}${r.flagged ? ' (ignored until reviewed)' : ''}</p>`).join('')}</div>` : '');
-  if (data.rules.length) parts.push(section('Rules', `<div style="display:flex;gap:32px">${ruleList('Do', data.rules.filter((r) => r.kind === 'do'))}${ruleList('Do not', data.rules.filter((r) => r.kind === 'dont'))}</div>`));
-
-  if (f.tone || data.words.length || data.voiceExamples.length) {
-    const words = (use: 'use' | 'avoid') => data.words.filter((w) => w.use === use).map((w) => w.word).join(', ');
-    const voice = [f.tone && label(`Tone: ${f.tone}`), words('use') && label(`Words to use: ${words('use')}`), words('avoid') && label(`Words to avoid: ${words('avoid')}`)].filter(Boolean).join('');
-    // Each example in the language it is written in, so that it is read and hyphenated as that language.
-    const primary = brandLanguages(data).primary;
-    const said = (e: { lang?: string }, text: string) => {
-      const tag = itemLanguage(e, primary);
-      return tag && tag !== ALL_LANGUAGES ? `<span lang="${escapeAttr(tag)}">${escapeHtml(text)}</span>` : escapeHtml(text);
-    };
-    const examples = data.voiceExamples.map((e) => `<div style="display:flex;gap:32px">${e.good ? `<p style="${css({ margin: 0, flex: '1 1 0', 'font-size': '15px', 'line-height': '22px', color: SHEET_INK, 'font-family': bodyStack })}">Good: ${said(e, e.good)}</p>` : ''}${e.bad ? `<p style="${css({ margin: 0, flex: '1 1 0', 'font-size': '15px', 'line-height': '22px', color: SHEET_DIM, 'font-family': bodyStack })}">Bad: ${said(e, e.bad)}</p>` : ''}</div>`).join('');
-    parts.push(section('Voice', `${voice}${examples}`));
-  }
-
-  return `<main data-name="Brand sheet" style="${css({ width: `${SHEET_WIDTH}px`, padding: '64px', display: 'flex', 'flex-direction': 'column', gap: '48px', background: SHEET_BG, 'font-family': bodyStack, color: SHEET_INK })}">${parts.join('')}</main>`;
+  return brandBookHtml(data);
 }

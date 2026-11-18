@@ -1,6 +1,6 @@
 import { inspectorStyle, updateScoped } from '../../ops/breakpoints.ts';
 import type { BogenNode } from '@bogen/core';
-import { Link2, Link2Off } from 'lucide-react';
+import { Link2, Link2Off, MoveHorizontal, MoveVertical } from 'lucide-react';
 import { computedBox, elOf, flowOf, isFlow } from '../../canvas/measure.ts';
 import { session } from '../../doc/session.ts';
 import { detectH, detectV, patchH, patchV, type HConstraint, type VConstraint } from '../../lib/constraints.ts';
@@ -61,8 +61,8 @@ export function ConstraintsRow({ nodes }: { nodes: BogenNode[] }) {
   };
   return (
     <Row>
-      <SelectField<HConstraint> label="↔" title={t('Horizontal constraint')} value={hs === MIXED ? MIXED : hs} testId="insp-constraint-h" onChange={(k) => set('h', k)} options={[{ value: 'left', label: t('Left') }, { value: 'right', label: t('Right') }, { value: 'both', label: t('Left and right') }, { value: 'center', label: t('Center') }, { value: 'scale', label: t('Scale') }]} />
-      <SelectField<VConstraint> label="↕" title={t('Vertical constraint')} value={vs === MIXED ? MIXED : vs} testId="insp-constraint-v" onChange={(k) => set('v', k)} options={[{ value: 'top', label: t('Top') }, { value: 'bottom', label: t('Bottom') }, { value: 'both', label: t('Top and bottom') }, { value: 'center', label: t('Center') }, { value: 'scale', label: t('Scale') }]} />
+      <SelectField<HConstraint> label={<MoveHorizontal size={12} aria-hidden="true" />} title={t('Horizontal constraint')} value={hs === MIXED ? MIXED : hs} testId="insp-constraint-h" onChange={(k) => set('h', k)} options={[{ value: 'left', label: t('Left') }, { value: 'right', label: t('Right') }, { value: 'both', label: t('Left and right') }, { value: 'center', label: t('Center') }, { value: 'scale', label: t('Scale') }]} />
+      <SelectField<VConstraint> label={<MoveVertical size={12} aria-hidden="true" />} title={t('Vertical constraint')} value={vs === MIXED ? MIXED : vs} testId="insp-constraint-v" onChange={(k) => set('v', k)} options={[{ value: 'top', label: t('Top') }, { value: 'bottom', label: t('Bottom') }, { value: 'both', label: t('Top and bottom') }, { value: 'center', label: t('Center') }, { value: 'scale', label: t('Scale') }]} />
     </Row>
   );
 }

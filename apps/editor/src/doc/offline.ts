@@ -120,6 +120,12 @@ export function queueOf(files: Iterable<StoredFile>): { changes: number; files: 
   return { changes, files: count };
 }
 
+/** Forgets the stored copy of a file, for a file whose copy on the computer was replaced (teams-1, file-reset). */
+export async function forgetStoredCopy(id: string): Promise<void> {
+  if (!OfflineDoc.enabled()) return;
+  await dropFile(id).catch(() => {});
+}
+
 async function dropFile(id: string): Promise<void> {
   const d = await db();
   const tx = d.transaction(['files', 'updates'], 'readwrite');

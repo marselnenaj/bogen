@@ -79,6 +79,8 @@ describe('WebMCP against a real server', () => {
     expect(mc.tools.get('html_write')!.annotations).toMatchObject({ readOnlyHint: false, consequentialHint: false });
     expect(mc.tools.get('layer_delete')!.annotations?.consequentialHint).toBe(true);
     expect(mc.tools.get('export_file')!.annotations?.consequentialHint).toBe(true);
+    // With overwrite it replaces a file under the home folder, so a client asks first.
+    expect(listed.find((t) => t.name === 'export_file')!.annotations?.destructiveHint).toBe(true);
     await webmcp.stop();
     expect(mc.tools.size).toBe(0);
   });
@@ -150,9 +152,15 @@ describe('WebMCP against a real server', () => {
     expect(asked[0]).toContain(id);
     expect(room.doc.getNode(id)).toBeDefined();
 
+    // export_file can replace a file on this computer, so it is asked as destructive.
     const exportRefused = await mc.execute('export_file', { node_ids: [id], format: 'png' });
     expect(exportRefused.isError).toBe(true);
-    expect(asked[1]).toMatch(/reaches past this file/);
+    expect(asked[1]).toContain('export_file');
+    expect(asked[1]).toMatch(/removes or replaces something/);
+    // A tool that only reaches past the file is asked as such.
+    const driftRefused = await mc.execute('drift_check', {});
+    expect(driftRefused.isError).toBe(true);
+    expect(asked[2]).toMatch(/reaches past this file/);
 
     answer = true;
     const deleted = await mc.execute('layer_delete', { node_ids: [id] });

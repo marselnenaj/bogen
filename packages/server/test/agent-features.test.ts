@@ -68,7 +68,13 @@ const rpc = async (session, id, method, params) => {
     log({ kind: 'review', agent, screenshot: !screenshot.isError, result: review });
   }
   if (mode === 'critique') {
-    const listed = (await rpc(session, 2, 'tools/list', {})).body.result.tools;
+    // A run lists one tool per area; each operation, with its own annotations, comes from the schema tool.
+    const listed = [];
+    for (const t of (await rpc(session, 2, 'tools/list', {})).body.result.tools) {
+      const ops = t.inputSchema.properties?.operation?.enum;
+      if (!ops) { listed.push(t); continue; }
+      for (const op of ops) listed.push(JSON.parse((await tool('schema', { operation: op })).content[0].text));
+    }
     const layer = /selected these layers: (\\w+)/.exec(text)[1];
     const write = await tool('layer_style', { node_ids: [layer], style: { color: 'red' } });
     const lint = await tool('design_lint', { node_id: layer, fix: true });

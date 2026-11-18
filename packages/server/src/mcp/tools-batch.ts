@@ -4,6 +4,7 @@ import type { BogenServer } from '../http/server.ts';
 import { agentOrigin, type Room } from '../sync.ts';
 import { errorMessage } from '../util.ts';
 import { fileIdArg, isToolResult, ToolContext, type Session, type ToolDefiner } from './kit.ts';
+import { assignWriter } from '../teams/writers.ts';
 
 const BATCHABLE = [
   'artboard_create', 'html_write', 'layer_style', 'layer_text', 'layer_rename', 'layer_move', 'layer_duplicate', 'layer_delete', 'layer_set_flags', 'layer_attrs',
@@ -66,6 +67,8 @@ function resolveRefs(value: unknown, results: Map<string, unknown>): unknown {
  */
 export function scratchCopy(room: Room): { y: Y.Doc; before: Uint8Array; room: Room } {
   const y = new Y.Doc({ gc: false });
+  // A team file's copy writes with an id of this device, so the change can be signed for the team.
+  assignWriter(room.id, y);
   Y.applyUpdate(y, Y.encodeStateAsUpdate(room.doc.y));
   const before = Y.encodeStateVector(y);
   return { y, before, room: Object.create(room, { doc: { value: new BogenDoc(y) } }) as Room };
@@ -115,8 +118,17 @@ Allowed tools: ${BATCHABLE.join(', ')}. For one change, just call the tool. Keep
           return { ok: false, dry_run: true, applied: false, failed_step: i, error: message, steps: report };
         }
       }
-      if (dry_run) return { ok: true, dry_run: true, applied: false, steps: report };
       const update = Y.encodeStateAsUpdate(scratchY, before);
+      // The steps wrote to a private copy, past the checks every write passes: a critique writes nothing, a write
+      // stays on the branch the session started on, and inside an open revision only its copies change. The whole
+      // difference is checked against the real file here, for a dry run too, so it does not promise what is refused.
+      try {
+        ctx.preflight(room, update);
+      } catch (e) {
+        if (!dry_run) throw e;
+        return { ok: false, dry_run: true, applied: false, error: errorMessage(e), steps: report };
+      }
+      if (dry_run) return { ok: true, dry_run: true, applied: false, steps: report };
       room.undoManagerFor(ctx.agent);
       ctx.wrote = true;
       ctx.canvasOnly = canvasOnly;

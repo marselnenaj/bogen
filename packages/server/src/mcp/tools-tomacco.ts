@@ -1,3 +1,4 @@
+import { agentImage, layoutMap } from '../layout-map.ts';
 import { z } from 'zod';
 import { compareWithScreen, exportLive, listDevices, readBundle, tomaccoStatus, type AppScreen } from '../tomacco.ts';
 import { importScreenInto } from '../http/tomacco-routes.ts';
@@ -98,7 +99,8 @@ export function registerTomaccoTools(define: ToolDefiner): void {
     return {
       content: [
         { type: 'text', text: JSON.stringify(summary, null, 1) },
-        { type: 'image', data: Buffer.from(out.diff).toString('base64'), mimeType: 'image/png' },
+        await agentImage(ctx.app.renderer, { bytes: out.diff, mime: 'image/png' }),
+        { type: 'text', text: await layoutMap(room.doc, ctx.app.renderer, { nodeIds: [node_id] }) },
       ],
     };
   });

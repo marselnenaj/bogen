@@ -1,10 +1,10 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { EditLocation, RecentEdit } from '@bogen/core';
-import { onServerEvent } from './events.ts';
+import { onEventsReconnect, onServerEvent } from './events.ts';
 import { session } from '../doc/session.ts';
 import { editor, useEditor } from '../state/store.ts';
 import { jumpToLayers } from '../ops/jump.ts';
-import { formatDate } from '../i18n/format.ts';
+import { formatDate, formatTime } from '../i18n/format.ts';
 
 const EMPTY: readonly RecentEdit[] = [];
 type Entry = { items: readonly RecentEdit[]; listeners: Set<() => void>; stop?: () => void };
@@ -39,7 +39,8 @@ function subscribe(id: string, notify: () => void): () => void {
       if ((event.t !== 'history' || event.fileId !== id) && event.t !== 'files') return;
       if (!timer) timer = window.setTimeout(() => { timer = 0; void load(); }, 250);
     });
-    entry.stop = () => { active = false; generation++; off(); clearTimeout(timer); for (const c of controllers) c.abort(); };
+    const offReconnect = onEventsReconnect(() => void load());
+    entry.stop = () => { active = false; generation++; off(); offReconnect(); clearTimeout(timer); for (const c of controllers) c.abort(); };
     void load();
   }
   return () => { entry.listeners.delete(notify); if (!entry.listeners.size) { entry.stop?.(); delete entry.stop; } };
@@ -58,6 +59,10 @@ export function recentByPage(items: readonly RecentEdit[]): Map<string, RecentEd
 }
 export function editDate(at: number): string {
   return formatDate(at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+/** Short enough for a row: the time of an edit made today, the day of an older one. The full date goes in the title. */
+export function editTime(at: number): string {
+  return new Date(at).toDateString() === new Date().toDateString() ? formatTime(at) : formatDate(at, { month: 'short', day: 'numeric' });
 }
 export function locationName(location: EditLocation): string {
   return [location.pageName, location.screenName].filter(Boolean).join(' · ');

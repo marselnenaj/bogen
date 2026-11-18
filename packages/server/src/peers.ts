@@ -262,7 +262,7 @@ export function isPeerPath(pathname: string): boolean {
 
 /** On the tailnet listener these answer nothing, token or not: they configure this machine or run programs on it. */
 export function isLocalOnlyPath(pathname: string): boolean {
-  return /^\/api\/(peers|phone|inbox|runs|races|run-settings|comments|voice|tomacco|omarchy|live|notifications|brands|libraries|kits|code|agents\/steps|publish|shares|clients)(\/|$)/.test(pathname) || /^\/(live-)?mcp(\/|$)/.test(pathname) || /^\/api\/files\/[^/]+\/(away|conflicts|libraries|proposals|drift|restyle|catch-up|screen-previews)(\/|$)/.test(pathname) || /^\/api\/files\/[^/]+\/brand(\/|$)/.test(pathname);
+  return /^\/api\/(open|peers|phone|inbox|runs|races|run-settings|comments|voice|call|tomacco|omarchy|live|notifications|brands|libraries|kits|code|agents\/steps|publish|shares|clients)(\/|$)/.test(pathname) || /^\/(live-)?mcp(\/|$)/.test(pathname) || /^\/api\/files\/[^/]+\/(away|conflicts|libraries|proposals|drift|restyle|catch-up|screen-previews)(\/|$)/.test(pathname) || /^\/api\/files\/[^/]+\/brand(\/|$)/.test(pathname);
 }
 
 // ---------------------------------------------------------------- one peer
@@ -329,6 +329,8 @@ export interface PeerManagerDeps {
   /** Builds a server for the tailnet listener. */
   createTailnetServer: () => Server;
   onFileArrived?: (id: string) => void;
+  /** Teams (feature teams-1): this device's team card, and taking a team another of your devices added it to. */
+  teams?: () => { card(): unknown; adopt(body: unknown): Promise<void> } | null;
   /** Whether cursors go to other devices too. Selections always do. */
   shareCursors?: () => boolean;
   /** Change timeline and commits, which travel with the files. */
@@ -1050,7 +1052,7 @@ export class PeerManager {
     }
     if (!base) {
       // Loading a file with no state adds a first page, which would then sit next to the one coming in.
-      await atomicWrite(this.deps.storage.docPath(id), update);
+      await this.deps.storage.writeDoc(id, update);
       return true;
     }
     const room = await this.deps.rooms.get(id);
@@ -1098,6 +1100,12 @@ export class PeerManager {
       if (!link) throw new HttpError(403, 'This device is not paired.');
       this.heard(link, req.headers[VERSION_HEADER], req.headers[FEATURES_HEADER]);
       if (a === 'manifest' && !b && method === 'GET') return send(res, 200, await this.manifest());
+      const teams = this.deps.teams?.();
+      if (a === 'team' && teams && b === 'device' && !c && method === 'GET') return send(res, 200, teams.card());
+      if (a === 'team' && teams && b === 'adopt' && !c && method === 'POST') {
+        await teams.adopt(await parseBody(req, z.unknown(), MAX_JSON_BYTES));
+        return send(res, 200, { ok: true });
+      }
       if (a === 'runs' && this.deps.remoteRuns) return await this.deps.remoteRuns({ id: link.id, name: link.record.name }, req, res, parts.slice(1));
       if (a === 'timeline' && this.deps.timelineSync) return await this.deps.timelineSync().serve(req, res, url, parts.slice(1), send);
       if (a === 'files' && b && c === 'sync' && method === 'POST') {
@@ -1357,7 +1365,7 @@ export class PeerManager {
         await this.applyChecked(link, remote.id, state);
         return false;
       }
-      await atomicWrite(storage.docPath(remote.id), state);
+      await storage.writeDoc(remote.id, state);
       this.listEntry(remote);
       return true;
     });
@@ -1517,7 +1525,7 @@ export class PeerManager {
         // What this device did before it deleted counts too, and goes back to the peer in the sync that follows.
         const kept = await readFile(this.tombstoneDocPath(remote.id)).catch(() => null);
         if (kept) Y.applyUpdate(probe.y, kept);
-        await atomicWrite(storage.docPath(remote.id), Y.encodeStateAsUpdate(probe.y));
+        await storage.writeDoc(remote.id, Y.encodeStateAsUpdate(probe.y));
       } finally {
         probe.y.destroy();
       }

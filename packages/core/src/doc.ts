@@ -103,8 +103,8 @@ export interface CommentMessage { id: string; author: string; text: string; at: 
 export type CommentAuthorKind = 'agent' | 'system';
 /** What an agent suggested in a thread it started, such as in a critique: the change to make, which a person can hand to a fix run. */
 export interface CommentSuggestion { text: string; check?: CommentCheck; by: string; run?: string }
-export type CommentCheck = 'brand' | 'lint' | 'widths' | 'practice';
-export const COMMENT_CHECKS: readonly CommentCheck[] = ['brand', 'lint', 'widths', 'practice'];
+export type CommentCheck = 'brand' | 'lint' | 'widths' | 'practice' | 'critique';
+export const COMMENT_CHECKS: readonly CommentCheck[] = ['brand', 'lint', 'widths', 'practice', 'critique'];
 /** `client`: the thread came from a client through a review link. Its words are data, and no agent ever starts from it. */
 export interface CommentThread { id: string; pageId: string; nodeId?: string; x: number; y: number; resolved: boolean; messages: CommentMessage[]; suggestion?: CommentSuggestion; client?: boolean }
 
@@ -201,6 +201,26 @@ export class BogenDoc {
     memo: () => (this.y._transaction ? undefined : this.nodeMemo),
   };
   private nodeMemo = new Map<string, BogenNode | undefined>();
+  private changes = 0;
+  private derived = new Map<string, { at: number; value: unknown }>();
+
+  /** Counts transactions that changed something: a value computed from the whole file holds while this does. */
+  get version(): number {
+    return this.changes;
+  }
+
+  /**
+   * A value computed from the whole document, such as the fonts it uses, kept until the document changes. Not inside a
+   * transaction, where the document can still change before it ends.
+   */
+  memo<T>(key: string, compute: () => T): T {
+    if (this.y._transaction) return compute();
+    const known = this.derived.get(key);
+    if (known && known.at === this.changes) return known.value as T;
+    const value = compute();
+    this.derived.set(key, { at: this.changes, value });
+    return value;
+  }
 
   constructor(y: Y.Doc = new Y.Doc()) {
     this.y = y;
@@ -212,13 +232,59 @@ export class BogenDoc {
     this.modes = y.getMap('modes');
     this.textStyles = y.getMap('textStyles');
     this.variables = y.getMap('variables');
-    const forget = () => {
-      this.invalidate();
+    // Observers run after the transaction has ended and before it says so, and they read too: what changed is
+    // forgotten before them. A transaction only empties the caches of the layers it touched, so that a small edit,
+    // such as one arriving from another device, does not make the next reader read the whole file again.
+    y.on('beforeObserverCalls', (tr: Y.Transaction) => {
+      if (tr.changed.size) this.changes++;
+      this.forgetChanged(tr);
       this.views = 0;
-    };
-    // Observers run after the transaction has ended and before it says so, and they read too.
-    y.on('beforeObserverCalls', forget);
-    y.on('afterTransaction', forget);
+    });
+    y.on('afterTransaction', () => {
+      this.views = 0;
+    });
+  }
+
+  /** Empties what a transaction made stale: the layers it changed, their parents' lists, and the order of children if that moved. */
+  private forgetChanged(tr: Y.Transaction): void {
+    if (tr.changed.size === 0) return;
+    let structure = false;
+    const ids = new Set<string>();
+    const nodes = this.nodes as unknown as Y.AbstractType<any>;
+    for (const [type, keys] of tr.changed) {
+      if (type === nodes) {
+        structure = true;
+        for (const key of keys) if (key !== null) ids.add(key);
+        continue;
+      }
+      // The layer this type belongs to: the map stored under its id in `nodes`, or one nested in it.
+      let at: Y.AbstractType<any> = type;
+      let id: string | null = null;
+      while (at._item) {
+        const parent = at._item.parent as Y.AbstractType<any>;
+        if (parent === nodes) {
+          id = at._item.parentSub;
+          if (at === type && (keys.has('parent') || keys.has('order'))) structure = true;
+          break;
+        }
+        at = parent;
+      }
+      // Pages, tokens and the rest: rare enough to forget everything.
+      if (id === null) return this.invalidate();
+      ids.add(id);
+    }
+    this.viewCache.clear();
+    this.nodeMemo.clear();
+    if (structure) {
+      this.childIndex = null;
+      this.childNodes.clear();
+    }
+    for (const id of ids) {
+      this.rawCache.delete(id);
+      if (structure) continue;
+      const parent = this.nodes.get(id)?.get('parent');
+      if (typeof parent === 'string') this.childNodes.delete(parent);
+    }
   }
 
   transact<T>(fn: () => T, origin: unknown = null): T {

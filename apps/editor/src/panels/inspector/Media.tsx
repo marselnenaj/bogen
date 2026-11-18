@@ -2,13 +2,15 @@ import { rectOf } from '../../canvas/measure.ts';
 import { inspectorStyle } from '../../ops/breakpoints.ts';
 import { useEffect, useMemo, useState } from 'react';
 import { CROP_ASPECTS, CROP_ATTR, IMAGE_FILTER_KEYS, IMAGE_FILTERS, parseCrop, parseImageFilters, withImageFilters, type BogenNode, type CropAspect, type ImageFilterKey } from '@bogen/core';
-import { Crop, Minus, PenTool, Plus, Upload } from 'lucide-react';
+import { Crop, Minus, PenTool, Plus, Sparkles, Upload } from 'lucide-react';
 import { startPathEdit } from '../../canvas/pen.ts';
 import { DEFAULT_SHADER, parseColorList, presetToAttrs, SHADER_TYPES, shaderPresets, type ShaderPreset } from '../../lib/shaders.ts';
 import { api, resolveAsset } from '../../lib/api.ts';
 import { fmt } from '../../lib/css-values.ts';
 import { applyAspect, aspectOf, cropOf, setImageFilter, useNaturalSize, vectorizeImage, writeCrop } from '../../ops/image-edit.ts';
 import { pickImage } from '../../ops/images.ts';
+import { generateIntoLayer } from '../../ops/generate-image.ts';
+import { openGenerateImage } from '../GenerateImage.tsx';
 import { setFields } from '../../ops/ops.ts';
 import { capsOf, isClosedMarkup, setCap, setStrokeAlign, setStrokeWidth, strokeAlignOf, strokeWidthOf, type CapKind, type StrokeAlign } from '../../ops/vector.ts';
 import { session } from '../../doc/session.ts';
@@ -51,7 +53,8 @@ export function ShaderSection({ node }: { node: BogenNode }) {
   };
   const keys = useMemo(() => {
     const all = new Set([...Object.keys(defaults), ...Object.keys(attrs)]);
-    all.delete('type');
+    // The effect's own type (such as a dither's 8x8) is written variant, since type names the effect.
+    if (all.delete('type') && 'type' in defaults) all.add('variant');
     return [...all];
   }, [defaults, attrs]);
   const main = keys.filter((k) => !SIZING.has(k));
@@ -60,7 +63,7 @@ export function ShaderSection({ node }: { node: BogenNode }) {
 
   const renderParam = (key: string) => {
     const raw = attrs[key];
-    const dflt = (defaults as Record<string, unknown>)[key];
+    const dflt = (defaults as Record<string, unknown>)[key === 'variant' ? 'type' : key];
     const current: unknown = raw ?? dflt;
     if (key === 'colors') {
       const colors = typeof raw === 'string' ? parseColorList(raw) : ((dflt as string[]) ?? []);
@@ -91,7 +94,10 @@ export function ShaderSection({ node }: { node: BogenNode }) {
     if (key === 'image' || key === 'src') {
       return (
         <div className="stack" key={key}>
-          <button type="button" className="btn" onClick={() => pickImage(async (f) => { const a = await api.upload(f); writeAttr(key, a.src); })}><Upload size={14} /> {t('Choose image')}</button>
+          <div className="image-actions">
+            <button type="button" className="btn" onClick={() => pickImage(async (f) => { const a = await api.upload(f); writeAttr(key, a.src); })}><Upload size={14} /> {t('Choose image')}</button>
+            <button type="button" className="btn" onClick={() => openGenerateImage({ into: node.name, onPick: ({ src }) => writeAttr(key, src) })} data-testid="shader-generate"><Sparkles size={14} /> {t('Generate')}</button>
+          </div>
         </div>
       );
     }
@@ -111,7 +117,10 @@ export function ShaderSection({ node }: { node: BogenNode }) {
         ) : null}
         {typeInfo?.image && !attrs.image ? <div className="hint">{t('This effect works on an image. Choose one below.')}</div> : null}
         {typeInfo?.image && !keys.includes('image') ? (
-          <button type="button" className="btn" onClick={() => pickImage(async (f) => { const a = await api.upload(f); writeAttr('image', a.src); })}><Upload size={14} /> {t('Choose image')}</button>
+          <div className="image-actions">
+            <button type="button" className="btn" onClick={() => pickImage(async (f) => { const a = await api.upload(f); writeAttr('image', a.src); })}><Upload size={14} /> {t('Choose image')}</button>
+            <button type="button" className="btn" onClick={() => openGenerateImage({ into: node.name, onPick: ({ src }) => writeAttr('image', src) })}><Sparkles size={14} /> {t('Generate')}</button>
+          </div>
         ) : null}
         {main.map(renderParam)}
         <details className="details">
@@ -155,10 +164,15 @@ export function ImageSection({ node }: { node: BogenNode }) {
     }
   };
   return (
-    <Section title={t('Image')} actions={node.src ? <button type="button" className="btn btn-quiet" onClick={() => pickImage(async (f) => { const a = await api.upload(f); setFields([node.id], { src: a.src }); })}>{t('Replace')}</button> : undefined}>
+    <Section title={t('Image')} actions={node.src ? <><button type="button" className="btn btn-quiet" onClick={() => generateIntoLayer(node.id)} data-testid="image-generate-again">{t('Generate')}</button><button type="button" className="btn btn-quiet" onClick={() => pickImage(async (f) => { const a = await api.upload(f); setFields([node.id], { src: a.src }); })}>{t('Replace')}</button></> : undefined}>
       <div className="stack">
         {node.src ? <div className="fill-image-preview" style={{ background: `center / contain no-repeat url("${resolveAsset(node.src)}")`, filter: node.style.filter }} /> : null}
-        {!node.src ? <button type="button" className="btn" onClick={() => pickImage(async (f) => { const a = await api.upload(f); setFields([node.id], { src: a.src }); })}><Upload size={14} /> {t('Upload image')}</button> : null}
+        {!node.src ? (
+          <div className="image-actions">
+            <button type="button" className="btn" onClick={() => pickImage(async (f) => { const a = await api.upload(f); setFields([node.id], { src: a.src }); })}><Upload size={14} /> {t('Upload image')}</button>
+            <button type="button" className="btn" onClick={() => generateIntoLayer(node.id)} data-testid="image-generate"><Sparkles size={14} /> {t('Generate')}</button>
+          </div>
+        ) : null}
         <TextField label="Alt" value={node.attrs?.alt ?? ''} placeholder={t('Describe the image')} onChange={(alt) => setFields([node.id], { attrs: { ...(node.attrs ?? {}), alt } })} />
         {node.src && natural ? <ResolutionNote id={node.id} natural={natural} src={node.src} /> : null}
         {!cropped ? (

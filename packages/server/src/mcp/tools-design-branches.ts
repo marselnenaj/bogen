@@ -1,7 +1,8 @@
+import { agentImage, layoutMap } from '../layout-map.ts';
 import { z } from 'zod';
-import { currentBranchId, describeBranch, getDesignBranch, MAIN_BRANCH } from '@bogen/core';
+import { currentBranchId, describeBranch, docFromContent, getDesignBranch, MAIN_BRANCH } from '@bogen/core';
 import { branchSummary, mergePreview, startBranch, switchBranch } from '../design-branches.ts';
-import { visualDiff } from '../history-ops.ts';
+import { contentAt, visualDiff } from '../history-ops.ts';
 import { busyOnBranch, fileIdArg, type ToolContext, type ToolDefiner } from './kit.ts';
 import type { Room } from '../sync.ts';
 
@@ -64,10 +65,17 @@ export function registerDesignBranchTools(define: ToolDefiner): void {
     const diff = await visualDiff(ctx.app, room.id, preview.compare.from, preview.compare.to, screen.pageId, screen.id);
     const text = { ...out, screen: { ...screen, different_percent: diff.percent, bounds: diff.bounds, picture: diff.diff ? 'differences in red' : screen.change === 'added' ? 'new in this merge, nothing before' : 'gone after the merge' } };
     const picture = diff.diff ?? diff.after ?? diff.before;
+    let map = '(no visible boxes in either version)';
+    if (picture) {
+      const version = await contentAt(ctx.app, room.id, diff.after ? preview.compare.to : preview.compare.from);
+      const compared = docFromContent(version);
+      try { map = await layoutMap(compared, ctx.app.renderer, { nodeIds: [screen.id] }); } finally { compared.y.destroy(); }
+    }
     return {
       content: [
         { type: 'text' as const, text: JSON.stringify(text, null, 1) },
-        ...(picture ? [{ type: 'image' as const, data: Buffer.from(picture).toString('base64'), mimeType: 'image/png' }] : []),
+        ...(picture ? [await agentImage(ctx.app.renderer, { bytes: picture, mime: 'image/png' })] : []),
+        { type: 'text' as const, text: map },
       ],
     };
   });

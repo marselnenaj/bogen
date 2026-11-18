@@ -33,7 +33,8 @@ export interface SuggestionRow {
 
 export const REVIEW_SECTION_LABELS: Record<BrandSection | 'fields', string> = {
   fields: 'Identity and settings', colors: 'Colours', pairings: 'Pairs', logos: 'Logos', families: 'Font families', typeScale: 'Type scale', spacing: 'Spacing',
-  radius: 'Radius', rules: 'Rules', words: 'Words', voiceExamples: 'Voice examples', artboards: 'Examples', assets: 'Assets',
+  radius: 'Radius', rules: 'Rules', words: 'Words', voiceExamples: 'Voice examples', artboards: 'Examples', assets: 'Assets', treatments: 'Image treatments',
+  devices: 'Graphic devices',
 };
 
 /** The fields worth comparing per section, in the order a person reads them. */
@@ -41,7 +42,8 @@ const SHOWN: Record<BrandSection, string[]> = {
   colors: ['value', 'name', 'role', 'token', 'modes'], pairings: ['fg', 'bg', 'verdict'], logos: ['name', 'asset', 'svg', 'background', 'minWidth', 'clearSpace', 'aspect'],
   families: ['family', 'role', 'weights', 'fallback', 'license', 'assets', 'token'], typeScale: ['size', 'weight', 'lineHeight', 'tracking', 'family', 'role', 'name', 'token'],
   spacing: ['value', 'name', 'token'], radius: ['value', 'name', 'token'], rules: ['text', 'kind', 'severity', 'topic', 'check', 'lang'], words: ['word', 'use', 'instead', 'severity', 'lang'],
-  voiceExamples: ['good', 'bad', 'lang'], artboards: ['nodeId', 'name', 'verdict', 'template'], assets: ['asset', 'name', 'kind', 'tags', 'alt'],
+  voiceExamples: ['good', 'bad', 'lang'], artboards: ['nodeId', 'name', 'verdict', 'template'], assets: ['asset', 'name', 'kind', 'tags', 'alt'], treatments: ['name', 'mode', 'inks', 'ground', 'output', 'params', 'before', 'after'],
+  devices: ['name', 'spec', 'use'],
 };
 
 /** What makes two items of a section the same thing, so that a suggestion can say which confirmed value it competes with. */
@@ -51,9 +53,10 @@ const SAME: Record<BrandSection, (item: Record<string, unknown>) => string[]> = 
   spacing: (i) => [`token:${i.token}`, `value:${i.value}`], radius: (i) => [`token:${i.token}`, `value:${i.value}`], rules: (i) => [`${String(i.text).toLowerCase()}|${i.lang ?? ''}`],
   // The same word in two languages is two words: "Team" may be right in English and in German.
   words: (i) => [`${String(i.word).toLowerCase()}|${i.lang ?? ''}`], voiceExamples: (i) => i.good ? [`good:${String(i.good).toLowerCase()}|${i.lang ?? ''}`] : i.bad ? [`bad:${String(i.bad).toLowerCase()}|${i.lang ?? ''}`] : [], artboards: (i) => [String(i.nodeId)], assets: (i) => [String(i.asset)],
+  treatments: (i) => [`name:${String(i.name).toLowerCase()}`], devices: (i) => [`name:${String(i.name).toLowerCase()}`],
 };
 
-const OPTIONAL = ['source', 'note', 'instead', 'check', 'template', 'svg', 'usage', 'aspect', 'modes', 'lang'];
+const OPTIONAL = ['source', 'note', 'instead', 'check', 'template', 'svg', 'usage', 'aspect', 'modes', 'lang', 'before', 'after'];
 
 function show(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;

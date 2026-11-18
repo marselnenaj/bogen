@@ -122,7 +122,7 @@ export function AssetsPanel() {
       <div className="assets-head">
         <label className="field">
           <span className="field-label is-static"><Search size={14} /></span>
-          <input className="field-input" placeholder={t('Search components')} value={query} data-testid="assets-search" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.stopPropagation()} spellCheck={false} />
+          <input className="field-input" aria-label={t('Search components')} placeholder={t('Search components')} value={query} data-testid="assets-search" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.stopPropagation()} spellCheck={false} />
         </label>
       </div>
       <div className="assets-scroll">

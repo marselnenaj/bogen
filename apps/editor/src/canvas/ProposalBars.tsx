@@ -58,6 +58,7 @@ function Bar({ proposal, race, lane }: { proposal: ProposalInfo; race?: Race; la
     s.tx(() => (draft ? discardRevision(s.doc, draft.id, loadUser().name || 'person', undefined) : discardProposal(s.doc, proposal.id)));
   };
   const live = lane ? laneLive(lane) : false;
+  const proposalLabel = proposal.note && proposal.note !== proposal.by ? t('Proposal by {by}: {note}', { by: proposal.by, note: proposal.note }) : t('Proposal by {by}', { by: proposal.by });
   // The same compare as for branches and versions: the original on one side, this copy on the other.
   const compareWithOriginal = () => {
     const { fileId } = editor();
@@ -68,7 +69,7 @@ function Bar({ proposal, race, lane }: { proposal: ProposalInfo; race?: Race; la
   return (
     <>
       <div className="proposal-outline" data-testid="proposal-outline" style={{ left, top, width: box.w * c.z, height: box.h * c.z, ...(color ? { borderColor: color } : {}) }} />
-      <div className="proposal-bar" data-ui data-testid="proposal-bar" data-proposal-id={proposal.id} data-lane={lane?.id} data-status={lane?.status} style={{ left, top: top - 34, maxWidth: Math.max(190, box.w * c.z) }} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+      <div className="proposal-bar" data-ui data-testid="proposal-bar" data-proposal-id={proposal.id} data-lane={lane?.id} data-status={lane?.status} style={{ left, top: top - 38, maxWidth: Math.max(260, box.w * c.z) }} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
         {color ? <span className={`lane-dot${lane?.status === 'queued' ? ' is-waiting' : ''}`} style={{ '--lane': color } as React.CSSProperties} /> : null}
         {lane ? (
           <>
@@ -85,7 +86,7 @@ function Bar({ proposal, race, lane }: { proposal: ProposalInfo; race?: Race; la
               : t.n(draft.targets.length, 'Revision of {count} artboard, by {by}', 'Revision of {count} artboards, by {by}', { by: draft.by }))} data-testid="revision-label">
             {draft.intent === 'alternative' ? t('Alternative: {name}', { name: draft.name }) : t('Revision: {name}', { name: draft.name })} <span className="proposal-meta">{t('draft · {by}', { by: draft.by })}</span>
           </span>
-        ) : <span className="proposal-label" title={proposal.note}>{proposal.note && proposal.note !== proposal.by ? t('Proposal by {by}: {note}', { by: proposal.by, note: proposal.note }) : t('Proposal by {by}', { by: proposal.by })}</span>}
+        ) : <span className="proposal-label" title={proposalLabel}>{proposalLabel}</span>}
         {live ? (
           <button type="button" className="btn btn-quiet proposal-discard" onClick={() => void stopRace(race!, lane)} data-testid="lane-stop"><Square size={10} /> {lane!.status === 'queued' ? t('Cancel') : t('Stop')}</button>
         ) : (

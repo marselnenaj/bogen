@@ -10,7 +10,7 @@ import { WebsocketProvider } from 'y-websocket';
 import { BogenDoc, exportDocument, Y } from '@bogen/core';
 import { packBogenFile } from '../src/bogen-file.ts';
 import { BogenServer } from '../src/http/server.ts';
-import { call, callRaw, connectAgent, pngStats, startServer, until, type Harness } from './helpers.ts';
+import { call, callRaw, connectAgent, startServer, until, type Harness } from './helpers.ts';
 
 const json = (body: unknown) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -361,7 +361,7 @@ async function rpc(session, id, method, params) {
     expect(second.runner).toBe('codex');
     expect(second.stdin).toContain('kannst du das größer machen?');
     expect(second.stdin).toContain("Your reply was:\nYou're right, that should be bigger.");
-    expect(second.stdin).toContain('You replied without changing anything. If the person asked for a change, make it now; if it truly was only a question, say so in one sentence.');
+    expect(second.stdin).toContain('You replied without changing anything. If the person clearly asked for a change, make that change now and nothing beyond it. If they asked a question, or only asked for your review or opinion, change nothing and say so in one sentence.');
     expect((await threadOf(threadId)).messages.map((m) => m.author)).toEqual(['Mara', 'codex', 'codex']);
     const record = (await h.server.history.list(file)).find((r) => r.threadId === threadId)!;
     expect(record).toMatchObject({ status: 'done', nudged: true, firstReply: "You're right, that should be bigger." });
@@ -800,8 +800,8 @@ describe('write tools', () => {
 
     it('takes shader parameters under the same rules', async () => {
       const [id] = await place('<x-shader type="mesh-gradient" colors="#000,#f50" style="width:100px;height:100px"></x-shader>');
-      expect((await call(agent, 'layer_attrs', { node_id: id, attrs: { colors: '#111,#222', speed: '0.5', image: 'bogen-asset:abc.png' } })).attrs).toMatchObject({ colors: '#111,#222', speed: '0.5', type: 'mesh-gradient' });
-      for (const attrs of [{ onLoad: 'x' }, { image: 'javascript:alert(1)' }, { dangerouslySetInnerHTML: 'x' }, { style: 'x' }, { 'a b': 'x' }, { distortion: 'javascript:x' }]) {
+      expect((await call(agent, 'layer_attrs', { node_id: id, attrs: { colors: '#111,#222', speed: '0.5' } })).attrs).toMatchObject({ colors: '#111,#222', speed: '0.5', type: 'mesh-gradient' });
+      for (const attrs of [{ onLoad: 'x' }, { image: 'javascript:alert(1)' }, { image: 'bogen-asset:abc.png' }, { colorz: '#fff' }, { dangerouslySetInnerHTML: 'x' }, { style: 'x' }, { 'a b': 'x' }, { distortion: 'javascript:x' }]) {
         expect((await callRaw(agent, 'layer_attrs', { node_id: id, attrs })).isError, JSON.stringify(attrs)).toBe(true);
       }
     });
@@ -1026,7 +1026,7 @@ describe('write tools', () => {
         await refuse({ path: join(dir, 'missing.png') }, /no file/);
         await refuse({ path: dir }, /not a file/);
         await refuse({ path: '/etc/passwd' }, /outside the home and temp folders/);
-        await refuse({ path: join(dir, 'made.png'), data_base64: PNG, mime_type: 'image/png' }, /either path or data_base64/);
+        await refuse({ path: join(dir, 'made.png'), data_base64: PNG, mime_type: 'image/png' }, /one of path, data_base64 or from_search/);
         await refuse({ data_base64: PNG }, /needs mime_type/);
       } finally {
         rmSync(dir, { recursive: true, force: true });
@@ -1064,6 +1064,7 @@ describe('design checking', () => {
     const raw = await callRaw(agent, 'visual_diff', args);
     expect(raw.isError, raw.content[0]?.text).toBe(false);
     const image = raw.content.find((c) => c.type === 'image')!;
+    expect(raw.content.some((c) => c.type === 'text' && c.text?.includes('Layout map'))).toBe(true);
     return { report: JSON.parse(raw.content[0]!.text!), image: Buffer.from(image.data!, 'base64'), mime: image.mimeType };
   };
 
@@ -1079,15 +1080,15 @@ describe('design checking', () => {
     expect(changed.report.different_percent).toBeGreaterThan(45);
     expect(changed.report.different_percent).toBeLessThan(55);
     expect(changed.report.bounds.x).toBeGreaterThanOrEqual(45);
-    expect(changed.mime).toBe('image/png');
-    const stats = await pngStats(changed.image);
-    expect(stats.width).toBe(100);
-    expect(stats.distinctColors).toBeGreaterThan(1);
+    expect(changed.mime).toBe('image/jpeg');
+    const stats = await h.server.renderer.transcode({ bytes: changed.image, mime: changed.mime! }, { type: 'image/jpeg', quality: 0.75, maxDimension: 2000 });
+    expect(stats!.width).toBe(100);
+    expect(changed.image.length).toBeGreaterThan(100);
   }, 30_000);
 
   it('compares against an image asset, counts size differences, and keeps the picture bounded', async () => {
     const [a] = (await call(agent, 'html_write', { target_id: board, html: square('#102030') })).ids;
-    const shot = await callRaw(agent, 'canvas_screenshot', { node_id: a });
+    const shot = await callRaw(agent, 'canvas_screenshot', { node_id: a, format: 'png' });
     const uploaded = await call(agent, 'asset_upload', { data_base64: shot.content[0]!.data, mime_type: 'image/png' });
     expect((await diff({ node_id: a, asset: uploaded.src })).report).toMatchObject({ different_percent: 0, same_size: true });
 
@@ -1099,8 +1100,8 @@ describe('design checking', () => {
 
     const [huge] = (await call(agent, 'html_write', { target_id: board, html: square('#102030', 'width:1800px;height:1800px') })).ids;
     const large = await diff({ node_id: huge, asset: uploaded.src });
-    const stats = await pngStats(large.image);
-    expect(Math.max(stats.width, stats.height)).toBeLessThanOrEqual(1000);
+    const stats = await h.server.renderer.transcode({ bytes: large.image, mime: large.mime! }, { type: 'image/jpeg', quality: 0.75, maxDimension: 2000 });
+    expect(Math.max(stats!.width, stats!.height)).toBeLessThanOrEqual(768);
     expect(large.image.length).toBeLessThanOrEqual(1_500_000);
 
     for (const args of [{ node_id: a }, { node_id: a, other_node_id: big, asset: uploaded.src }, { node_id: a, asset: 'bogen-asset:nope.png' }, { node_id: 'nope', other_node_id: a }]) {
@@ -1129,8 +1130,10 @@ describe('design checking', () => {
     expect(narrow.clipped_text.map((c: any) => c.name)).toContain('Long');
     const shots = raw.content.filter((c) => c.type === 'image');
     expect(shots).toHaveLength(2);
-    const stats = await pngStats(Buffer.from(shots[1]!.data!, 'base64'));
-    expect(stats.width).toBeLessThanOrEqual(800);
+    expect(shots.every((s) => s.mimeType === 'image/jpeg')).toBe(true);
+    expect(raw.content.filter((c) => c.type === 'text' && c.text?.includes('Layout map'))).toHaveLength(2);
+    const stats = await h.server.renderer.transcode({ bytes: Buffer.from(shots[1]!.data!, 'base64'), mime: 'image/jpeg' }, { type: 'image/jpeg', quality: 0.75, maxDimension: 2000 });
+    expect(Math.max(stats!.width, stats!.height)).toBeLessThanOrEqual(768);
 
     const fine = await call(agent, 'artboard_create', { name: 'Fine', width: 600, x: 4000 });
     await call(agent, 'html_write', { target_id: fine.id, html: '<p style="width:100%">Short.</p>' });

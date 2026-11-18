@@ -95,6 +95,7 @@ describe('prompt assembly', () => {
     const claude = buildCommand('claude', base, { url: 'http://x' }, '/tmp/c', '/tmp');
     expect(claude.stdin).toBe("Earlier in this conversation, oldest first:\n\nThe person: Draw a hero\n\nThe person's new message:\nMake it bigger");
     const codex = buildCommand('codex', { ...base, runner: 'codex' }, { url: 'http://x' }, '/tmp/c', '/tmp');
+    expect(codex.args.find((a) => a.startsWith('mcp_servers.bogen.http_headers='))).toContain('"X-Bogen-Tools"="grouped"');
     expect(codex.stdin).toMatch(/Treat the earlier turns as context[^\n]*\n\nEarlier in this conversation[\s\S]*The person's new message:\nMake it bigger$/);
     const images = buildCommand('claude', { ...base, images: [{ data: Buffer.from('x'), mime: 'image/png', name: 'a.png' }] }, { url: 'http://x' }, '/tmp/c', '/tmp');
     expect(JSON.parse(images.stdin).message.content[0].text).toContain("The person's new message:\nMake it bigger");

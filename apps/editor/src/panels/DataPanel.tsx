@@ -88,15 +88,15 @@ function AddSource() {
     <div className="data-add" data-testid="data-add">
       <span className="panel-title">{t('Add a source')}</span>
       <Segmented<AddKind> value={kind} onChange={setKind} testId="data-add-kind" options={[{ value: 'paste', label: t('Paste'), title: t('Paste JSON or CSV') }, { value: 'upload', label: t('Upload'), title: t('A JSON or CSV file') }, { value: 'url', label: t('URL'), title: t('An address that returns JSON or CSV') }]} />
-      <input className="token-input" placeholder={t('Name, such as Products')} dir="auto" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.stopPropagation()} data-testid="data-name" />
-      {kind === 'paste' ? <textarea className="repeat-data" rows={4} placeholder={'[{ "name": "Lamp", "price": 49 }]'} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.stopPropagation()} data-testid="data-text" /> : null}
+      <input className="token-input" placeholder={t('Name, such as Products')} aria-label={t('Name')} dir="auto" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.stopPropagation()} data-testid="data-name" />
+      {kind === 'paste' ? <textarea className="repeat-data" rows={4} aria-label={t('JSON or CSV')} placeholder={'[{ "name": "Lamp", "price": 49 }]'} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.stopPropagation()} data-testid="data-text" /> : null}
       {kind === 'url' ? (
         <>
-          <input className="token-input" placeholder="https://api.example.com/items" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.stopPropagation()} data-testid="data-url" />
+          <input className="token-input" placeholder="https://api.example.com/items" aria-label={t('Address')} value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.stopPropagation()} data-testid="data-url" />
           <label className="import-check" title={t('A dev server or a device at home. Only a request from this computer reaches it, never an agent\'s.')}><input type="checkbox" checked={local} onChange={(e) => setLocal(e.target.checked)} data-testid="data-local" /> {t('Allow this computer\'s network (only from this device)')}</label>
         </>
       ) : null}
-      <input className="token-input" placeholder={t('Where the list is, such as {path}', { path: 'data.items' })} value={path} onChange={(e) => setPath(e.target.value)} onKeyDown={(e) => e.stopPropagation()} data-testid="data-path" />
+      <input className="token-input" placeholder={t('Where the list is, such as {path}', { path: 'data.items' })} aria-label={t('Where the list is')} value={path} onChange={(e) => setPath(e.target.value)} onKeyDown={(e) => e.stopPropagation()} data-testid="data-path" />
       <button type="button" className="btn btn-primary" disabled={busy} onClick={() => (kind === 'upload' ? upload() : void add())} data-testid="data-add-run"><Plus size={14} /> {busy ? t('Reading') : kind === 'upload' ? t('Choose a file') : t('Add')}</button>
       {note ? <div className="hint" data-testid="data-note">{note}</div> : null}
       {error ? <div className="error" data-testid="data-add-error">{error}</div> : null}

@@ -2,6 +2,7 @@ import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { RunEnd, RunnerId, RunObserver, RunRequest, RunReview } from './agents.ts';
 import type { EventHub } from './events.ts';
+import type { RunSize } from '@bogen/core';
 import { TALK_TOOLS } from './run-guard.ts';
 import { atomicWrite, errorMessage } from './util.ts';
 
@@ -27,12 +28,26 @@ export interface Turn {
   review?: RunReview;
   /** It replied without changing anything and was asked once more. */
   nudged?: boolean;
+  /** The model Bogen picked by the size of the request, shown in the chat as "Sonnet · small change". */
+  sized?: { size: RunSize; label?: string };
 }
 
 /** Why a chat is over: its branch in the repository was merged. The person starts a new chat for the next change. */
 export interface ConversationClosed { at: number; reason: 'merged'; branch?: string; into?: string; url?: string }
 
-export interface Conversation { id: string; fileId: string; startedAt: number; updatedAt: number; turns: Turn[]; closed?: ConversationClosed }
+/**
+ * One line of a voice call in this chat: what the person was heard to say, or what the call's voice said, with how
+ * the voice decided (answered here, asked back, or handed to the agent) and how long it took. Kept so that a call can
+ * be looked at afterwards; the agent never sees these.
+ */
+/** One line of a voice call. `engine` is what wrote a person's words down; `reason` why a stretch was taken for noise. */
+export interface CallLine { at: number; who: 'person' | 'voice'; text: string; kind?: string; route?: 'agent' | 'answer' | 'clarify' | 'steer' | 'queue' | 'voice'; source?: 'persona' | 'rules' | 'instant'; ms?: number; engine?: string; reason?: 'no-speech' | 'made-up' | 'echo' | 'empty' }
+
+/**
+ * `callSummary`: the voice call's own notes on itself in two sentences, written by the talking layer as the call goes,
+ * so that a later call about the file knows what this one was about.
+ */
+export interface Conversation { id: string; fileId: string; startedAt: number; updatedAt: number; turns: Turn[]; closed?: ConversationClosed; call?: CallLine[]; callSummary?: string }
 
 /** A conversation in a list of a file's chats: what it is called, when, who answered, and how long it is. */
 export interface ConversationSummary { id: string; title: string; startedAt: number; updatedAt: number; turns: number; runners: RunnerId[]; running: boolean; closed?: ConversationClosed }
@@ -55,24 +70,31 @@ export function conversationSummary(c: Conversation): ConversationSummary {
 const MAX_CONVERSATIONS = 40;
 const MAX_TURNS = 60;
 const MAX_LAYERS = 60;
+const MAX_CALL_LINES = 400;
+const CALL_TEXT_MAX = 2000;
 const STORE_KEY = /^[\w-]{1,80}$/;
 const SAVE_DELAY_MS = 300;
 
 /** What the transcript in a prompt may hold. Newest turns are kept, older ones are counted. */
-export const TRANSCRIPT = { turns: 8, chars: 6000, message: 1200, reply: 1200, layers: 24 };
+/**
+ * What the transcript in a prompt may hold. Newest turns are kept, older ones are counted. The newest answer gets more
+ * room (`lastReply`), so a follow-up such as "and the rest?" or "do that too" finds what it refers to.
+ */
+export const TRANSCRIPT = { turns: 8, chars: 6000, message: 1200, reply: 1200, lastReply: 4000, layers: 24 };
 
 const cut = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 /** The earlier turns as plain text for a prompt, oldest first, bounded by `TRANSCRIPT`. Empty when there are none. */
-export function transcript(turns: Turn[], limits = TRANSCRIPT): string {
+export function transcript(turns: Turn[], limits: Omit<typeof TRANSCRIPT, 'lastReply'> & { lastReply?: number } = TRANSCRIPT): string {
   const blocks: string[] = [];
   let used = 0;
   const done = turns.filter((t) => t.status !== 'running');
   for (const turn of [...done].reverse()) {
     if (blocks.length >= limits.turns) break;
     const how = turn.status === 'done' ? '' : turn.status === 'interrupted' ? ' (cut off)' : ` (${turn.status})`;
-    const lines = [`The person: ${cut(oneLine(turn.message), limits.message)}`, `${turn.runner} answered${how}: ${turn.reply ? cut(oneLine(turn.reply), limits.reply) : '(nothing)'}`];
+    const replyMax = blocks.length ? limits.reply : Math.max(limits.reply, limits.lastReply ?? 0);
+    const lines = [`The person: ${cut(oneLine(turn.message), limits.message)}`, `${turn.runner} answered${how}: ${turn.reply ? cut(oneLine(turn.reply), replyMax) : '(nothing)'}`];
     if (turn.layers.length) lines.push(`Layers it created or changed: ${turn.layers.slice(0, limits.layers).join(', ')}${turn.layers.length > limits.layers ? ` and ${turn.layers.length - limits.layers} more` : ''}`);
     const block = lines.join('\n');
     if (used + block.length > limits.chars && blocks.length) break;
@@ -95,7 +117,7 @@ export class Conversations implements RunObserver {
   private books = new Map<string, Book>();
   private loading = new Map<string, Promise<Book>>();
   /** Turns of runs still going, by run id. */
-  private live = new Map<string, { fileId: string; turn: Turn }>();
+  private live = new Map<string, { fileId: string; turn: Turn; before?: string }>();
 
   constructor(private readonly home: string, private readonly hub?: EventHub) {
     hub?.tap((event) => {
@@ -166,6 +188,48 @@ export class Conversations implements RunObserver {
     this.hub?.broadcast({ t: 'conversation', fileId, conversationId: id, closed: true });
   }
 
+  /** Adds lines of a voice call to a chat, starting the chat when the call came first. Oldest lines go past 400. */
+  async addCallLines(fileId: string, id: string, lines: CallLine[]): Promise<void> {
+    if (!lines.length) return;
+    const book = await this.book(fileId);
+    let conversation = book.list.find((c) => c.id === id);
+    const now = Date.now();
+    if (!conversation) {
+      conversation = { id, fileId, startedAt: now, updatedAt: now, turns: [] };
+      book.list.unshift(conversation);
+      if (book.list.length > MAX_CONVERSATIONS) book.list.length = MAX_CONVERSATIONS;
+    }
+    const call = conversation.call ?? (conversation.call = []);
+    for (const l of lines) call.push({ ...l, text: cut(l.text, CALL_TEXT_MAX) });
+    if (call.length > MAX_CALL_LINES) call.splice(0, call.length - MAX_CALL_LINES);
+    this.saveSoon(fileId);
+  }
+
+  /**
+   * The chats of a file that hold a voice call, the one whose call ended last first: also chats where the call never
+   * reached the agent, which `list` leaves out.
+   */
+  async calls(fileId: string): Promise<{ id: string; lastAt: number; call: CallLine[]; callSummary?: string }[]> {
+    return (await this.book(fileId)).list.filter((c) => c.call?.length).map((c) => ({ id: c.id, lastAt: c.call!.at(-1)!.at, call: c.call!, ...(c.callSummary ? { callSummary: c.callSummary } : {}) }))
+      .sort((a, b) => b.lastAt - a.lastAt);
+  }
+
+  /** Keeps the call's latest notes on itself with the chat, starting the chat when the call came first. */
+  async setCallSummary(fileId: string, id: string, summary: string): Promise<void> {
+    const text = cut(oneLine(summary), 600);
+    if (!text) return;
+    const book = await this.book(fileId);
+    let conversation = book.list.find((c) => c.id === id);
+    if (!conversation) {
+      const now = Date.now();
+      conversation = { id, fileId, startedAt: now, updatedAt: now, turns: [] };
+      book.list.unshift(conversation);
+      if (book.list.length > MAX_CONVERSATIONS) book.list.length = MAX_CONVERSATIONS;
+    }
+    conversation.callSummary = text;
+    this.saveSoon(fileId);
+  }
+
   /** Puts the transcript of the earlier turns ahead of the request. Runs outside a conversation pass unchanged. */
   async prepare(req: RunRequest): Promise<RunRequest> {
     if (!req.conversationId || req.threadId) return req;
@@ -177,7 +241,7 @@ export class Conversations implements RunObserver {
   started(runId: string, req: RunRequest): void {
     const id = req.conversationId;
     if (!id || req.threadId) return;
-    const turn: Turn = { runId, at: Date.now(), runner: req.runner, message: cut(req.title ?? req.prompt, 4000), layers: [], status: 'running', ...(req.review ? { review: req.review } : {}) };
+    const turn: Turn = { runId, at: Date.now(), runner: req.runner, message: cut(req.title ?? req.prompt, 4000), layers: [], status: 'running', ...(req.review ? { review: req.review } : {}), ...(req.sized ? { sized: { size: req.sized.size, ...(req.sized.label ? { label: req.sized.label } : {}) } } : {}) };
     this.live.set(runId, { fileId: req.fileId, turn });
     void this.book(req.fileId).then((book) => {
       let conversation = book.list.find((c) => c.id === id);
@@ -198,8 +262,9 @@ export class Conversations implements RunObserver {
   event(runId: string, event: { kind: string; text?: string }): void {
     const live = this.live.get(runId);
     if (!live) return;
-    if (event.kind === 'text' && event.text) live.turn.reply = cut(event.text, 8000);
-    else if (event.kind === 'nudge') live.turn.nudged = true;
+    // After the nudge, what it answered before stays in front: a review must not be lost to "I left it as it was".
+    if (event.kind === 'text' && event.text) live.turn.reply = cut(live.before ? `${live.before}\n\n${event.text}` : event.text, 8000);
+    else if (event.kind === 'nudge') { live.turn.nudged = true; live.before = live.turn.reply ?? event.text; }
     else return;
     this.saveSoon(live.fileId);
   }
@@ -209,6 +274,8 @@ export class Conversations implements RunObserver {
     if (!live) return;
     this.live.delete(end.runId);
     live.turn.status = end.status;
+    // The continuation made the change after all: what it said before was only agreeing, and the answer is the change.
+    if (live.before && live.turn.layers.length && live.turn.reply?.startsWith(`${live.before}\n\n`)) live.turn.reply = live.turn.reply.slice(live.before.length + 2);
     this.saveSoon(live.fileId);
   }
 

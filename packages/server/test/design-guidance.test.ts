@@ -132,10 +132,22 @@ describe('copy that reads like a report or a hedge', () => {
 });
 
 describe('what an agent reads first', () => {
+  it('keeps the one-round policy across guides, knowledge and bundled skills', () => {
+    for (const text of [INSTRUCTIONS, GUIDES.design, GUIDES.apps, disciplineSkill('mobile-apps'), skillText('codex'), skillText('claude-code')]) {
+      expect(text).toMatch(/[Aa]t most one design_critique/);
+      expect(text).toMatch(/without re-reviewing/);
+      expect(text).toMatch(/[Ss]cores never block/);
+      expect(text).toContain('loop_request');
+      expect(text).not.toMatch(/until [89]|loop scored it [89]/);
+    }
+  });
+
   it('puts the design core first in the instructions, in order, positive and with an ambition bar', () => {
     // Every MCP client carries the instructions in every session. 3,872 characters before the direction step and the
     // ambition bar; the skill no longer repeats them for Claude Code, which shows the instructions itself.
     expect(INSTRUCTIONS.length).toBeLessThanOrEqual(6600);
+    expect(INSTRUCTIONS).toContain('Measure from the layout map');
+    for (const topic of ['design', 'apps', 'checks']) expect(GUIDES[topic as keyof typeof GUIDES]).toContain('layout map');
     expect(INSTRUCTIONS.indexOf(DESIGN_CORE)).toBeLessThan(200);
     const order = ['1. Direction, before the first html_write', '2. System', '3. Build with ambition', '4. Check', 'Canvas structure'].map((s) => INSTRUCTIONS.indexOf(s));
     expect(order.every((at) => at > 0)).toBe(true);
@@ -164,7 +176,8 @@ describe('what an agent reads first', () => {
     }
     // 7,417 characters before, with the instructions inside.
     expect(claude.length).toBeLessThan(6500);
-    expect(codex.length).toBeLessThan(10400);
+    // The core now names the platform kit and the done-step for phone screens.
+    expect(codex.length).toBeLessThan(10500);
   });
 
   it('gives worked examples as a default and a decision, from subjects of their own', () => {
@@ -185,7 +198,7 @@ describe('what an agent reads first', () => {
       for (const line of playbook(id).ambition) expect(skill, id).toContain(line);
       for (const c of RUBRIC) expect(skill, id).toContain(`- ${c.id}: ${c.question}`);
       // 13,051 to 13,343 characters before; the bar and the loop live in the instructions now, not in every skill.
-      expect(skill.length, id).toBeLessThan(10700);
+      expect(skill.length, id).toBeLessThan(11300);
     }
     expect(DESIGN_WORKFLOW.bar[0]).toContain('Direction first');
     expect(DESIGN_WORKFLOW.sequence[0]).toContain('Sketch three directions');

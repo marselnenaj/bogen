@@ -67,7 +67,30 @@ the same origins.
 
 `BogenServer` (`packages/server/src/http/server.ts`) owns storage, the rooms, the renderer, MCP, runs, brands,
 libraries, history and peers. A `Room` (`sync.ts`) is one open file: its document, awareness, connected sockets and
-undo managers. Rooms load on demand and save to `files/<id>.ydoc`.
+undo managers. Rooms load on demand and save through `Storage` (`storage.ts`).
+
+### Storage
+
+The data folder (`$BOGEN_HOME`, by default `~/.local/share/bogen`) holds:
+
+| Path | What | Written |
+| --- | --- | --- |
+| `files/<id>.ydoc` | The last full save of a document, one Yjs update (V1) | Whole, atomically, fsynced |
+| `files/<id>.updates` | The updates since that full save, for a file over 1 MB (`doc-log.ts`): length, CRC-32 and bytes per record | Appended and fsynced per batch, 400 ms after an edit, at most 3 s later |
+| `files/<id>.ydoc.bak` | The full save before the last, kept while the next one replaces it | By the full save |
+| `index.json` | The list of files and folders, as compact JSON | Soon after a rename, move or new file; within 5 s for a change of edit time alone |
+| `history/<id>/` | The timeline (`changes-<device>.jsonl`, thinned by age and size), versions, commits, and `recent-edits.json` for Home | Per change |
+| `assets/<sha256>.<ext>`, `thumbs/<id>.webp` | Content-addressed assets, previews | Atomically |
+
+A small file is saved whole after each burst of edits. A big one appends each update to its log instead, so that a
+small edit costs what it changes and not what the file weighs; the log is folded into a full save when edits have
+paused for 15 s and it holds 4 MB or an eighth of the full save, at once past 64 MB, when the file is unloaded and
+when the server stops. A full save writes the new file and fsyncs it, moves the old one to `.bak`, puts the new one in
+place and then removes the log; a crash between those steps loads from `.bak` and the log, and replaying a log that a
+full save already holds changes nothing. Reading stops at the first log record that does not check out, so a torn
+append loses only that record. Read documents with `Storage.loadDoc` or `readDoc` (full save and log together) and
+replace one with `Storage.writeDoc`, never through `docPath` directly. Temporary files of interrupted writes are
+removed on start once they are ten minutes old.
 
 ### Listeners and who may do what
 
@@ -77,11 +100,15 @@ undo managers. Rooms load on demand and save to `files/<id>.ydoc`.
 | Tailnet | port 29990 on the `tailscale ip -4` address | The device token as Bearer only; local-only routes closed | `peers.ts`, `tailnet.ts` |
 | Phone | `127.0.0.1:29991`, behind `tailscale serve` on 29443 | `ts.net` Host, same Origin, allowed `Tailscale-User-Login`, a paired phone's token | `phone.ts`, `Phone.check` |
 
+Before any of this, `pathRefusal` (`http/security.ts`) refuses a path in any spelling but its plain one (empty or dot
+segments, backslashes, encoded slashes, dots or NUL), on every listener and for upgrades, since the closed-route lists
+match the path as written while routing splits it into segments.
+
 Inside a route, two questions decide the rest:
 
 - `fromThisDevice(req, guard)`: a request from this machine directly, not through a proxy, the tailnet or the phone.
   Needed for anything that uses the machine: its disk, its local network, code projects, live site mode, Git, the
-  Figma token, phone settings.
+  Figma token, phone settings, pairing devices and the tailnet listener (`/api/peers`).
 - `fromOwner(req, guard)`: this machine, or a paired phone. Needed to start agent runs, comment for agents, decide on
   proposals and waive brand rules.
 
@@ -123,10 +150,59 @@ There is one set of rules for turning a layer into HTML and CSS: `renderSpec` an
 - **Screenshots and exports** (`packages/server/src/render.ts`) write the page with `exportDocument` from core and load
   it in one shared headless Chromium through `puppeteer-core`. PNG, JPG, WebP, PDF and `canvas_screenshot` come from
   there; video is rendered frame by frame at exact times; SVG is converted to vector elements in `svg-vector.ts`.
+  The browser reaches the network only through the proxy in `egress-proxy.ts` (unless it is the `secure-chromium`
+  wrapper, which brings its own), which resolves each name once and refuses private addresses.
 - **Code** (`export.ts`, `react-export.ts`) writes HTML, React and Tailwind from the same rules.
 
 Shader layers run `@paper-design/shaders` in the editor, and in renders through `dist/shader-runtime.js`. Code
 components render in a sandboxed frame from `/api/code/:project/frame` (`code-build.ts`).
+
+## Voice calls
+
+`speech/` serves a call with the agent at `/api/call/*`: `status`, `install` (this computer only, downloads a voice
+or the listening model into `$BOGEN_HOME/speech/` and keeps it only when its SHA-256 matches `speech/catalog.ts`),
+`say` (one sentence to WAV) and `listen` (one utterance to text). The routes are for the owner, like voice notes,
+and closed on the tailnet. Speech out is a `TtsEngine` (`speech/tts.ts`): Piper voices in ONNX Runtime's
+WebAssembly build with eSpeak NG compiled to WebAssembly for the phonemes, and, the default English voice,
+tiny-voca (two speakers in one 21 MB ONNX model) read through `speech/dizione/`, a TypeScript port of its
+phonemizer dizione that test/dizione-golden.test.ts holds to the Python output; so no native binary. Speech in is
+NVIDIA Parakeet TDT 0.6B v3 kept loaded on the CPU through sherpa-onnx-node (`ResidentParakeet` in `speech/hear.ts`),
+with the open file's names as hotwords (modified beam search; sherpa-onnx turns them into tokens with a vocabulary
+written from Parakeet's tokens.txt); a line in neither German nor English is dropped. Whisper large-v3-turbo on the
+GPU through whisper.cpp (@fugood/whisper.node) is a choice (`?engine=whisper`), primed with the same names
+(`speech/context.ts`); Whisper base through Voxtype is the last resort. What the voice says comes from `@bogen/core`'s `CallBrain` (`call-brain.ts`): each turn is answered here
+from the screen and the call so far, asked back when it is too vague, or handed to the agent; the agent's text is
+retold, never read out, unless the agent ended with a `<say>` block for the call. The call is the host: a request is
+collected into a draft until the person is quiet (`draftQuietMs`) or says go, read back when it took several turns,
+holds a correction or redoes a lot, and sent as a brief (`briefMessage`: the talking layer's goal and constraints,
+the person's words marked as speech recognition, corrections, and what else was said to the voice). Only work
+(`asksForWork`: a change or a look at the design) reaches the agent; questions about progress and small questions
+are answered by the voice, and remarks and thanks are only kept as context. The talking layer (`speech/persona.ts`) is Claude Code on the person's plan when it is signed
+in (one session to decide turns, one to word lines), else a small local model, else rules; `/api/call/talk` adds the
+file, page, artboards and selection by name, and the file's runs as the server records them (`runTruth`: whether the
+agent works comes from that record, also for runs the call did not start). With Claude Code, `turnModel` is on: the
+talking layer decides and words every turn in one answer (`kind: 'turn'`, an `@action` line and the words below it,
+read by `parseTurn`), so its first sentence is spoken while the rest is written; work still goes through the draft,
+steer and queue paths above, a named file through the file switch. The rules (`routeByRules`) then only act when it
+does not answer within `turnTimeoutMs`, and even then never hand chat to the agent. `/api/call/log` keeps every heard and spoken line with the chat
+(`Conversation.call`), with the engine that heard each person's line and, for a stretch taken for noise, why. Before
+Whisper, `listen` runs Silero VAD v6.2.0 through whisper.cpp (`ResidentVad`, CPU, a few ms) and does not transcribe
+a stretch with under 250 ms of speech; `@bogen/core`'s `call-noise.ts` then drops Whisper's known made-up lines when
+little speech was behind them, and `CallBrain` ignores the call's own recent lines heard back. While the agent works,
+a change to the task is collected for `steerQuietMs` and steered (`BrainSinks.steer`): the editor stops the run with
+`?gentle=1` (SIGINT, which ends Claude Code's turn cleanly) and sends the brief with `call.steer`; `Runs` keeps one
+Claude Code session per call conversation (`callSessions`, an empty folder per conversation as its working
+directory, `--resume` instead of `--no-session-persistence`), so the next run continues it without the transcript.
+A follow-up in the same file and conversation (call or chat, `sessionKey`) resumes it too while that session holds
+the conversation's latest turn, on the same model, within `RESUME_WINDOW_MS`; a session that is gone falls back to a
+fresh run with the transcript. Codex starts afresh with the transcript, as before. At a run's end the call keeps the
+whole answer as points (`call-result.ts`), speaks the gist and top points, and tells the next points for "the rest". A call run's system prompt (`callLines`) tells the agent about
+the call and the `<say>` block; a task marked for later is queued; "keep me updated" turns on short
+progress lines from the agent's latest tool or words. The editor's `call/` keeps the mic (echo cancellation on, an
+energy detector that cuts utterances) and the voice queue; barge-in stops the voice and spoken commands stop or undo
+the run.
+A new engine is a new `engine` value and catalogue entries; the panel lists the
+catalogue.
 
 ## Sync
 

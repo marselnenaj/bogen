@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { contentLanguageOf, currentBranchId, readCanvasPlan, confirmed, fileKeyframes, type BogenDoc } from '@bogen/core';
+import { contentLanguageOf, currentBranchId, getCritiques, readCanvasPlan, confirmed, fileKeyframes, type BogenDoc } from '@bogen/core';
 import type { BogenServer } from './http/server.ts';
 import type { RunRequest } from './agents.ts';
 import { auditA11y } from './a11y.ts';
@@ -24,6 +24,22 @@ export interface QualityReport {
   rubric: RubricResult;
   /** The result is not an accessibility certificate or an independent taste verdict. */
   limitations: string[];
+  /** Independent review information, when available. Scores never block completion. */
+  critique?: CritiqueGate;
+}
+/** Informational review status. There is no required critique score or round count. */
+export interface CritiqueGate { state: 'reviewed' | 'missing' | 'unavailable'; score?: number; round?: number; max_rounds?: number; defects?: number; series?: string; next: string; open?: { title: string; fix: string; node_id?: string }[] }
+
+/** Report the latest review for any screen without asking for another paid round. */
+export function critiqueGate(doc: BogenDoc, board: string, available: boolean): CritiqueGate {
+  const last = getCritiques(doc).filter((r) => r.screens.some((sc) => sc.id === board)).sort((a, b) => a.at - b.at).at(-1);
+  if (!last) return { state: available ? 'missing' : 'unavailable', next: available
+    ? 'No independent review yet. At most one design_critique round by default; fix its objective defects without re-reviewing. Scores never block completion.'
+    : 'design_critique cannot run here (Claude Code is missing). Report the limitation; use design_lint and inspect the screenshot.' };
+  const open = last.defects.filter((d) => !d.screens.length || d.screens.some((n) => last.screens[n - 1]?.id === board)).slice(0, 8)
+    .map((d) => ({ title: d.title, fix: d.fix.slice(0, 240), ...(d.nodeId ? { node_id: d.nodeId } : {}) }));
+  return { state: 'reviewed', score: last.score, round: last.round, max_rounds: last.maxRounds, defects: last.defects.length, series: last.series, ...(open.length ? { open } : {}),
+    next: `design_critique: ${last.score}/10 in round ${last.round}, with ${last.defects.length} objective defects listed. Fix the objective defects and report any still open. Do not re-review unless the person explicitly requested a loop. The score never blocks completion.` };
 }
 export interface FinishCheck { ok: boolean; message: string; retryable?: boolean }
 
@@ -104,7 +120,8 @@ export class DesignQuality {
       } else {
       const brand = await this.app.brands.forRoom(await this.app.rooms.get(file));
       const avoid = brand?.data ? confirmed(brand.data.words).filter((w) => w.use === 'avoid').map((w) => ({ word: w.word, ...(w.instead ? { instead: w.instead } : {}) })) : [];
-      for (const issue of await lintIssues(doc, this.app.renderer, { nodeIds: [node] }, nodes, { avoid })) findings.push(fromLint(issue));
+      const fileName = this.app.storage.get(file)?.name;
+      for (const issue of await lintIssues(doc, this.app.renderer, { nodeIds: [node] }, nodes, { avoid, ...(fileName ? { fileName } : {}) })) findings.push(fromLint(issue));
       if (d.responsive) {
         const a11y = await auditA11y(doc, this.app.renderer, { nodeId: node });
         for (const layer of a11y.layers) for (const issue of layer.issues) findings.push({ rule: `a11y:${issue.rule}`, node_id: issue.node_id, message: `${issue.message} (${issue.wcag})`, severity: ['name', 'alt', 'focus-visible'].includes(issue.rule) && issue.severity === 'error' ? 'error' : 'warning' });
@@ -140,6 +157,8 @@ export class DesignQuality {
     const valid = observations.filter((o) => d.review.some((c) => c.id === o.criterion) && o.evidence.trim().length >= 24);
     const complete = d.review.every((c) => valid.filter((o) => o.criterion === c.id).length === 1);
     report.visual = { state: valid.some((o) => o.verdict === 'needs-work') ? 'needs-work' : screenshot && complete ? 'self-assessed' : 'missing', screenshot, observations: valid, criteria: d.review };
+    const available = await this.app.critiques.status().then((st) => st.state === 'ready', () => false);
+    report.critique = critiqueGate(doc, node, available);
     this.bounded(this.reports, this.key(file, node, run), report);
     return report;
   }

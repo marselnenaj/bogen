@@ -1,15 +1,19 @@
-import { brandBookMap, initializeBrandBook } from '@bogen/core';
+import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { join } from 'node:path';
+import { PDFDocument } from 'pdf-lib';
+import { brandBookMap, initializeBrandBook, readBrandEdition } from '@bogen/core';
 import {
-  addFontFaces, applyBrandTokens, applyTokenRenames, brandTokenRenames, bindingBrand, BRANCHES_ROOT, brandBrief, brandLanguages, contentLanguageOf, resolveContentLanguage, brandCounts, brandFieldsMap, brandItemsMap, BRAND_NOTICE, brandLinkOf, brandSheetHtml, brandSummary, brandVersionHead, brandVersions, brandVersionsMap, BogenDoc, colorsIn, confirmed, diffBrand,
+  addFontFaces, applyBrandTokens, applyTokenRenames, brandTokenRenames, bindingBrand, BRANCHES_ROOT, brandBrief, brandLanguages, contentLanguageOf, resolveContentLanguage, brandCounts, brandFieldsMap, brandItemsMap, BRAND_NOTICE, brandLinkOf, brandBookHtml, brandBookLanguage, brandBookPages, BRAND_BOOK_PAGE, type BrandBookExample, brandSummary, brandVersionHead, brandVersions, brandVersionsMap, BogenDoc, colorsIn, confirmed, diffBrand,
   familyStack, getFontFaces, type StoredFontFace, importHtml, isBrandDoc, makeBrandCopy, markBrandDoc, newId, normalizeColor, publishBrandVersion, readBrand, readProject, setBrandField, setBrandLink, Y, type BrandChange, type BrandData, type BrandVersion,
 } from '@bogen/core';
 import type { RunEnd, RunRequest } from './agents.ts';
-import { checkRendered, reportLine, resolveVars, type BrandReport } from './brand-check.ts';
+import { checkRendered, reportLine, resolveVars, type BrandReport, type Scope } from './brand-check.ts';
 import { trendOf, worstLayers, type ScoreHistory, type WorstLayer } from './brand-scores.ts';
 import type { EventHub } from './events.ts';
 import type { FileEvents } from './file-events.ts';
 import type { PeerManager } from './peers.ts';
 import type { Renderer } from './render.ts';
+import { screenFingerprint } from './screen-previews.ts';
 import type { FileEntry, Storage } from './storage.ts';
 import type { Room, Rooms } from './sync.ts';
 import { themeIndexOf } from './theme-projects.ts';
@@ -32,6 +36,8 @@ export interface BrandListItem {
   version: number;
   suggestions: number;
   draft: boolean;
+  /** How many changes the brand has since its latest version: what draft says, counted. */
+  changes: number;
 }
 
 export interface BrandNote {
@@ -89,6 +95,15 @@ function keyOfRoom(room: Room): string {
 }
 
 /** Brands are files of their own kind: this is everything that knows the difference. */
+/**
+ * What a check of a whole file covers. A designed edition of a brand book holds the generated book as a reference page,
+ * which shows counter-examples on purpose and is not the work: only the edition's own page counts.
+ */
+function wholeFile(doc: BogenDoc): Scope {
+  const edition = readBrandEdition(doc);
+  return edition && doc.pages.has(edition.pageId) ? { pageId: edition.pageId } : { file: true };
+}
+
 export class Brands {
   private listeners = new Set<(id: string) => void>();
   private timers = new Map<string, NodeJS.Timeout>();
@@ -233,17 +248,18 @@ export class Brands {
   }
 
   private itemFromEntry(entry: FileEntry): BrandListItem {
-    return { id: entry.id, name: entry.name, updatedAt: entry.updatedAt, positioning: '', colors: [], isDefault: false, linkedFiles: this.linkedEntries(entry.id).length, version: 0, suggestions: 0, draft: false };
+    return { id: entry.id, name: entry.name, updatedAt: entry.updatedAt, positioning: '', colors: [], isDefault: false, linkedFiles: this.linkedEntries(entry.id).length, version: 0, suggestions: 0, draft: false, changes: 0 };
   }
 
   private itemFromDoc(entry: FileEntry, doc: BogenDoc): BrandListItem {
     const data = readBrand(doc);
     const head = brandVersionHead(doc);
     const latest = head ? brandVersions(doc).at(-1) : undefined;
+    const changes = latest ? diffBrand(latest.data, data).length : 0;
     return {
       id: entry.id, name: entry.name, updatedAt: entry.updatedAt, positioning: data.fields.positioning, colors: data.colors.slice(0, 8).map((c) => c.value),
       isDefault: data.fields.defaultAt > 0, linkedFiles: this.linkedEntries(entry.id).length, version: head?.n ?? 0, suggestions: brandCounts(data).suggestions,
-      draft: latest ? diffBrand(latest.data, data).length > 0 : false,
+      draft: changes > 0, changes,
     };
   }
 
@@ -263,7 +279,7 @@ export class Brands {
         setBrandField(doc, 'name', clean);
         initializeBrandBook(doc);
       }, `person:${by}`);
-      await atomicWrite(this.deps.storage.docPath(id), Y.encodeStateAsUpdate(doc.y));
+      await this.deps.storage.writeDoc(id, Y.encodeStateAsUpdate(doc.y));
     } finally {
       doc.y.destroy();
     }
@@ -300,7 +316,7 @@ export class Brands {
     if (data.fields.defaultAt > 0 && (await this.defaultBrandId())) setBrandField(carried.doc, 'defaultAt', 0, origin);
     // Another import of the same brand, or a paired device, may have listed it while the default was looked up.
     if (storage.get(id)) return this.adopt(carried, origin);
-    await atomicWrite(storage.docPath(id), Y.encodeStateAsUpdate(carried.doc.y));
+    await storage.writeDoc(id, Y.encodeStateAsUpdate(carried.doc.y));
     storage.create(name, id, 'brand');
     hub.broadcast({ t: 'files' });
     hub.broadcast({ t: 'brand', id });
@@ -353,7 +369,7 @@ export class Brands {
       Y.applyUpdate(copy.y, Y.encodeStateAsUpdate(room.doc.y));
       const from = { id, name: data.fields.name || entry.name, version: brandVersionHead(room.doc)?.n ?? 0, at: Date.now() };
       makeBrandCopy(copy, from, `${data.fields.name || entry.name} copy`, origin);
-      await atomicWrite(this.deps.storage.docPath(copyId), Y.encodeStateAsUpdate(copy.y));
+      await this.deps.storage.writeDoc(copyId, Y.encodeStateAsUpdate(copy.y));
     } finally {
       copy.y.destroy();
     }
@@ -414,7 +430,7 @@ export class Brands {
 
   // ---------------------------------------------------------------- links
 
-  async link(fileId: string, brandId: string | null, origin: unknown): Promise<{ brand_id: string | null; tokens_set: string[] }> {
+  async link(fileId: string, brandId: string | null, origin: unknown): Promise<{ brand_id: string | null; tokens_set: string[]; provisional_tokens?: string[]; note?: string }> {
     const { storage, rooms } = this.deps;
     const entry = storage.get(fileId);
     if (!entry) throw new HttpError(404, `No file with id ${fileId}.`);
@@ -429,12 +445,16 @@ export class Brands {
     const head = brandVersionHead(brandRoom.doc) ?? publishBrandVersion(brandRoom.doc, { note: 'First linked', by: 'Bogen' }, origin);
     const faces = this.faceSubset(brandRoom.doc, data);
     let tokens: string[] = [];
+    let provisional: string[] = [];
     room.doc.transact(() => {
       setBrandLink(room.doc, { id: brandId, version: head.id, at: Date.now() });
-      tokens = applyBrandTokens(room.doc, data).set;
+      ({ set: tokens, provisional } = applyBrandTokens(room.doc, data));
       if (faces.length) addFontFaces(room.doc, faces);
     }, origin);
-    return { brand_id: brandId, tokens_set: tokens };
+    return {
+      brand_id: brandId, tokens_set: tokens,
+      ...(provisional.length ? { provisional_tokens: provisional, note: 'These tokens come from suggestions nobody confirmed yet. Design with them; they become the brand\'s own when the person confirms the suggestions, and go if they are dismissed.' } : {}),
+    };
   }
 
   /** The hosted font files for this brand's families, so that a linked file draws them like the brand does. */
@@ -442,11 +462,21 @@ export class Brands {
     const wanted = new Set(confirmed(data.families).map((f) => f.family.toLowerCase()));
     const faces = getFontFaces(brandDoc).filter((f) => wanted.has(f.family.toLowerCase()));
     // Files a person gave the brand count just as much as what a capture brought along.
+    // One file can serve several roles of a family (display at 800 to 900, body at 400 to 700): its face covers them all,
+    // or the browser would take the first role's range for every weight.
+    const ranges = new Map<string, { family: string; weights: number[] }>();
     for (const family of confirmed(data.families)) {
-      const weights = family.weights.length ? `${Math.min(...family.weights)} ${Math.max(...family.weights)}` : undefined;
       for (const src of family.assets) {
-        if (/\.(woff2|woff|ttf|otf)$/.test(src) && !faces.some((f) => f.src === src)) faces.push({ family: family.family, src, ...(weights ? { weight: weights } : {}), display: 'swap' });
+        if (!/\.(woff2|woff|ttf|otf)$/.test(src) || faces.some((f) => f.src === src)) continue;
+        const key = `${family.family.toLowerCase()}|${src}`;
+        const seen = ranges.get(key) ?? { family: family.family, weights: [] };
+        seen.weights.push(...family.weights);
+        ranges.set(key, seen);
       }
+    }
+    for (const [key, { family, weights }] of ranges) {
+      const src = key.slice(key.indexOf('|') + 1);
+      faces.push({ family, src, ...(weights.length ? { weight: `${Math.min(...weights)} ${Math.max(...weights)}` } : {}), display: 'swap' });
     }
     return faces;
   }
@@ -517,7 +547,7 @@ export class Brands {
     if (!found?.data) return;
     try {
       // The language the run wrote in, which may be its own for this one request rather than the file's.
-      const report = await checkRendered(room.doc, found.data, this.deps.renderer, { file: true }, end.language ? { contentLanguage: end.language.tag } : {});
+      const report = await checkRendered(room.doc, found.data, this.deps.renderer, wholeFile(room.doc), end.language ? { contentLanguage: end.language.tag } : {});
       if (this.closed) return;
       this.reports.set(end.fileId, { ...report, at: Date.now(), runId: end.runId });
       await this.deps.scores.record(found.link.id, end.fileId, report, `run:${end.runner}`).catch(() => {});
@@ -553,7 +583,7 @@ export class Brands {
       if (options.fileIds && !options.fileIds.includes(file.id)) continue;
       const room = await this.deps.rooms.get(file.id).catch(() => null);
       if (!room || brandLinkOf(room.doc)?.id !== brandId) continue;
-      const report = await checkRendered(room.doc, data, this.deps.renderer, { file: true });
+      const report = await checkRendered(room.doc, data, this.deps.renderer, wholeFile(room.doc));
       if (report.score.nothing_checked) {
         files.push({ file_id: file.id, file_name: file.name, score: null, hard: 0, soft: 0, layers: 0, worst: [], trend: trendOf(before.files[file.id] ?? []) });
         continue;
@@ -703,18 +733,186 @@ export class Brands {
     return { version: head.n, files: out, ...(skipped.length ? { skipped } : {}) };
   }
 
-  /** The rendered sheet as a throwaway document: one artboard, built from the data and nothing else. */
-  sheetDoc(data: BrandData, brandDoc: BogenDoc): { doc: BogenDoc; rootId: string } {
+  /**
+   * The brand book as a throwaway document: one artboard holding the pages one under another, built from the data and
+   * nothing else, with the brand's example artboards rendered into it as pictures. `pageIds` are the pages in order,
+   * one PDF page each.
+   */
+  async sheetDoc(data0: BrandData, brandDoc: BogenDoc, layout: 'book' | 'pages' = 'book'): Promise<{ doc: BogenDoc; rootId: string; pageIds: string[]; titles: string[] }> {
+    const data = await this.bookData(data0);
+    const examples = await this.bookExamples(data, brandDoc);
+    const head = brandVersionHead(brandDoc);
+    const date = new Date().toLocaleDateString(brandBookLanguage(data) === 'de' ? 'de-AT' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const opts = { examples, date, ...(head ? { version: head.n } : {}) };
     const doc = new BogenDoc(new Y.Doc());
-    doc.ensureFirstPage('Sheet');
+    doc.ensureFirstPage('Brand book');
     const pageId = doc.getPages()[0]!.id;
-    const { nodes } = importHtml(brandSheetHtml(data));
+    addFontFaces(doc, getFontFaces(brandDoc));
+    if (layout === 'pages') {
+      // Each page an artboard of its own, one under another: what a PDF takes one page each from.
+      const pages = brandBookPages(data, opts);
+      const ids = pages.map((p, i) => {
+        const node = importHtml(p.html).nodes[0]!;
+        node.style = { ...node.style, position: 'absolute', left: '0px', top: `${i * (BRAND_BOOK_PAGE.height + 80)}px` };
+        return doc.insert(pageId, node);
+      });
+      return { doc, rootId: ids[0]!, pageIds: ids, titles: ids.map((id) => doc.getNode(id)!.name) };
+    }
+    const { nodes } = importHtml(brandBookHtml(data, opts));
     const root = nodes[0];
-    if (!root) throw new Error('The sheet came out empty.');
+    if (!root) throw new Error('The brand book came out empty.');
     root.style = { ...root.style, position: 'absolute', left: '0px', top: '0px' };
     const rootId = doc.insert(pageId, root);
-    addFontFaces(doc, getFontFaces(brandDoc));
-    return { doc, rootId };
+    const pages = doc.getChildren(rootId).filter((n) => /^\d{2} /.test(n.name));
+    return { doc, rootId, pageIds: pages.map((n) => n.id), titles: pages.map((n) => n.name) };
+  }
+
+  /**
+   * The brand book as a PDF, one page per page. Each page is rendered from a document of its own: a page among many
+   * artboards of one document can come out blank in the browser's print.
+   */
+  async bookPdf(data0: BrandData, brandDoc: BogenDoc): Promise<Uint8Array> {
+    const data = await this.bookData(data0);
+    const examples = await this.bookExamples(data, brandDoc);
+    const head = brandVersionHead(brandDoc);
+    const date = new Date().toLocaleDateString(brandBookLanguage(data) === 'de' ? 'de-AT' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const faces = getFontFaces(brandDoc);
+    const merged = await PDFDocument.create();
+    for (const page of brandBookPages(data, { examples, date, ...(head ? { version: head.n } : {}) })) {
+      const doc = new BogenDoc(new Y.Doc());
+      try {
+        doc.ensureFirstPage('Brand book');
+        addFontFaces(doc, faces);
+        const node = importHtml(page.html).nodes[0]!;
+        node.style = { ...node.style, position: 'absolute', left: '0px', top: '0px' };
+        const id = doc.insert(doc.getPages()[0]!.id, node);
+        const part = await PDFDocument.load(await this.deps.renderer.pdf(doc, [{ nodeIds: [id] }]));
+        for (const copied of await merged.copyPages(part, part.getPageIndices())) merged.addPage(copied);
+      } finally {
+        doc.y.destroy();
+      }
+    }
+    merged.setTitle(`${data.fields.name || 'Brand'} brand guidelines`);
+    return merged.save();
+  }
+
+  /**
+   * The brand as the book shows it: each SVG logo with its viewBox trimmed to the drawing, so that a mark drawn with an
+   * empty margin sits on the book's margin and its clear space is measured from the mark itself. Measured once per SVG.
+   */
+  private artBoxes = new Map<string, { x: number; y: number; width: number; height: number } | null>();
+  private async bookData(data: BrandData): Promise<BrandData> {
+    const svgs = data.logos.map((l) => l.svg ?? '').filter((x) => x && !this.artBoxes.has(x));
+    if (svgs.length) {
+      const boxes = typeof this.deps.renderer?.svgArtBoxes === 'function' ? await this.deps.renderer.svgArtBoxes(svgs).catch(() => svgs.map(() => null)) : svgs.map(() => null);
+      svgs.forEach((x, i) => { if (this.artBoxes.size > 200) this.artBoxes.clear(); this.artBoxes.set(x, boxes[i] ?? null); });
+    }
+    return { ...data, logos: data.logos.map((l) => {
+      const box = l.svg ? this.artBoxes.get(l.svg) : null;
+      if (!l.svg || !box) return l;
+      const vb = /viewBox="\s*([-\d.]+)[\s,]+([-\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"/.exec(l.svg);
+      const w = vb ? Number(vb[3]) : Number(/\swidth="([\d.]+)"/.exec(l.svg)?.[1] ?? 0);
+      const h = vb ? Number(vb[4]) : Number(/\sheight="([\d.]+)"/.exec(l.svg)?.[1] ?? 0);
+      // Only a real margin is trimmed: the drawing at least 4 % smaller than its box on one side.
+      if (w && h && box.width >= w * 0.96 && box.height >= h * 0.96) return l;
+      const pad = Math.max(box.width, box.height) * 0.01;
+      const viewBox = `${(box.x - pad).toFixed(2)} ${(box.y - pad).toFixed(2)} ${(box.width + 2 * pad).toFixed(2)} ${(box.height + 2 * pad).toFixed(2)}`;
+      const svg = vb ? l.svg.replace(vb[0], `viewBox="${viewBox}"`) : l.svg.replace(/<svg\b/, `<svg viewBox="${viewBox}"`);
+      return { ...l, svg, aspect: (box.width + 2 * pad) / (box.height + 2 * pad) };
+    }) };
+  }
+
+  /**
+   * Example artboards as pictures, kept for as long as the artboard looks the same: in memory, and on disk so that a
+   * restarted server opens the book at once too. The key is a hash of the artboard's own HTML, so an edit to it makes a
+   * new picture and nothing else does.
+   */
+  private exampleShots = new Map<string, string>();
+  private exampleSizes = new Map<string, { width: number; height: number }>();
+  private exampleMeta = new Map<string, ShotMeta>();
+  private async bookExamples(data: BrandData, brandDoc: BogenDoc): Promise<BrandBookExample[]> {
+    const folder = join(this.deps.storage.home, 'brand-book-shots');
+    const out: BrandBookExample[] = [];
+    // An example can be an artboard of the brand itself or of a file linked to it, where the brand's own design work
+    // usually lives; the linked files are opened only when an example is not in the brand.
+    const brandId = this.deps.storage.listBrands().find((e) => this.deps.rooms.peek(e.id)?.doc === brandDoc)?.id;
+    let linked: BogenDoc[] | null = null;
+    const docFor = async (nodeId: string): Promise<BogenDoc | null> => {
+      if (brandDoc.getNode(nodeId)) return brandDoc;
+      if (!brandId) return null;
+      linked ??= (await Promise.all(this.linkedEntries(brandId).slice(0, 6).map((e) => this.deps.rooms.get(e.id).then((r) => r.doc).catch(() => null)))).filter((d): d is BogenDoc => !!d);
+      return linked.find((d) => !!d.getNode(nodeId)) ?? null;
+    };
+    for (const a of data.artboards.filter((x) => !x.suggested).slice(0, 8)) {
+      const srcDoc = await docFor(a.nodeId);
+      if (!srcDoc) continue;
+      let key: string;
+      try { key = screenFingerprint(srcDoc, a.nodeId).fingerprint; } catch { continue; }
+      key = `v6-${key}`;
+      let src = this.exampleShots.get(key);
+      let size = this.exampleSizes.get(key);
+      let meta = this.exampleMeta.get(key);
+      if (!src) {
+        const path = join(folder, `${key}.jpg`);
+        const kept = await readFile(path).catch(() => null);
+        if (kept) {
+          src = `data:image/jpeg;base64,${kept.toString('base64')}`; size = jpegSize(kept);
+          meta = await readFile(join(folder, `${key}.json`), 'utf8').then((x) => JSON.parse(x) as ShotMeta).catch(() => undefined);
+        } else {
+          try {
+            // Sharp where the book shows it: a desktop page at 1.5 times the 1152px it fills, a phone screen at 1.5 times
+            // its 340px column, so that no picture is enlarged. Only as much of the top as the book's frame shows
+            // (1152 by 540, or 340 by 540), ended where no line or object is cut, with the smallest text in it.
+            const width = parseFloat(String(srcDoc.getNode(a.nodeId)?.style?.width ?? '')) || 1440;
+            const scale = width > 700 ? Math.min(2, 1728 / width) : Math.min(3, 520 / width);
+            const frame = width > 700 ? 540 / 1152 : 540 / 340;
+            const shot = await this.deps.renderer.screenshot(srcDoc, { nodeIds: [a.nodeId] }, { format: 'jpg', scale, quality: 74, maxDimension: 4200, maxHeight: Math.round(width * frame), cleanCut: true });
+            src = `data:image/jpeg;base64,${Buffer.from(shot.bytes).toString('base64')}`;
+            size = { width: shot.width, height: shot.height };
+            meta = { cssWidth: shot.cssWidth ?? width, ...(shot.minTextPx ? { minTextPx: shot.minTextPx } : {}), cut: !!shot.cut };
+            await mkdir(folder, { recursive: true, mode: 0o700 })
+              .then(() => atomicWrite(path, shot.bytes, 0o600))
+              .then(() => atomicWrite(join(folder, `${key}.json`), Buffer.from(JSON.stringify(meta)), 0o600))
+              .then(() => pruneShots(folder)).catch(() => {});
+          } catch {
+            continue; // No browser here: the book is made without the pictures.
+          }
+        }
+        if (this.exampleShots.size >= 64) this.exampleShots.delete(this.exampleShots.keys().next().value!);
+        this.exampleShots.set(key, src);
+        if (size) this.exampleSizes.set(key, size);
+        if (meta) this.exampleMeta.set(key, meta);
+      }
+      out.push({ name: a.name, verdict: a.verdict, src, ...(a.note ? { note: a.note } : {}), ...(size ? { width: size.width, height: size.height } : {}), ...(meta ?? {}) });
+    }
+    return out;
+  }
+}
+
+/** What the book needs to know of an example picture beyond its pixels. */
+interface ShotMeta { cssWidth: number; minTextPx?: number; cut: boolean }
+
+/** The pixel size of a JPEG, from its first start-of-frame marker. */
+function jpegSize(b: Buffer): { width: number; height: number } | undefined {
+  let i = 2;
+  while (i + 9 < b.length) {
+    if (b[i] !== 0xff) return undefined;
+    const marker = b[i + 1]!;
+    const len = b.readUInt16BE(i + 2);
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) return { height: b.readUInt16BE(i + 5), width: b.readUInt16BE(i + 7) };
+    i += 2 + len;
+  }
+  return undefined;
+}
+
+/** Keeps the newest 200 example pictures; they are only a cache. */
+async function pruneShots(folder: string): Promise<void> {
+  const names = (await readdir(folder)).filter((n) => n.endsWith('.jpg'));
+  if (names.length <= 200) return;
+  const dated = await Promise.all(names.map(async (n) => ({ n, at: (await stat(join(folder, n)).catch(() => null))?.mtimeMs ?? 0 })));
+  for (const { n } of dated.sort((x, y) => x.at - y.at).slice(0, names.length - 200)) {
+    await rm(join(folder, n), { force: true });
+    await rm(join(folder, n.replace(/\.jpg$/, '.json')), { force: true });
   }
 }
 

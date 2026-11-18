@@ -1,7 +1,14 @@
 import type { Theme, ThreadRunStatus } from './api.ts';
 
+/** An agent ringing the person because a run they asked for ended on a question. See server `incoming-calls.ts`. */
+export interface IncomingCallInfo { id: string; fileId: string; fileName: string; runId: string; runner: string; question: string; threadId?: string; conversationId?: string; at: number; expiresAt: number }
+
 export type ServerEvent =
   | { t: 'files' }
+  | { t: 'incoming-call'; call: IncomingCallInfo }
+  | { t: 'incoming-call-end'; id: string; fileId: string; reason: 'answered' | 'declined' | 'text' | 'missed' }
+  | { t: 'team-unsent'; fileId: string; count: number }
+  | { t: 'file-reset'; fileId: string }
   | { t: 'activity'; fileId: string; agent: string; tool: string; nodeIds: string[]; at: number; runId?: string }
   | { t: 'agent'; runId: string; fileId: string; kind: 'text' | 'tool' | 'done' | 'error'; text?: string; tool?: string }
   | { t: 'theme'; theme: Theme | null }
@@ -22,7 +29,9 @@ export type ServerEvent =
   | { t: 'race'; fileId: string; raceId: string }
   | { t: 'memory'; fileId: string; brandId?: string }
   | { t: 'pull'; id: string; fileId: string; status: string }
-  | { t: 'conversation'; fileId: string; conversationId: string; closed?: boolean };
+  | { t: 'conversation'; fileId: string; conversationId: string; closed?: boolean }
+  /** `bogen open` on this machine asks whether a window that is there takes the file (tabs/OneWindow.tsx). */
+  | { t: 'open-request'; id: string; hash: string; raise?: boolean };
 
 type Listener = (e: ServerEvent) => void;
 
@@ -55,20 +64,29 @@ export function onReachableChange(fn: () => void): () => void {
   return () => reachListeners.delete(fn);
 }
 
+/** Whether the socket was open before: an open after that is a reconnect, and what was sent meanwhile is missed. */
+let opened = false;
+const reconnectListeners = new Set<() => void>();
+
 function connect(): void {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   socket = new WebSocket(`${proto}//${location.host}/events`);
   socket.onopen = () => {
     retry = 500;
     setReachable(true);
+    if (opened) for (const fn of [...reconnectListeners]) run(fn);
+    opened = true;
   };
   socket.onmessage = (m) => {
+    let data: ServerEvent;
     try {
-      const data = JSON.parse(String(m.data)) as ServerEvent;
-      for (const l of listeners) l(data);
+      data = JSON.parse(String(m.data)) as ServerEvent;
     } catch {
       // A server newer than this editor may send messages it does not understand.
+      return;
     }
+    // Each listener on its own: one that throws must not keep the event from the ones after it.
+    for (const l of [...listeners]) run(() => l(data));
   };
   socket.onclose = () => {
     setReachable(false);
@@ -87,6 +105,27 @@ export function reconnectEvents(): void {
     socket.close();
   }
   connect();
+}
+
+function run(fn: () => void): void {
+  try {
+    fn();
+  } catch (e) {
+    console.error('bogen: an event listener failed', e);
+  }
+}
+
+/**
+ * Called each time the events socket opens again after it was closed, say by a restart of the server. Events sent
+ * while it was closed never arrive, so a view that follows them reads its data anew here.
+ */
+export function onEventsReconnect(fn: () => void): () => void {
+  if (!started) {
+    started = true;
+    connect();
+  }
+  reconnectListeners.add(fn);
+  return () => reconnectListeners.delete(fn);
 }
 
 export function onServerEvent(fn: Listener): () => void {

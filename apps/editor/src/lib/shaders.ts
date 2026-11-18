@@ -76,6 +76,11 @@ export function parseShaderAttrs(attrs: Record<string, string> | undefined): Rec
       out.colors = parseColorList(v);
       continue;
     }
+    // The effect's own type (halftone dots' classic or gooey, a dither's 8x8) is written variant: type names the effect.
+    if (k === 'variant') {
+      out.type = v;
+      continue;
+    }
     if (v === 'true') out[k] = true;
     else if (v === 'false') out[k] = false;
     else if (v !== '' && !Number.isNaN(Number(v))) out[k] = Number(v);
@@ -100,7 +105,7 @@ export function presetToAttrs(type: string, preset: ShaderPreset): Record<string
   const out: Record<string, string> = { type };
   for (const [k, v] of Object.entries(preset.params)) {
     if (v === undefined) continue;
-    out[k] = Array.isArray(v) ? JSON.stringify(v) : String(v);
+    out[k === 'type' ? 'variant' : k] = Array.isArray(v) ? JSON.stringify(v) : String(v);
   }
   return out;
 }

@@ -1,5 +1,5 @@
 import {
-  bindingBrand, contentLanguageOf, declaredLanguageOf, exampleLine, itemsForLanguage, judgeCopy, voiceFindings, voiceProfile, brandTokens, familyStack, colorAlpha, colorDistance, colorsIn, confirmed, contrastRatio, flattenColor, logoFitsBackground, normalizeColor, pickLogo, readWaivers, resolveBrandColor, ruleValues, sanitizeSvgMarkup, svgAspect, waiverKey,
+  bindingBrand, contentLanguageOf, declaredLanguageOf, exampleLine, itemsForLanguage, judgeCopy, voiceFindings, voiceProfile, brandTokens, provisionalBrandTokens, familyStack, colorAlpha, colorDistance, colorsIn, confirmed, contrastRatio, flattenColor, logoFitsBackground, normalizeColor, pickLogo, readWaivers, resolveBrandColor, ruleValues, sanitizeSvgMarkup, svgAspect, waiverKey,
   type BogenDoc, type BogenNode, type BrandColor, type BrandData, type BrandFamily, type BrandLogo, type BrandRule, type Severity,
 } from '@bogen/core';
 import type { Renderer, Target } from './render.ts';
@@ -645,8 +645,10 @@ function tokenMap(doc: BogenDoc): Map<string, string> {
 }
 
 /** Tokens of this file that stand for the brand: the brand's own names, and others holding exactly a brand value. */
-function brandTokenNames(data: BrandData, tokens: Map<string, string>): Set<string> {
-  const brand = brandTokens(data);
+export function brandTokenNames(data: BrandData, tokens: Map<string, string>): Set<string> {
+  // Suggestions count too: a brand that is all suggestions still has colours, and a file that designs with them
+  // through tokens uses the system as far as it exists. Without this such a file scored 0 % on system.
+  const brand = [...brandTokens(data), ...provisionalBrandTokens(data)];
   const norm = (v: string) => normalizeColor(v) ?? v.trim().toLowerCase().replace(/\s+/g, ' ');
   const values = new Set(brand.map((t) => norm(t.value)));
   const out = new Set(brand.map((t) => t.name));

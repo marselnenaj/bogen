@@ -1,5 +1,5 @@
 import {
-  aspectRatioOf, CROP_ASPECTS, CROP_ATTR, croppedHeight, cropToAspect, formatCrop, paletteFromImage, palettesFromSeed, palettesFromSubject, parseCrop, parseImageFilters, withImageFilters,
+  brandLinkOf, aspectRatioOf, CROP_ASPECTS, CROP_ATTR, croppedHeight, cropToAspect, formatCrop, paletteFromImage, palettesFromSeed, palettesFromSubject, parseCrop, parseImageFilters, withImageFilters,
   type BogenDoc, type BogenNode, type Crop, type CropAspect, type NewNode,
 } from '@bogen/core';
 import { z } from 'zod';
@@ -138,18 +138,28 @@ export function registerImageTools(define: ToolDefiner): void {
     return { id: node_id, filter, brightness: now.brightness ?? 100, contrast: now.contrast ?? 100, saturation: now.saturate ?? 100, blur: now.blur ?? 0, grayscale: now.grayscale ?? 0 };
   });
 
-  define('image_vectorize', { description: `Trace an image layer into an editable SVG layer, on this computer (imagetracerjs, in a worker): flat shapes in at most colors colours, with more or fewer of them by detail. The result is sanitized like any SVG, and goes next to the image (or in its place with replace), sized to the layer's width at the image's own shape. Works for images stored in Bogen: PNG, JPEG, WebP, GIF and AVIF. Good for logos, icons, flat illustrations and posterized looks; photos make many paths. Then edit fills and paths as for any vector.` }, {
+  define('image_vectorize', { description: `Trace an image layer into an editable SVG layer, on this computer (imagetracerjs, in a worker): flat shapes in at most colors colours, with more or fewer of them by detail. The result is sanitized like any SVG, and goes next to the image (or in its place with replace), sized to the layer's width at the image's own shape. Works for images stored in Bogen: PNG, JPEG, WebP, GIF and AVIF. Good for logos, icons, flat illustrations and posterized looks; photos make many paths. palette brand traces to the brand's own colours only, written as var(--token), so the vector follows the brand; for a photo in brand colours, image_treatment gives halftone, mosaic and dither looks. Then edit fills and paths as for any vector.` }, {
     node_id: z.string().describe('The image layer.'),
+    palette: z.enum(['image', 'brand']).default('image').describe('image: colours found in the image. brand: only the colours of the brand the file is linked to (or brand_id).'),
+    brand_id: z.string().optional(),
     colors: z.number().int().min(MIN_COLORS).max(MAX_COLORS).default(8).describe('How many colours the vector has at most.'),
     detail: z.enum(VECTORIZE_DETAILS).default('medium').describe('low drops small shapes and smooths edges; high keeps them.'),
     replace: z.boolean().default(false).describe('Put the vector in place of the image, which is deleted (agent_undo brings it back).'),
     file_id: fileIdArg,
-  }, async ({ node_id, colors, detail, replace, file_id }, ctx) => {
+  }, async ({ node_id, colors, detail, replace, palette, brand_id, file_id }, ctx) => {
     if (ctx.dryRun) throw new Error('image_vectorize runs the tracer, so it does not run in a dry run.');
     const room = await ctx.room(file_id);
     const node = requireImage(room.doc, node_id);
     assertUnlocked(room.doc, [node_id]);
-    const traced = await vectorizeAsset(ctx.app.storage, ctx.app.renderer, node.src!, { colors, detail });
+    let brandPalette: { color: string; token?: string }[] | undefined;
+    if (palette === 'brand') {
+      const id = brand_id ?? brandLinkOf(room.doc)?.id;
+      if (!id || ctx.app.storage.get(id)?.kind !== 'brand') throw new Error('palette brand needs a brand: link the file with brand_link, or pass brand_id.');
+      const { data } = await ctx.app.brands.read(id);
+      brandPalette = data.colors.map((c) => ({ color: c.value.slice(0, 7), token: c.token }));
+      if (brandPalette.length < 2) throw new Error('The brand has fewer than two colours to trace to.');
+    }
+    const traced = await vectorizeAsset(ctx.app.storage, ctx.app.renderer, node.src!, { colors, detail, ...(brandPalette ? { palette: brandPalette } : {}) });
     const width = (await layerWidth(ctx, room.doc, node)) ?? Math.min(traced.width, 800);
     const spec = vectorLayer(node, traced, width, replace);
     const id = ctx.write(room, () => {

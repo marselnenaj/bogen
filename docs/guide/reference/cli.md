@@ -51,6 +51,11 @@ Opens the editor in your browser, starting the server if needed. With a token, t
 With a file, by id or name, it opens that file; with `#<layer>`, by id or name, that layer is selected
 and in view. It prints the address. See [Layer links](../agents.md#layer-links).
 
+A Bogen window that already shows the file takes it, and comes to the front where the system allows it (on
+Hyprland the command raises it by its title). On Hyprland and on a Mac, without one, a window in view takes the file
+as a new tab. Otherwise a new window opens; when another window has the file, it says so and offers to use this
+window instead, since a file is open in one window at a time.
+
 ### bogen welcome
 
 Opens the "Welcome to Bogen" file, starting the server if needed. If you deleted it, this makes a new

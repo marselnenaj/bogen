@@ -1,16 +1,22 @@
 import { useEffect, useState } from 'react';
+import { Facts } from '../ui/Facts.tsx';
 import { BRAND_BOOK_CHAPTERS, brandBookReadiness, brandLanguages, chapterLanguage, languageDirection, updateBrandBookChapter, type BrandBookChapterId, type BrandBookStatus, type BrandData } from '@bogen/core';
 import type { Session } from '../doc/session.ts';
 import { useT } from '../i18n/react.ts';
 import { languageLabel, languageOptions } from './ContentLanguage.tsx';
 import { SelectField } from '../ui/controls.tsx';
 
+/** **Bold** inside a line, as React text: the asterisks are markup, not words. */
+function Inline({ text }: { text: string }) {
+  return <>{text.split(/(\*\*[^*\n]+\*\*)/).map((part, i) => /^\*\*[^*\n]+\*\*$/.test(part) ? <strong key={i}>{part.slice(2, -2)}</strong> : part)}</>;
+}
+
 /** Small safe Markdown subset. Content is React text, never executable HTML. */
 function BookCopy({ text }: { text: string }) {
   return <div className="brand-book-copy">{text.split(/\n\s*\n/).map((block, i) => {
-    if (/^#{1,4} /.test(block)) return <h4 key={i}>{block.replace(/^#{1,4} /, '')}</h4>;
-    if (block.split('\n').every((line) => /^[-*] /.test(line))) return <ul key={i}>{block.split('\n').map((line, j) => <li key={j}>{line.slice(2)}</li>)}</ul>;
-    return <p key={i}>{block}</p>;
+    if (/^#{1,4} /.test(block)) return <h3 key={i}><Inline text={block.replace(/^#{1,4} /, '')} /></h3>;
+    if (block.split('\n').every((line) => /^[-*] /.test(line))) return <ul key={i}>{block.split('\n').map((line, j) => <li key={j}><Inline text={line.slice(2)} /></li>)}</ul>;
+    return <p key={i}><Inline text={block} /></p>;
   })}</div>;
 }
 
@@ -48,13 +54,13 @@ export function BrandBook({ brandId, data, by, session }: { brandId: string; dat
     finally { setSaving(false); }
   };
   return <section className="brand-book" data-testid="brand-book">
-    <header><h2>{t('Brandbook')}</h2><p>{t('Drafts are proposals. Only confirmed chapters guide design. Open questions stay visible.')}</p></header>
-    <p className="brand-book-progress" data-testid="brand-book-readiness">{t('Confirmed')} {readiness.confirmed}/{readiness.total} · {t('Draft')} {readiness.draft} · {t('Open')} {readiness.open} · {t('Not applicable')} {readiness.notApplicable}</p>
+    <header><h1>{t('Brandbook')}</h1><p>{t('Drafts are proposals. Only confirmed chapters guide design. Open questions stay visible.')}</p></header>
+    <Facts className="brand-book-progress" testId="brand-book-readiness" items={[`${t('Confirmed')} ${readiness.confirmed}/${readiness.total}`, `${t('Draft')} ${readiness.draft}`, `${t('Open')} ${readiness.open}`, `${t('Not applicable')} ${readiness.notApplicable}`]} />
     {/* Chapter names, their prompts and the foundations come from the brand model in English, like template names. */}
     {readiness.foundationGaps.length ? <p className="bp-group-hint">{t('Required')}: <span lang="en">{readiness.foundationGaps.join(', ')}</span></p> : null}
-    <label className="brand-book-picker"><span>{t('Chapter')}</span><select value={id} disabled={editing || saving} onChange={(e) => { setId(e.target.value as BrandBookChapterId); setError(''); }} data-testid="brand-book-chapter">{BRAND_BOOK_CHAPTERS.map((d, i) => <option key={d.id} value={d.id}>{String(i + 1).padStart(2, '0')} · {d.title} · {label(data.book?.chapters.find((c) => c.id === d.id)?.status ?? 'open')}</option>)}</select></label>
+    <label className="brand-book-picker"><span>{t('Chapter')}</span><select value={id} disabled={editing || saving} onChange={(e) => { setId(e.target.value as BrandBookChapterId); setError(''); }} data-testid="brand-book-chapter">{BRAND_BOOK_CHAPTERS.map((d, i) => <option key={d.id} value={d.id}>{t('{number}. {chapter}, {status}', { number: i + 1, chapter: d.title, status: label(data.book?.chapters.find((c) => c.id === d.id)?.status ?? 'open') })}</option>)}</select></label>
     <article>
-      <div className="brand-book-title"><h3 lang="en">{def.title}</h3><span>{label(chapter?.status ?? 'open')}</span></div>
+      <div className="brand-book-title"><h2 lang="en">{def.title}</h2><span>{label(chapter?.status ?? 'open')}</span></div>
       <p className="bp-group-hint" lang="en">{def.prompt}</p>
       {editing ? <>
         <SelectField<string> label={t('Language')} value={draft.lang} options={[{ value: '', label: langs.primary ? languageLabel(langs.primary) : t('Language: not set') }, ...languageOptions([draft.lang, ...langs.all]).filter((o) => o.value !== langs.primary)]} onChange={(v) => setDraft({ ...draft, lang: v })} testId="brand-book-language" />

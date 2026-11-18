@@ -136,7 +136,7 @@ try {
   check('a second take was written into the confirmed value, with no duplicate', after.colors.filter((c: { name: string }) => c.name === 'Ink').length === 1, after.colors.map((c: { name: string; value: string }) => `${c.name} ${c.value}`));
 
   // 3. Across linked files, with the trend.
-  await page.click(t('brand-tab-health'));
+  await page.click(t('brand-tab-files'));
   await page.waitForSelector(t('brand-health'));
   await page.click(t('brand-health-run'));
   await page.waitForSelector(t('brand-health-layer'), { timeout: 30000 });

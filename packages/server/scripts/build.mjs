@@ -39,8 +39,9 @@ await build({
   // puppeteer-core reaches for many optional modules at runtime, so it stays an npm dependency.
   // esbuild has a native binary: it bundles code components at runtime, and the shader runtime in development.
   // Mermaid and pdf.js are files of their own in dist/vendor/, loaded on first use (src/vendor-files.ts): bundled,
-  // pdf.js alone would be most of cli.js and its start time.
-  external: ['puppeteer-core', 'esbuild', 'mermaid', 'mermaid/*', 'pdfjs-dist', 'pdfjs-dist/*'],
+  // pdf.js alone would be most of cli.js and its start time. ONNX Runtime and eSpeak NG (voice calls) load their own
+  // WebAssembly files from their packages, so they stay npm dependencies too.
+  external: ['puppeteer-core', 'esbuild', 'mermaid', 'mermaid/*', 'pdfjs-dist', 'pdfjs-dist/*', 'onnxruntime-web', 'espeak-ng', 'node-llama-cpp', '@fugood/whisper.node', 'sherpa-onnx-node'],
   banner: {
     js: [
       '#!/usr/bin/env node',

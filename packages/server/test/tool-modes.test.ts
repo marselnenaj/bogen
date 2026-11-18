@@ -251,3 +251,44 @@ describe('the reviewer profile', () => {
     expect(JSON.stringify(tree)).not.toContain('<p>x</p>');
   });
 });
+
+describe('critique policy in tool modes without a listening server', () => {
+  it.each(['full', 'compact', 'grouped'] as const)('keeps the one-round default and rejects unrequested loops in %s', async (mode) => {
+    const { McpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
+    const { z } = await import('zod');
+    const { toolDefiner } = await import('../src/mcp/kit.ts');
+    const { installToolModes } = await import('../src/mcp/tool-modes.ts');
+    const { registerCritiqueTools } = await import('../src/mcp/tools-critique.ts');
+    const server = new McpServer({ name: 'critique-policy', version: '1' });
+    const define = toolDefiner(server, {} as import('../src/http/server.ts').BogenServer, { pageByFile: new Map(), agent: () => 'test' });
+    define.area = 'checks'; registerCritiqueTools(define);
+    // Use the same handler with an inert context: no server, renderer or reviewer starts.
+    const entry = define.tools.get('design_critique')!;
+    entry.call = async (args) => {
+      try {
+        await entry.handler(args as never, {} as import('../src/mcp/kit.ts').ToolContext);
+        return { content: [] };
+      } catch (e) {
+        return { isError: true, content: [{ type: 'text', text: (e as Error).message }] };
+      }
+    };
+    installToolModes(server, define, mode);
+    type Handler = (request: unknown, extra: unknown) => Promise<any>;
+    const handlers = (server.server as unknown as { _requestHandlers: Map<string, Handler> })._requestHandlers;
+    const list = await handlers.get('tools/list')!({ method: 'tools/list' }, {});
+    const listed = list.tools.find((t: Tool) => t.name === (mode === 'grouped' ? 'checks' : 'design_critique'));
+    expect(listed).toBeDefined();
+    if (mode !== 'grouped') {
+      expect(listed.description).toContain('one independent design review by default');
+      expect(listed.inputSchema.properties.max_rounds.default).toBe(1);
+      expect(listed.inputSchema.properties.loop_request).toBeDefined();
+    }
+    const args = { max_rounds: 3, until: 7.5 };
+    const response = mode === 'grouped'
+      ? await handlers.get('tools/call')!({ method: 'tools/call', params: { name: 'checks', arguments: { operation: 'design_critique', arguments: args } } }, {})
+      : await entry.call(z.object(entry.shape).parse(args));
+    expect(response.isError).toBe(true);
+    expect(text(response)).toContain('explicit request quoted in loop_request');
+    await server.close();
+  });
+});

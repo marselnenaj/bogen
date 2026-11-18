@@ -12,6 +12,7 @@
  * rather than run without it.
  */
 import type { RunRequest } from '../agents.ts';
+import { canvasRunHeaders } from '../mcp/run-defaults.ts';
 
 export interface ParsedEvent { kind: 'text' | 'tool' | 'error'; text?: string; tool?: string }
 
@@ -58,7 +59,7 @@ export function opencodeRules(server: string): Record<string, 'allow' | 'deny'> 
  * plugins. The login stays where OpenCode keeps it.
  */
 export function buildOpencodeCommand(req: RunRequest, system: string, endpoint: { url: string; token?: string }, ids: RunHeaders): Command {
-  const headers: Record<string, string> = { 'X-Bogen-Agent': ids.agent, 'X-Bogen-File': ids.fileId, 'X-Bogen-Run': ids.runId };
+  const headers = canvasRunHeaders(ids.agent, ids.fileId, ids.runId);
   // In the inline configuration, which lives in this one child's environment like Codex's BOGEN_MCP_TOKEN: in no
   // file and no argument. (`{env:…}` substitution is documented for config files, not certain for inline content.)
   if (endpoint.token) headers.Authorization = `Bearer ${endpoint.token}`;

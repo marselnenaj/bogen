@@ -1,4 +1,4 @@
-// opentype.js (MIT) ships no types. Only what glyph-font-build.ts uses.
+// opentype.js (MIT) ships no types. Only what glyph-font-build.ts and text-outline.ts use.
 declare module 'opentype.js' {
   export type PathCommand =
     | { type: 'M' | 'L'; x: number; y: number }
@@ -13,7 +13,9 @@ declare module 'opentype.js' {
     quadTo(x1: number, y1: number, x: number, y: number): void;
     close(): void;
     toPathData(options?: number | { decimalPlaces?: number }): string;
+    getBoundingBox(): { x1: number; y1: number; x2: number; y2: number };
   }
+  export interface RenderOptions { kerning?: boolean; letterSpacing?: number; tracking?: number; features?: Record<string, boolean> }
   export class Glyph {
     constructor(options: { name: string; unicode?: number; unicodes?: number[]; advanceWidth: number; path: Path });
     index: number;
@@ -36,6 +38,8 @@ declare module 'opentype.js' {
     outlinesFormat: string;
     charToGlyph(char: string): Glyph;
     getKerningValue(left: Glyph | number, right: Glyph | number): number;
+    getPath(text: string, x: number, y: number, fontSize: number, options?: RenderOptions): Path;
+    getAdvanceWidth(text: string, fontSize: number, options?: RenderOptions): number;
     getEnglishName(name: string): string | undefined;
     toArrayBuffer(): ArrayBuffer;
   }

@@ -43,6 +43,7 @@ export const ICONS = {
   x: 'x', settings: 'settings', search: 'search', home: 'house', heart: 'heart', user: 'user', plus: 'plus', minus: 'minus', menu: 'menu',
   bell: 'bell', arrowLeft: 'arrow-left', star: 'star', info: 'info', alert: 'circle-alert', calendar: 'calendar', mail: 'mail', more: 'ellipsis-vertical',
   edit: 'pencil', share: 'share-2', circleCheck: 'circle-check', triangleAlert: 'triangle-alert',
+  signal: 'signal', wifi: 'wifi', battery: 'battery-full', inbox: 'inbox',
 } as const;
 
 /** An icon as an svg layer in the text colour. */

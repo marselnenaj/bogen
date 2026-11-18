@@ -45,6 +45,12 @@ function describe(item: InboxItem): { label: string; text: string } {
   return { label: msg('Done'), text: item.result?.split(/(?<=[.!?])\s/)[0] ?? item.prompt };
 }
 
+/** Where it is: the layer and the file for a proposal with a note of its own (several can share one note), else the file. */
+function where(item: InboxItem): string {
+  if (item.kind === 'proposal' && item.note && item.ofName) return t('{layer} in {file}', { layer: item.ofName, file: item.fileName });
+  return item.fileName;
+}
+
 function open(item: InboxItem): void {
   if (item.kind === 'proposal') location.hash = `#/review/${item.fileId}/${item.id}`;
   else if (item.kind === 'comment') openCanvas(item.fileId, '#/', item.id);
@@ -100,8 +106,9 @@ export function Inbox() {
             <button type="button" key={`${item.kind}-${item.id}`} className="phone-row phone-inbox-row" onClick={() => open(item)} data-testid="phone-inbox-item" data-kind={item.kind}>
               <span className={`phone-mark is-${item.kind}${label === 'Failed' ? ' is-failed' : ''}`} aria-hidden="true" />
               <span className="phone-row-body">
-                <span className="phone-row-meta"><span dir="auto"><b>{t(label)}</b> · {item.fileName}</span><span>{shortAgo(item.at)}</span></span>
+                <span className="phone-row-meta"><b>{t(label)}</b><span className="phone-row-when">{shortAgo(item.at)}</span></span>
                 <span className="phone-row-text" dir="auto">{text}</span>
+                <span className="phone-row-sub phone-row-where" dir="auto" translate="no">{where(item)}</span>
               </span>
             </button>
           );

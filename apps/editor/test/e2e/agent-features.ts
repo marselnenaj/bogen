@@ -136,7 +136,9 @@ async function main(): Promise<void> {
       await page.keyboard.press('k');
       await page.keyboard.up('Control');
       await page.waitForSelector('[data-testid="prompt-input"]');
-      await page.select('select[data-testid="prompt-review"]', review);
+      // The mode is picked in its sheet over the field.
+      await page.click('[data-testid="prompt-review"]');
+      await page.click(`[data-testid="prompt-review-${review}"]`);
       await sleep(200);
     };
     const races = async () => (await (await fetch(`${base}/api/races?fileId=${file.id}`)).json()) as { id: string; lanes: { agent: string; status: string; decision?: string }[] }[];

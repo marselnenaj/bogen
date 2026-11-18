@@ -69,7 +69,9 @@ keys, cookies and Tailscale logins masked. It sends nothing. Read it, then attac
 | A comment says `5 comments are already waiting for an agent in this file.` | The queue per file is full. | Mention it again once those are done. |
 | A comment says the file has started 20 runs from comments in the last 10 minutes | The limit per file. | Wait a while. |
 | A mention in a comment starts nothing | The comment came from another device, an agent, or an import. Only you, on this device, start runs. | Write the mention in the editor on the device that runs the agent. |
-| `bogen-gen: does nothing, so those images were left empty.` | A prompt or an agent asked Bogen to generate an image. Bogen has no image generator. | The agent makes the image itself, as SVG or CSS or with its own image tool, and stores it with `asset_upload`. The empty image stays as a placeholder until then. |
+| `bogen-gen: does nothing, so those images were left empty.` | An old prompt used the removed `bogen-gen:` source. | The agent uses `image_generate`, or makes the image itself as SVG or CSS or with its own image tool and stores it with `asset_upload`. The empty image stays as a placeholder until then. |
+| Generate image says the Codex CLI is missing or not signed in | Image generation runs the Codex CLI on this computer, which the Bogen service finds on its PATH. | Install it, run `codex login`, then **Check again**. If it is installed somewhere the service does not look, set `BOGEN_CODEX` to its full path in the service's environment. |
+| `Codex made no picture in 4 minutes, so it was stopped.` | One take hung or the service was slow. | Try that take again; the others are kept. |
 | `path works only on a server that listens on this machine alone.` | `asset_upload` with `path` on a server bound to another address. | Send the file as `data_base64`, or run the server on 127.0.0.1. |
 | `wait_for_event` returns `reset` | The server restarted, and its event log is in memory. | The agent catches up with `comments_list` and `layer_tree`. |
 

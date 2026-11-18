@@ -157,7 +157,7 @@ describe('OpenCode runs, with a stand-in CLI', () => {
     // The person's own servers are merged in; only the run's own is allowed.
     expect(first.servers).toEqual(['notes', 'bogen', `bogen_run_${runId.replace(/[^A-Za-z0-9]/g, '')}`]);
     expect(first.decisions).toEqual({ bash: 'deny', edit: 'deny', read: 'deny', webfetch: 'deny', notes_search: 'deny', bogen_layer_text: 'deny', [`bogen_run_${runId.replace(/[^A-Za-z0-9]/g, '')}_layer_text`]: 'allow' });
-    expect(first.headers).toEqual(['X-Bogen-Agent', 'X-Bogen-File', 'X-Bogen-Run']);
+    expect(first.headers).toEqual(['X-Bogen-Tools', 'X-Bogen-Agent', 'X-Bogen-File', 'X-Bogen-Run']);
     expect(calls().filter((c) => c.kind === 'tool')).toEqual([{ kind: 'tool', name: 'artboard_create', error: null }]);
   });
 

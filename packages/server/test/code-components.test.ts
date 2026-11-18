@@ -184,7 +184,7 @@ describe('code components on a server', () => {
     expect(placed.size.height).toBe(40);
     expect(placed.size.width).toBeGreaterThan(60);
     expect(placed.jsx).toBe('<Button>Save changes</Button>');
-    const shot = await callRaw(agent, 'canvas_screenshot', { node_id: board.id });
+    const shot = await callRaw(agent, 'canvas_screenshot', { node_id: board.id, format: 'png' });
     const colors = pngColors(Buffer.from(shot.content.find((c) => c.type === 'image')!.data!, 'base64'));
     expect(colors.has('e5484d')).toBe(true);
   }, 60_000);
@@ -194,7 +194,7 @@ describe('code components on a server', () => {
     expect(updated.jsx).toBe('<Button variant="outline" size="lg">Save changes</Button>');
     expect(updated.size.height).toBe(48);
     const parent = (await call(agent, 'layer_get', { node_id: layer })).parent;
-    const shot = await callRaw(agent, 'canvas_screenshot', { node_id: parent });
+    const shot = await callRaw(agent, 'canvas_screenshot', { node_id: parent, format: 'png' });
     expect(pngColors(Buffer.from(shot.content.find((c) => c.type === 'image')!.data!, 'base64')).has('e5484d')).toBe(false);
     const code = await call<string>(agent, 'code_get', { node_id: parent, format: 'react-tailwind' });
     expect(code).toMatch(/^import \{ Button \} from "@\/components\/ui\/button";$/m);

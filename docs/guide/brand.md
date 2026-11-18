@@ -27,21 +27,68 @@ A brand holds:
 | Rules | Do and don't rules, each hard (must) or soft (should). |
 | Examples | Artboards on the brand's own canvas, marked good or bad. |
 
-The panel edits all of this with undo, shows a brand sheet generated from the data, and downloads the
-brand guide as Markdown or PDF. Colour values per theme mode are set by your agent with
-`brand_update`; the panel has no field for them yet. An empty brand's sheet is bare. When an export, an
-upload or an edit does not go through, the page says why in its header. The PDF and the sheet are
+A brand opens on its **brand book**: the brand laid out as landscape guideline pages, made from the data and
+nothing else, printed on the brand's own paper and ink with its mark in the running head. It has a cover with the
+primary lockup (or, for a brand with only a mark, the mark over its name; never both), contents, and then each
+chapter opening on a full page in the brand's colour, the number always in the same corner: the brand idea and
+principles; the logo with its clear zone as a share of the mark's height, its smallest sizes and misuse; colour, the
+core colours as columns as wide as their share of a page, with HEX, RGB and OKLCH and measured contrast for the pairs
+that matter (a pair that only passes for large text is marked "headlines only"); type specimens and the scale from
+display to caption with whole sentences of the brand's own; space and corners; voice with words to use and avoid,
+good and bad examples as pairs and the brand's other lines as examples; imagery and icons with do and do not; rules;
+the tokens a designer works with, core and semantic (component, project and one-off tokens stay in the CSS export);
+and applications. The applications are drawn from the brand itself and say only what the brand says: a business
+card, a letter in its own sentences, a social post and an upright story with its one line, and the first screen of a
+home page when the brand has none of its own to show, without navigation or buttons the brand never wrote and without
+fake window chrome. Then come the brand's own example artboards, cropped to their first screen so they can be read.
+The book obeys the brand's own rules: a display face the brand sets in capitals only is set in capitals, headlines it
+sets in italic are italic, a brand without shadows or dashed lines gets none, and a brand that forbids screenshots of
+other brands gets none. Display type is kept to a few lines; longer text is set in the body face. A brand with little
+written down gets a short, tight book without chapter openers. One-off colours go to an appendix table. A section the brand has
+no data for is left out; the colophon at the end names it, counts the values that are still proposals and says how
+many written chapters are confirmed, rather than tagging each value. The book is for sharing: its own words follow
+the brand's language (German for a German brand, else English), a sentence in the other language is left out as a
+note, copy is never cut mid-sentence, a token whose name claims a value it does not hold is not printed, and working
+notes in the data, such as file paths, sources or notes to agents, stay in the Markdown export. Below 760 pixels the
+pages reflow into one column for a phone. The PDF has one page per page of the book.
+
+The sections on the left are grouped: **Edit** (identity, logos, colour, typography, spacing and layout, imagery,
+voice, rules, examples, assets), **Write** (the chapters) and **Use** (suggestions, the files using the brand, and
+versions). Each has its own address, such as `#/brand/<id>/colors`, and while you edit one the book is shown beside
+it. Colour values per theme mode are set by your agent with `brand_update`; the panel has no field for them yet.
+When an export, an upload or an edit does not go through, the page says why in its header. The PDF and the book are
 rendered by a Chromium-based browser on this machine, and need one.
+
+Brands is a place of its own on Home (`#/brands`), next to Files. It lists every brand and takes one from a website
+address: Bogen captures the page, reads the colours, fonts, spacing and logo candidates it really uses, and saves
+them as suggestions to review, without an agent. If the page cannot be loaded, nothing is kept. The prompt box at the
+top of Home offers the same when a prompt holds a link.
+
+### A designed edition
+
+The generated book is one template for every brand. **Make a designed edition**, above the book, has an agent
+art-direct the guidelines for this brand instead: it makes a file "*Name* · Brand book" that links the brand, with the
+generated pages as a locked reference page, and starts a run there with the agent and model your chat uses, on your
+plan. The agent follows the brand guidelines playbook: an argument in 10 to 14 landscape pages of 1280×800 (cover,
+idea, logo, colour, type, voice, imagery, applications, rules), a layout per page that fits what it shows, applications
+from the brand's own world, its quirks on show, and nothing invented; what the brand does not state is left out or set
+as an open question. Before it may finish, `design_critique` has a fresh reviewer, on another model than the
+maker's, judge the whole book once as studio guidelines, and the agent fixes what it finds; one round, as each round
+is a reviewer session on your plan (agents can ask for a loop of up to four with `rounds`). The run
+shows in the new file's chat and in the activity dock; the result is an ordinary Bogen file to edit; select its pages and export a
+PDF for one 1280×800 page each. Once there is an edition, the book links to it and says which parts of the brand changed since it was made;
+**Refresh those pages** starts a run that redoes only the pages showing them. Agents start the same with
+`brand_book_design`.
 
 ## Build a usable brandbook
 
-The **Brandbook** tab opens first. It keeps sixteen chapters in the brand itself: purpose and positioning, audience, architecture, principles, logo, colour, typography and languages, responsive layout, imagery, icons, voice, motion, data, applications, accessibility and governance. Each chapter has editable Markdown, its source, open questions and a review state. Save explicitly; undo and redo work like other brand edits. A synchronized change to the same chapter refuses a stale save and keeps your local draft.
+The **Chapters** section keeps sixteen chapters in the brand itself: purpose and positioning, audience, architecture, principles, logo, colour, typography and languages, responsive layout, imagery, icons, voice, motion, data, applications, accessibility and governance. Each chapter has editable Markdown, its source, open questions and a review state. Save explicitly; undo and redo work like other brand edits. A synchronized change to the same chapter refuses a stale save and keeps your local draft.
 
 Agents read `brand_book_get` for an outline or one complete chapter and write proposals with `brand_book_update`. Only you confirm a sourced chapter or mark it not applicable with a reason. Resolve open questions before confirming. Reopen a confirmed chapter before asking an agent to revise it. Draft chapters do not override confirmed tokens or rules. Documentation coverage is not a design score, accessibility test or licence clearance; leave unknown facts open.
 
 Chapters are written in whatever language you write them in, and Bogen does not translate them. A chapter is taken to be in the brand's primary language; when you write one in another, choose it under **Language** while you edit it, and an agent passes `lang` to `brand_book_update`. The page marks each chapter's text with its language, so it is read, hyphenated and spell-checked as that language, whatever language Bogen's own interface is in. The chapter names and prompts are Bogen's and stay in English.
 
-Markdown export contains the full editable book, sources and questions. PDF contains the visual foundation and chapter index. **Brand system file** opens the existing linked visual guideline, creating one only when no destination exists. Revisions belong in that file; the seven-board visual template alone is not a full brandbook. See [the model and review behavior](../design/brandbook.md) for technical details.
+Markdown export contains the full editable book, sources and questions. The PDF is the brand book. **Brand system file** opens the existing linked visual guideline, creating one only when no destination exists. Revisions belong in that file; the seven-board visual template alone is not a full brandbook. See [the model and review behavior](../design/brandbook.md) for technical details.
 
 ## Bring in what exists
 

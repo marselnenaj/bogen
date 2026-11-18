@@ -20,6 +20,22 @@ OpenAI's [Europe Terms of Use](https://openai.com/policies/eu-terms-of-use/) des
 - Component kits in `packages/server/src/kits/` are Bogen's own drawings after public design systems, with token values read from the systems' published packages. They include no logos, no restricted fonts (no Segoe UI, GDS Transport or SF fonts) and no government marks.
 - Bogen's app icon and wordmark are project assets. References to other products identify integrations and do not imply endorsement or convey their trademark rights.
 
+## Voices and speech models (downloaded on request, not shipped)
+
+The call panel downloads these only when the person asks, from the URLs in `packages/server/src/speech/catalog.ts`,
+and keeps a file only when its SHA-256 matches. They are not in the repository or the package.
+
+| File | Licence | Source |
+| --- | --- | --- |
+| `de_DE-thorsten-medium.onnx` (+ `.json`) | Model CC0; Thorsten-Voice recordings CC0-1.0; fine-tuned from the CC0 Dutch voice rdh | <https://huggingface.co/rhasspy/piper-voices/tree/main/de/de_DE/thorsten/medium> |
+| `en_US-ljspeech-medium.onnx` (+ `.json`) | LJ Speech recordings public domain; trained from scratch | <https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/ljspeech/medium> |
+| `tiny-voca-model.onnx`, `tiny-voca-config.json` | tiny-voca by Muhammed Nazeem: model and code Apache-2.0; trained on the tiny-voca dataset, CC BY 4.0 (speech made with Qwen3-TTS). Credit shown with the voice in the call panel | <https://huggingface.co/n4ze3m/tiny-voca> (revision `666f595c`), dataset <https://huggingface.co/datasets/n4ze3m/tiny-voca> |
+| `tiny-voca-lexicon.tsv`, `-align.json`, `-g2p.json`, `-g2p.npz`, `-homographs.json` (+ `-LICENSE.cmudict`, `-LICENSE.homograph-data`) | dizione's phonemizer data: built from CMUdict (BSD-style, Carnegie Mellon University, licence kept next to the files) and the Wikipedia Homograph Data (Apache-2.0); the unknown-word model Apache-2.0 | same revision, `phonemizer/` |
+| `ggml-base.bin` | Whisper weights MIT (OpenAI); ggml conversion MIT (whisper.cpp) | <https://huggingface.co/ggerganov/whisper.cpp> |
+| `ggml-large-v3-turbo-q5_0.bin` | Whisper weights MIT (OpenAI); ggml conversion MIT (whisper.cpp). Used on a GPU through @fugood/whisper.node (MIT) | <https://huggingface.co/ggerganov/whisper.cpp> |
+| `parakeet-encoder.int8.onnx`, `parakeet-decoder.int8.onnx`, `parakeet-joiner.int8.onnx`, `parakeet-tokens.txt` | NVIDIA Parakeet TDT 0.6B v3, CC BY 4.0 (NVIDIA); int8 conversion for sherpa-onnx by the k2-fsa project. How a call hears by default, through sherpa-onnx-node (Apache-2.0). Credit shown with the listening model in the call panel. Pinned to revision ed5d7456 | <https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8>, original <https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3> |
+| `ggml-silero-v6.2.0.bin` | Silero VAD MIT (Silero Team); ggml conversion MIT (whisper.cpp). Voice activity detection before Whisper, on the CPU through @fugood/whisper.node (MIT). Pinned to revision 9ffd54a1 | <https://huggingface.co/ggml-org/whisper-vad> |
+
 ## Your own content
 
 User-imported designs, images, fonts and themes retain their own provenance; this inventory does not clear them for redistribution.

@@ -7,6 +7,16 @@ import { clearUndoOnCheckout } from './branch-watch.ts';
 import { ensureFont } from '../lib/fonts.ts';
 import { loadUser, type LocalUser } from '../lib/user.ts';
 import { t } from '../i18n/store.ts';
+import { bindTeamWriter, type TeamWriter } from './team-writer.ts';
+
+/** Moves this tab's presence to a new Yjs id: the old id leaves, the same state shows under the new one. */
+export function moveAwareness(aw: { clientID: number; getLocalState(): unknown; setLocalState(state: unknown): void }, id: number): void {
+  if (aw.clientID === id) return;
+  const state = aw.getLocalState();
+  aw.setLocalState(null);
+  aw.clientID = id;
+  if (state !== null) aw.setLocalState(state);
+}
 
 /** Origin of every transaction this editor makes. The undo manager tracks only this. */
 export const LOCAL = 'bogen-editor';
@@ -39,8 +49,11 @@ export class Session {
   readonly offline: OfflineDoc | null;
   /** On the phone: when the socket connects, and what waits for the computer. */
   readonly link: PhoneLink | null;
+  /** The id this tab writes a team file with; `ready` before the editor lets anyone write. */
+  readonly writer: TeamWriter;
   private gestureDepth = 0;
   private stopCheckoutWatch: () => void = () => {};
+  private offSwitch: () => void = () => {};
 
   constructor(readonly fileId: string) {
     // A family the document carries loads from there, not from Google Fonts by name.
@@ -61,19 +74,26 @@ export class Session {
     this.doc.tokens.observeDeep(() => {
       for (const t of this.doc.getTokens()) if (t.kind === 'font-family') load(t.value);
     });
+    // Before anything writes: in a team file this tab writes with an id of this device (team-writer.ts).
+    this.writer = bindTeamWriter(fileId, this.y);
     // Before the socket, so that a stored copy is in the document before the server's state arrives.
     this.offline = OfflineDoc.enabled() ? new OfflineDoc(fileId, this.y) : null;
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     // On the phone the link decides when the socket connects: changes made offline go to the computer first.
     this.provider = new WebsocketProvider(`${proto}//${location.host}/sync`, fileId, this.y, { disableBc: true, connect: !this.offline });
     this.link = this.offline ? new PhoneLink(fileId, this.y, this.provider, this.offline) : null;
+    // Presence is keyed by the Yjs id: when this tab switches the id it writes with, others see it under the new
+    // one, and the old one leaves.
+    this.offSwitch = this.writer.onSwitch(() => moveAwareness(this.provider.awareness, this.y.clientID));
     this.undo = new Y.UndoManager([this.doc.nodes, this.doc.pages, this.doc.tokens, this.doc.meta, this.doc.modes, this.doc.textStyles, this.doc.variables, ...brandUndoScope(this.doc)], { trackedOrigins: new Set([LOCAL]), captureTimeout: 0 });
     // A switch of branch, from anywhere, empties Ctrl+Z: its steps were made on the branch that was live before.
     this.stopCheckoutWatch = clearUndoOnCheckout(this.y, this.undo);
   }
 
   destroy(): void {
+    this.offSwitch();
     this.stopCheckoutWatch();
+    this.writer.destroy();
     this.undo.destroy();
     this.provider.awareness.setLocalState(null);
     this.link?.destroy();

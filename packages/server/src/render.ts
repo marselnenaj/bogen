@@ -8,6 +8,7 @@ import { PDFDocument } from 'pdf-lib';
 import type { Browser, HTTPRequest, Page } from 'puppeteer-core';
 import { firstFamily } from './fonts.ts';
 import { parseRange } from './http/assets.ts';
+import { EgressProxy, egressArgs } from './egress-proxy.ts';
 import { fetchPublic, isPublicUrl } from './net-guard.ts';
 import { embedFontFaces, vectorizeInPage, type VectorSvg } from './svg-vector.ts';
 import { errorMessage } from './util.ts';
@@ -38,6 +39,13 @@ export interface ScreenshotOptions {
   quality?: number;
   /** Longest side of the result in pixels. */
   maxDimension?: number;
+  /** Only the top of the layer, at most this many CSS px of it: the first screen of a long page. */
+  maxHeight?: number;
+  /**
+   * With maxHeight: end the picture where no line of text and no small object is cut (down to half of maxHeight), and
+   * report the smallest text in what is kept, so that whoever shows the picture smaller knows whether it can be read.
+   */
+  cleanCut?: boolean;
   /** Largest encoded size. The image is scaled down until it fits. */
   maxBytes?: number;
   transparent?: boolean;
@@ -45,6 +53,9 @@ export interface ScreenshotOptions {
 
 export interface ScreenshotResult {
   preview?: Uint8Array;
+  /** With cleanCut: the size of the small text in the picture (a fifth of its text is smaller), in CSS px, and whether the layer was cut. */
+  minTextPx?: number;
+  cut?: boolean;
   cssWidth?: number;
   cssHeight?: number;
   bytes: Uint8Array;
@@ -138,6 +149,12 @@ export function fontLinkTags(doc: BogenDoc): string {
 
 /** Parameters for the shader runtime, safe to place inside a `<script>`. */
 export function shaderParamsTag(doc: BogenDoc, resolve: (src: string) => string): string {
+  // Every layer is read: kept until the file changes, for the resolver renders use.
+  if (resolve === resolveAsset) return doc.memo('shaderParamsTag', () => readShaderParams(doc, resolve));
+  return readShaderParams(doc, resolve);
+}
+
+function readShaderParams(doc: BogenDoc, resolve: (src: string) => string): string {
   const params: Record<string, Record<string, string>> = {};
   const add = (n: BogenNode | undefined) => {
     if (n?.type !== 'shader') return;
@@ -186,6 +203,8 @@ export class Renderer {
   /** Local ports a port-scoped browser wrapper is started with, and whether the running browser lacks one of them. */
   private localPorts = new Set<number>();
   private portsChanged = false;
+  /** The browser's way out, unless the browser is a wrapper that brings its own (see `sharesLocalPorts`). */
+  private readonly egress = new EgressProxy();
   /** Pages of code components, which layers load in sandboxed frames from `/api/code/`. Set by the server. */
   codeFrames?: (url: URL) => Promise<{ status: number; headers: Record<string, string>; body: string }> | null;
 
@@ -217,6 +236,15 @@ export class Renderer {
    * starts again before the next site page, once nothing else is rendering. Other browsers need nothing.
    * Returns false when the browser is such a wrapper and will not have the port in time.
    */
+  /**
+   * Lets the browser reach this computer's `port` until the returned function is called: for a page of this computer
+   * that the person asked to capture here. Other pages rendered meanwhile could reach it too, so callers release it as
+   * soon as the page is done. A wrapper browser is given the port through `shareLocalPort` instead.
+   */
+  openLocalPort(port: number): () => void {
+    return this.egress.allowLocal(port);
+  }
+
   shareLocalPort(port: number): boolean {
     const path = findBrowser();
     if (!path || !sharesLocalPorts(path) || !Number.isInteger(port) || port < 1 || port > 65535) return true;
@@ -235,8 +263,10 @@ export class Renderer {
     if (!path) throw new Error('No Chromium-based browser was found. Install chromium or set BOGEN_BROWSER to the path of one.');
     const shared = sharesLocalPorts(path) ? [...this.localPorts].map((port) => `--secure-local-port=${port}`) : [];
     this.portsChanged = false;
+    const wrapper = sharesLocalPorts(path);
     this.browser = (async () => {
       const puppeteer = (await import('puppeteer-core')).default;
+      const proxyPort = wrapper ? null : await this.egress.start();
       const browser = await puppeteer.launch({
         executablePath: path,
         headless: true,
@@ -246,6 +276,7 @@ export class Renderer {
           '--disable-background-networking', '--disable-extensions', '--disable-sync', '--mute-audio',
           '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist',
           ...shared,
+          ...egressArgs(proxyPort),
           ...(process.env.BOGEN_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
         ],
       });
@@ -272,6 +303,7 @@ export class Renderer {
     const pending = this.browser;
     this.browser = null;
     if (pending) await pending.then((b) => b.close()).catch(() => {});
+    if (!this.browser) await this.egress.close();
   }
 
   private async slot<T>(fn: () => Promise<T>): Promise<T> {
@@ -516,8 +548,63 @@ export class Renderer {
     const measuringScale = Math.min(1, 2048 / Math.max(size.width, size.height), clampScale(options.scale ?? 1, whole, options.maxDimension ?? MAX_DIMENSION));
     await page.setViewport(viewport(measuringScale));
     await page.evaluate(nextPaint);
-    const box = target.nodeIds?.length ? await this.targetRect(page, target.nodeIds) : whole;
-    if (!box) throw new Error('Nothing to capture: the layer is hidden or has no size.');
+    const found = target.nodeIds?.length ? await this.targetRect(page, target.nodeIds) : whole;
+    if (!found) throw new Error('Nothing to capture: the layer is hidden or has no size.');
+    let box = options.maxHeight && found.height > options.maxHeight ? { ...found, height: options.maxHeight } : found;
+    let minTextPx: number | undefined;
+    if (options.cleanCut && target.nodeIds?.length) {
+      const measured = await page.evaluate((id: string, limit: number) => {
+        const root = document.querySelector(`[data-bogen-id="${id}"]`);
+        if (!root) return null;
+        const top = root.getBoundingClientRect().top;
+        const blocked = new Uint8Array(Math.ceil(limit) + 2);
+        const blockOf = (el: Element): Element => { let x: Element = el; while (x !== root && x.parentElement && getComputedStyle(x).display.startsWith('inline')) x = x.parentElement; return x; };
+        const block = (a: number, b: number) => { for (let y = Math.max(0, Math.ceil(a - top)); y < Math.min(blocked.length, Math.floor(b - top)); y++) blocked[y] = 1; };
+        // Lines of text, and objects smaller than half the picture (a card, a cursor, a picture), are never cut.
+        const lines: { top: number; size: number; chars: number }[] = [];
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+          if (!t.textContent?.trim()) continue;
+          const el = t.parentElement!;
+          const cs = getComputedStyle(el);
+          if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) === 0) continue;
+          const range = document.createRange();
+          range.selectNodeContents(t);
+          // A paragraph is kept whole: the gap between two of its lines is no place to cut.
+          const para = blockOf(el).getBoundingClientRect();
+          if (para.height < limit * 0.5) block(para.top, para.bottom);
+          for (const r of range.getClientRects()) {
+            if (r.width < 1 || r.height < 1) continue;
+            block(r.top, r.bottom);
+            lines.push({ top: r.top - top, size: parseFloat(cs.fontSize), chars: Math.max(1, Math.round(r.width / (parseFloat(cs.fontSize) * 0.5))) });
+          }
+        }
+        for (const el of root.querySelectorAll('*')) {
+          const r = el.getBoundingClientRect();
+          if (r.height < 2 || r.height >= limit * 0.5 || r.bottom - top < 0 || r.top - top > limit) continue;
+          const cs = getComputedStyle(el);
+          const painted = /^(IMG|svg|CANVAS|VIDEO|INPUT|BUTTON)$/.test(el.tagName) || cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || cs.backgroundImage !== 'none' || parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderBottomWidth) > 0 || cs.boxShadow !== 'none';
+          if (painted) block(r.top, r.bottom);
+        }
+        let cut = Math.floor(limit);
+        if (root.getBoundingClientRect().height > limit) {
+          let y = Math.floor(limit);
+          while (y > limit * 0.5 && blocked[y]) y--;
+          cut = y > limit * 0.5 ? y : Math.floor(limit);
+        }
+        // The size the reading text starts at: the size under which a fifth of the kept text is set, so that one tiny
+        // label does not decide, and a sheet of small captions does.
+        const kept = lines.filter((l) => l.top < cut).sort((a, b) => a.size - b.size);
+        const total = kept.reduce((sum, l) => sum + l.chars, 0);
+        let acc = 0, minText: number | undefined;
+        for (const l of kept) { acc += l.chars; if (acc >= total * 0.2) { minText = l.size; break; } }
+        return { cut, minText };
+      }, target.nodeIds[0]!, box.height);
+      // A layer a little taller than the first screen is kept whole: shown smaller, it reads better than cut.
+      minTextPx = measured?.minText ?? undefined;
+      if (box.height < found.height && found.height <= box.height * 1.4) box = found;
+      else if (measured && measured.cut < box.height) box = { ...box, height: measured.cut };
+    }
     // The scale and the size are the layer's own: a small layer on a long artboard comes out at the scale asked for.
     let scale = clampScale(options.scale ?? 1, box, options.maxDimension ?? MAX_DIMENSION);
     let rect = box;
@@ -574,6 +661,7 @@ export class Renderer {
     }
     return {
       preview, cssWidth: box.width, cssHeight: box.height,
+      ...(options.cleanCut ? { cut: box.height < found.height - 1, ...(minTextPx ? { minTextPx } : {}) } : {}),
       bytes: shot.bytes, format, scale,
       mime: format === 'jpg' ? 'image/jpeg' : `image/${format}`,
       width: Math.round(shot.rect.width * scale),
@@ -822,6 +910,77 @@ export class Renderer {
         }, tiles.map((t) => ({ x: t.x, y: t.y, data: Buffer.from(t.bytes).toString('base64') })), width, height);
         if (!joined) throw new Error(`An image of ${width}x${height}px is more than the browser can encode.`);
         return new Uint8Array(Buffer.from(joined, 'base64'));
+      } finally {
+        await page.close().catch(() => {});
+      }
+    });
+  }
+
+  /**
+   * The box the drawing of each SVG takes in its own coordinates, in a blank page of our own: what a logo's viewBox
+   * should be so that the mark has no empty margin of its own. Null for an SVG the browser cannot measure.
+   */
+  async svgArtBoxes(svgs: string[]): Promise<({ x: number; y: number; width: number; height: number } | null)[]> {
+    if (!svgs.length) return [];
+    return this.slot(async () => {
+      const browser = await this.launch();
+      const page = await browser.newPage();
+      try {
+        return await page.evaluate((list: string[]) => list.map((text) => {
+          try {
+            // Parsed inert, then stripped of anything that could run or load before it is measured: logos can come
+            // from another device.
+            const parsed = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement;
+            if (!parsed || parsed.nodeName.toLowerCase() !== 'svg') return null;
+            parsed.querySelectorAll('script, foreignObject, iframe, image, use, a, animate, set').forEach((x) => x.remove());
+            for (const el of [parsed, ...Array.from(parsed.querySelectorAll('*'))]) for (const at of Array.from(el.attributes)) if (/^on/i.test(at.name) || /href$/i.test(at.name)) el.removeAttribute(at.name);
+            const holder = document.createElement('div');
+            const svg = document.importNode(parsed, true);
+            holder.appendChild(svg);
+            document.body.appendChild(holder);
+            const b = (svg as unknown as SVGSVGElement).getBBox();
+            holder.remove();
+            return b.width > 0 && b.height > 0 ? { x: b.x, y: b.y, width: b.width, height: b.height } : null;
+          } catch { return null; }
+        }), svgs);
+      } finally {
+        await page.close().catch(() => {});
+      }
+    });
+  }
+
+  /**
+   * One picture in another format, at most `maxDimension` on its long side, in a blank page of our own: a generated
+   * PNG of 2 MB becomes a WebP of a few hundred KB. Null when the browser cannot decode or encode it.
+   */
+  async transcode(image: ImageBytes, options: { type: 'image/webp' | 'image/jpeg'; quality: number; maxDimension: number }): Promise<{ bytes: Uint8Array; width: number; height: number } | null> {
+    return this.slot(async () => {
+      const browser = await this.launch();
+      const page = await browser.newPage();
+      try {
+        const out = await page.evaluate(async (data: string, mime: string, type: string, quality: number, max: number) => {
+          const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+          const bitmap = await createImageBitmap(new Blob([bytes], { type: mime }));
+          const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+          const w = Math.max(1, Math.round(bitmap.width * scale));
+          const h = Math.max(1, Math.round(bitmap.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return null;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(bitmap, 0, 0, w, h);
+          const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+          if (!blob || blob.type !== type) return null;
+          const encoded = new Uint8Array(await blob.arrayBuffer());
+          let text = '';
+          for (let i = 0; i < encoded.length; i += 0x8000) text += String.fromCharCode(...encoded.subarray(i, i + 0x8000));
+          return { data: btoa(text), width: w, height: h };
+        }, Buffer.from(image.bytes).toString('base64'), image.mime, options.type, options.quality, options.maxDimension);
+        return out ? { bytes: new Uint8Array(Buffer.from(out.data, 'base64')), width: out.width, height: out.height } : null;
+      } catch {
+        return null;
       } finally {
         await page.close().catch(() => {});
       }

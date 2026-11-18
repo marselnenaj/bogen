@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runtimeShrinkwrap } from './shipped-packages.mjs';
+import { RUNTIME, runtimeShrinkwrap } from './shipped-packages.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const server = join(root, 'packages', 'server');
@@ -41,7 +41,7 @@ const manifest = {
   engines: source.engines,
   keywords: ['design', 'canvas', 'mcp', 'claude-code', 'codex', 'omarchy'],
   // Left external by scripts/build.mjs, or read from disk at run time, so they are the only runtime dependencies.
-  dependencies: Object.fromEntries(['puppeteer-core', 'esbuild', 'tailwindcss'].map((name) => [name, installed(name)])),
+  dependencies: Object.fromEntries(RUNTIME.map((name) => [name, installed(name)])),
 };
 writeFileSync(join(out, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 writeFileSync(join(out, 'npm-shrinkwrap.json'), `${JSON.stringify(runtimeShrinkwrap(root, manifest), null, 2)}\n`);

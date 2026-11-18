@@ -44,7 +44,7 @@ describe('craft checks on a whole page', () => {
     expect(by('font-families').message).toContain('3 font families on one artboard (Space Grotesk on 11, JetBrains Mono on 4, Georgia on 1)');
     expect(by('loud-type').numbers).toEqual({ loud: 6, largest: 72 });
     expect(by('primary-actions').message).toContain('2 different actions in "Hero" share one filled style ("Start free trial", "Book a demo")');
-    expect(by('centred').numbers).toEqual({ share: 0.88 });
+    expect(by('centred').numbers).toEqual({ share: 0.9 });
   });
 
   it('stays quiet on the considered page for the same product', () => {
@@ -132,6 +132,22 @@ describe('each craft check has a testable line', () => {
     expect(rules(`<div style="text-align:center">${p(5)}</div>`)).toEqual([]);
   });
 
+  it('centred: counts text that is read, not the labels of buttons, links and short values', () => {
+    // An app toolbar and inspector: centred button labels, icon glyphs and short values, and two left-aligned notes.
+    const controls = Array.from({ length: 10 }, (_, i) => `<button style="text-align:center">Run ${i}</button><a href="#a" style="text-align:center;display:block">Open the file ${i} now</a><span style="text-align:center">${i} px</span>`).join('');
+    expect(rules(`<div style="text-align:center">${controls}</div>${p(2)}`)).toEqual([]);
+    // The same page with its paragraphs centred is the centred look.
+    expect(rules(`<div style="text-align:center">${controls}${p(6)}</div>${p(2)}`)).toEqual(['centred']);
+    // A bold run in a centred paragraph is part of that paragraph, not a short value.
+    expect(rules(`<div style="text-align:center">${Array.from({ length: 6 }, () => '<p>A run of <b>bold</b> words in here</p>').join('')}</div>`)).toEqual(['centred']);
+  });
+
+  it('meta dots: a name someone gave a thing is theirs, not copy strung with dots', () => {
+    const names = Array.from({ length: 4 }, (_, i) => `<p translate="no">Mobile · Flow ${i} · Draft</p>`).join('');
+    expect(rules(names)).toEqual([]);
+    expect(rules(names.replaceAll(' translate="no"', ''))).toEqual(['meta-dots']);
+  });
+
   it('primary actions: the same fill on two different actions in one section', () => {
     const a = (label: string, style = 'background:#c2410c;color:#fff') => `<a href="#x" style="${style}">${label}</a>`;
     const section = (inner: string) => `<section>${inner}</section>`;
@@ -142,6 +158,19 @@ describe('each craft check has a testable line', () => {
     expect(rules(section(a('Start trial') + a('Start trial')) + section('<p>Rest</p>'))).toEqual([]);
     expect(rules(section(a('Start trial')) + section(a('Read the docs')))).toEqual([]);
     expect(rules(section(a('Save') + a('Cancel', 'background:#e5e7eb;color:#111')) + section('<p>Rest</p>'))).toEqual([]);
+    // The chosen segment of a switch shows a state; it does not compete with the action beside it.
+    const chosen = '<button aria-pressed="true" style="background:#c2410c;color:#fff">Dark</button><button aria-pressed="false">Light</button>';
+    expect(rules(section(a('Start trial') + chosen) + section('<p>Rest</p>'))).toEqual([]);
+    expect(rules(section(a('Start trial') + '<button role="tab" aria-selected="true" style="background:#c2410c;color:#fff">Files</button>') + section('<p>Rest</p>'))).toEqual([]);
+    // Quiet grey buttons a step off their surface are secondary actions.
+    const tonal = (label: string) => `<button style="background:#2d2d2c;color:#e8e7e4">${label}</button>`;
+    expect(rules(`<section style="background:#1c1c1b">${tonal('Link') + tonal('Run checks')}</section>` + section('<p>Rest</p>'))).toEqual([]);
+    // The same on a tinted dark theme: a step off the surface in its own hue.
+    const tinted = (label: string) => `<button style="background:#2f3347;color:#c0caf5">${label}</button>`;
+    expect(rules(`<section style="background:#1a1b26">${tinted('Link') + tinted('Run checks')}</section>` + section('<p>Rest</p>'))).toEqual([]);
+    expect(rules(`<section style="background:#1c1c1b">${tonal('Link') + a('Run checks', 'background:#e8e7e4;color:#111')}${a('Save', 'background:#e8e7e4;color:#111')}</section>` + section('<p>Rest</p>'))).toEqual(['primary-actions']);
+    // What is behind an open modal cannot be done there: its actions do not compete with the dialog's.
+    expect(rules(section(`<div aria-hidden="true">${a('Ask agent')}</div>` + a('Run check')) + section('<p>Rest</p>'))).toEqual([]);
   });
 
   it('glow: a saturated shadow with 8px blur or more, not a neutral shadow or a tight coloured one', () => {
@@ -175,6 +204,8 @@ describe('each craft check has a testable line', () => {
   it('backgrounds: a repeating dot or grid tile, the blue-to-purple gradient, and gradient text', () => {
     expect(rules('<section style="background-image:radial-gradient(#cbd5e1 1px,transparent 1px);background-size:20px 20px"><p>Text</p></section>')).toEqual(['pattern-background']);
     expect(rules('<section style="background-image:linear-gradient(#e5e7eb 1px,transparent 1px),linear-gradient(90deg,#e5e7eb 1px,transparent 1px);background-size:32px 32px"><p>Text</p></section>')).toEqual(['pattern-background']);
+    // The checkerboard under a small swatch shows that its colour is see-through: a mark, not a surface.
+    expect(rules('<div style="position:relative;width:16px;height:16px;background:repeating-conic-gradient(#c8c8c8 0% 25%,#fff 0% 50%) 50% / 8px 8px"><p style="margin:0">a</p></div>')).toEqual([]);
     expect(rules('<section style="background:linear-gradient(135deg,#6366f1,#a855f7)"><p>Text</p></section>')).toEqual(['default-gradient']);
     expect(rules('<section style="background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899)"><p>Text</p></section>')).toEqual(['default-gradient']);
     // Other hues, a single hue, and a neutral fade are choices, not the default.
@@ -192,6 +223,12 @@ describe('each craft check has a testable line', () => {
     expect(rules(card().repeat(6) + plain.repeat(6))).toEqual([]);
     expect(rules(card(card()) + card(card()))).toEqual(['nested-boxes']);
     expect(rules(card(card()))).toEqual([]);
+    // Controls drawn with an outline are the controls, and an empty frame is a shape: a field, a radio card, a key cap.
+    const field = '<div style="border:1px solid #e5e7eb"><input placeholder="Search"></div>';
+    const radio = '<label style="border:1px solid #e5e7eb"><input type="radio"> Option</label>';
+    const key = '<kbd style="border:1px solid #e5e7eb">K</kbd>';
+    const handle = '<div style="position:absolute;width:8px;height:8px;border:1px solid #2563eb"></div>';
+    expect(rules(card(field + radio + key + handle) + card(field + radio + key + handle))).toEqual([]);
     // A hairline between rows and a button are not cards.
     expect(rules('<div style="border-top:1px solid #e5e7eb"><p>Row</p></div>'.repeat(8) + '<button style="border:1px solid #111">Go</button>'.repeat(8))).toEqual([]);
   });

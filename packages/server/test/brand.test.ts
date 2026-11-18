@@ -494,7 +494,8 @@ describe('the current file', () => {
     expect(shot.isError).toBeFalsy();
     const example = await callRaw(client, 'brand_example_get', {});
     expect(example.isError).toBe(false);
-    expect(example.content.some((c) => c.type === 'image')).toBe(true);
+    expect(example.content.some((c) => c.type === 'image' && c.mimeType === 'image/jpeg')).toBe(true);
+    expect(example.content.some((c) => c.type === 'text' && c.text?.includes('Layout map'))).toBe(true);
     await call(client, 'file_open', { file_id: brand });
     const mine = await call(client, 'artboard_create', { name: 'Mine', width: 400, background: 'var(--paper)' });
     const pages = await call<any[]>(client, 'page_list', { file_id: file.id });
@@ -524,6 +525,9 @@ describe('exports', () => {
     expect(pdf.headers.get('content-type')).toBe('application/pdf');
     const bytes = Buffer.from(await pdf.arrayBuffer());
     expect(bytes.subarray(0, 4).toString()).toBe('%PDF');
+    // One PDF page per page of the book: cover, contents, the sections the brand has, and the status page.
+    const { PDFDocument } = await import('pdf-lib');
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(5);
     await client.close();
   }, 60_000);
 });
@@ -807,6 +811,8 @@ describe('runs', () => {
     writeFileSync(join(bin, 'claude'), `#!/usr/bin/env node
 const fs = require('node:fs');
 if (process.argv.includes('--version')) { console.log('stand-in 1'); process.exit(0); }
+// The model catalog (--help, and the SDK's initialize), read before a run picks a model by the size of its request: no run, so not logged.
+if (process.argv.includes('--help') || process.argv.includes('{"mcpServers":{}}')) process.exit(0);
 fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify(process.argv.slice(2)) + '\\n');
 console.log(JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: 'ok' }));
 `);
@@ -820,12 +826,14 @@ console.log(JSON.stringify({ type: 'result', subtype: 'success', is_error: false
       const f2 = await call(c2, 'file_create', { name: 'F2' });
       await call(c2, 'brand_link', { brand_id: b2, file_id: f2.id });
       const seen = () => (existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l) as string[]) : []);
+      // A run that changed nothing is asked once more, under the same config: count runs by their config.
+      const runs = () => new Set(seen().map((args) => args[args.indexOf('--mcp-config') + 1])).size;
       await rest(fresh.base, '/api/runs', { method: 'POST', body: { fileId: f2.id, prompt: 'Make it', runner: 'claude' } });
-      await until(() => seen().length === 1, 8000);
+      await until(() => runs() === 1, 8000);
       await until(() => !fresh.server.runs.activeFor(f2.id), 8000);
       const posted = await rest(fresh.base, '/api/comments', { method: 'POST', body: { fileId: f2.id, text: '@claude make it blue', author: 'Mara' } });
       expect(posted.started).toEqual(['claude']);
-      await until(() => seen().length === 2, 8000);
+      await until(() => runs() === 2, 8000);
       for (const args of seen()) expect(args[args.indexOf('--append-system-prompt') + 1]).toContain('<brand_content>');
       await c2.close();
     } finally {

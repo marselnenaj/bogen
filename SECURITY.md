@@ -32,6 +32,11 @@ Only the latest release gets fixes. Fixes land on `main` first.
 Bogen's server can listen in five places. Each has its own rules, in `packages/server/src/http/security.ts`,
 `packages/server/src/peers.ts`, `packages/server/src/phone.ts` and `packages/server/src/static-listener.ts`.
 
+Every listener routes a path in one spelling only (`pathRefusal` in `security.ts`). A path with an empty segment
+(`/api//peers`), a dot segment, a backslash, or an encoded slash, backslash, dot or NUL is refused with 400 before
+anything else looks at it, for requests and WebSocket upgrades alike. The closed-route lists below match the path as
+written, so this is what makes them hold.
+
 ### This machine: 127.0.0.1:29990
 
 The default. There is no login for your own user: any program you run can use the API, the editor and MCP.
@@ -52,7 +57,11 @@ The default. There is no login for your own user: any program you run can use th
 - **What counts as this machine.** Some routes act on the machine itself: reading a folder on disk, linking a code
   project, live site mode, Git, the Figma token, phone settings, capturing `localhost`. They answer only a request
   whose socket comes from a loopback address and that carries no `X-Forwarded-For`, `Forwarded` or `X-Real-IP`
-  header, so a request through a local proxy does not count.
+  header, so a request through a local proxy does not count. Pairing devices and turning the tailnet listener on or
+  off (`/api/peers`) is one of them.
+- **The editor page** has a Content-Security-Policy: scripts only from the editor itself, fetches and WebSockets only
+  to this server, no plugins, no `<base>`, no form that navigates, and no framing by other pages. A design's own
+  pictures, fonts, styles and media may load from the web.
 
 ### With a token: `--host` and `--token`
 
@@ -329,8 +338,18 @@ project folder and nothing else: no shell and none of the CLI's built-in tools.
 Capture of a page or a whole site, `layer_repeat` from a URL, brand extraction and images written into designs go through
 an address guard (`packages/server/src/net-guard.ts`). It refuses private, loopback, link-local, CGNAT and reserved
 ranges, `localhost`, `.local` and `.internal` names, and URLs with credentials. It checks the resolved address when
-the connection is made, so a DNS answer that changes cannot slip through, and the headless browser's own requests are
-checked the same way.
+the connection is made, so a DNS answer that changes cannot slip through. Responses have size and time limits on
+every redirect.
+
+The headless browser's own requests are checked the same way. Chromium is started with `--proxy-server` pointing at a
+proxy in the server (`packages/server/src/egress-proxy.ts`), so it never resolves a name itself: the proxy resolves
+it once, refuses private and reserved answers, and connects to the address it checked. WebSockets go through it as
+CONNECT tunnels, QUIC is off, and WebRTC may not send UDP around the proxy. A port of this computer is reached only
+while a capture you started here has it open. The `secure-chromium` wrapper brings a proxy of its own with the same
+rules, so Bogen leaves it to that one.
+
+A page of this computer that you capture from here gets its images, fonts and sitemap from this computer only: a
+redirect from your dev server to the local network or the internet is refused.
 
 Pages on this computer, such as your dev server, can be captured only by a request from this machine outside MCP:
 `bogen capture http://localhost:5173` from your shell. An agent over MCP cannot capture them. Addresses on your
@@ -417,6 +436,9 @@ its SHA-256 file and against the release key before anything is installed, with 
 into the script. The three runtime dependencies (`puppeteer-core`, `esbuild`, `tailwindcss`) come from the npm
 registry at the versions and integrity hashes the package's shrinkwrap pins. To install a file you downloaded
 yourself: `bogen verify` it, then `npm i -g ./bogen-design-VERSION.tgz`.
+
+In the repository, every package manifest names exact versions (the workspace packages aside), so a fresh install
+gets what `package-lock.json` was reviewed with, and `npm audit` is expected to report nothing for a release.
 
 ## What is not in scope
 

@@ -102,10 +102,10 @@ try {
   await shot(page, 'voice-languages');
 
   // 4. A chapter written in German is marked German, inside an interface in English.
-  await page.click(t('brand-tab-book'));
+  await page.click(t('brand-tab-chapters'));
   await page.waitForSelector(t('brand-book-copy'));
   check('the chapter text says its own language', (await page.$eval(t('brand-book-copy'), (el) => el.getAttribute('lang'))) === 'de');
-  check('the chapter title stays marked English', (await page.$eval('.brand-book-title h3', (el) => el.getAttribute('lang'))) === 'en');
+  check('the chapter title stays marked English', (await page.$eval('.brand-book-title h2', (el) => el.getAttribute('lang'))) === 'en');
 
   // 5. A duplicate is a new brand that says where it came from.
   const copy = await call('brand_duplicate', { brand_id: brand });

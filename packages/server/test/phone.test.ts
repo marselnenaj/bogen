@@ -235,6 +235,12 @@ describe('the phone listener', () => {
       ] as const) {
         const answer = await raw(port, path, { method, headers: as(), body });
         expect(answer.status, `${method} ${path}`).toBe(403);
+        // Another spelling of the same route never gets past the list: routing splits the path into segments.
+        const [, first, ...rest] = path.split('/');
+        for (const variant of [`/${first}//${rest.join('/')}`, `//${path.slice(1)}`, `/${first}/./${rest.join('/')}`, `/${first}/%2e/${rest.join('/')}`, `/${first}%2f${rest.join('/')}`, `/${first}\\${rest.join('/')}`]) {
+          const again = await raw(port, variant, { method, headers: as(), body });
+          expect(again.status, `${method} ${variant}`).toBe(400);
+        }
       }
       // Linking a code project reads this machine's disk: refused by the route itself, as from any other device.
       const link = await raw(port, '/api/code/projects', { method: 'POST', headers: as(), body: { dir: '/home' } });

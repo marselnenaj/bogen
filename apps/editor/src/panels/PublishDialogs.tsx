@@ -90,7 +90,8 @@ function Dialog({ title, subtitle, testId, onClose, children, footer }: { title:
   const ref = useRef<HTMLDivElement>(null);
   const back = useRef<Element | null>(document.activeElement);
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>('button, input')?.focus();
+    // The dialog itself takes focus: on the close button or a segment, a tooltip would cover the dialog's own words.
+    ref.current?.focus();
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -107,10 +108,10 @@ function Dialog({ title, subtitle, testId, onClose, children, footer }: { title:
   }, [onClose]);
   return (
     <div className="dialog-scrim" data-ui onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div ref={ref} className="dialog publish" role="dialog" aria-modal="true" aria-label={title} data-testid={testId}>
-        <header className="dialog-head settings-head">
-          <span><span className="settings-title">{title}</span> <span className="publish-sub" dir="auto">{subtitle}</span></span>
-          <IconButton icon={<X size={14} />} title={t('Close ({shortcut})', { shortcut: 'Esc' })} onClick={onClose} testId={`${testId}-close`} />
+      <div ref={ref} className="dialog publish" role="dialog" aria-modal="true" aria-label={title} data-testid={testId} tabIndex={-1}>
+        <header className="dialog-head publish-head">
+          <h2 className="dialog-title">{title} <span className="publish-sub" dir="auto">{subtitle}</span></h2>
+          <IconButton icon={<X size={16} />} title={t('Close ({shortcut})', { shortcut: 'Esc' })} onClick={onClose} testId={`${testId}-close`} />
         </header>
         <div className="publish-body">{children}</div>
         {footer ? <footer className="publish-foot">{footer}</footer> : null}
@@ -269,7 +270,10 @@ function PublishDialog({ fileId }: { fileId: string }) {
             : <button type="button" className="btn btn-quiet publish-danger-text" onClick={() => setTaking(true)} data-testid="publish-unpublish">{t('Unpublish')}</button>) : null}
           <span className="publish-grow" />
           <button type="button" className="btn" onClick={close}>{t('Cancel')}</button>
-          <button type="button" className="btn btn-primary" disabled={!ready} onClick={publish} data-testid="publish-run">{version ? (flagged ? t('Publish v{version} anyway', { version: version.n }) : liveHere === version.id ? t('Publish v{version} again', { version: version.n }) : t('Publish v{version}', { version: version.n })) : t('Publish')}</button>
+          {/* Without a version there is nothing to publish yet: the next step is the button, not a greyed-out Publish. */}
+          {version
+            ? <button type="button" className="btn btn-primary" disabled={!ready} onClick={publish} data-testid="publish-run">{flagged ? t('Publish v{version} anyway', { version: version.n }) : liveHere === version.id ? t('Publish v{version} again', { version: version.n }) : t('Publish v{version}', { version: version.n })}</button>
+            : <button type="button" className="btn btn-primary" disabled={busy || !target.pageId} onClick={prepare} data-testid="publish-make-version">{t('Make a version')}</button>}
         </>
       )}
     >
@@ -316,7 +320,7 @@ function PublishDialog({ fileId }: { fileId: string }) {
             <div className="publish-file publish-sum"><span className="hint">{t.n(version.files, '{count} file, {size}. No script, no layer ids, no comments.', '{count} files, {size}. No script, no layer ids, no comments.', { size: kb(version.bytes) })}</span><span className="hint">v{version.n}</span></div>
             {version.notes.map((n) => <div key={n} className="hint">{n}</div>)}
           </div>
-        ) : <span className="hint">{t('No version yet. A version is a frozen copy of the design as it is now.')}</span>}
+        ) : <span className="hint publish-field-text">{t('No version yet. A version is a frozen copy of the design as it is now.')}</span>}
       </Field>
       <Field label={t('Check')}>
         <CheckView state={check} artboard={nodeId ? target.artboard?.name ?? null : null} page={target.name} />
@@ -377,7 +381,15 @@ function CheckView({ state, artboard, page }: { state: ReturnType<typeof usePubl
   if (state.error) return <span className="hint" data-testid="publish-check-error">{state.error}</span>;
   if (!state.result) return <span className="hint" data-testid="publish-check-busy">{t('Checking on this computer')}</span>;
   const { counts, findings, summaries } = state.result;
-  const shown = findings.filter((f) => f.level !== 'note');
+  // The same finding on every page is one finding, with the pages it is on.
+  const groups: { f: CheckFinding; pages: string[] }[] = [];
+  for (const f of findings) {
+    if (f.level === 'note') continue;
+    const same = groups.find((g) => g.f.level === f.level && g.f.check === f.check && g.f.message === f.message);
+    const page = f.page && f.page !== 'index.html' ? f.page : '';
+    if (same) { if (page) same.pages.push(page); } else groups.push({ f, pages: page ? [page] : [] });
+  }
+  const shown = groups;
   const list = all ? shown : shown.slice(0, 6);
   const word = (level: CheckFinding['level']) => (level === 'error' ? t('Problem') : level === 'warning' ? t('Warning') : t('Note'));
   const a11y = summaries.a11y && 'issues' in summaries.a11y ? summaries.a11y : null;
@@ -398,10 +410,10 @@ function CheckView({ state, artboard, page }: { state: ReturnType<typeof usePubl
           : t('Nothing to fix before publishing.')}
         {' '}<span className="hint">{t('Checked on this computer. Nothing was sent anywhere.')}</span>
       </span>
-      {list.map((f, i) => (
-        <div key={`${f.check}-${f.page ?? ''}-${f.path ?? ''}-${i}`} className={`publish-finding is-${f.level}`} data-testid="publish-check-finding" data-level={f.level} data-check={f.check}>
+      {list.map(({ f, pages }, i) => (
+        <div key={`${f.check}-${f.path ?? ''}-${i}`} className={`publish-finding is-${f.level}`} data-testid="publish-check-finding" data-level={f.level} data-check={f.check}>
           <span className="publish-finding-level">{word(f.level)}</span>
-          <span className="publish-finding-text" dir="auto">{f.page && f.page !== 'index.html' ? `${f.page}: ` : ''}{f.message}</span>
+          <span className="publish-finding-text" dir="auto">{f.message}{pages.length ? <span className="hint publish-finding-pages">{pages.length === 1 ? pages[0] : t.n(pages.length, 'On {count} page', 'On {count} pages')}</span> : null}</span>
         </div>
       ))}
       {shown.length > list.length ? <button type="button" className="run-link publish-finding-more" onClick={() => setAll(true)}>{t.n(shown.length - list.length, 'and {count} more', 'and {count} more')}</button> : null}

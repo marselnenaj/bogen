@@ -82,7 +82,8 @@ export const CRAFT_LIMITS = {
   scaleNear: 0.08,
   capsMinLayers: 3, capsMaxChars: 30,
   eyebrowMaxPx: 14, eyebrowMaxChars: 40, eyebrowMin: 2,
-  centredShare: 0.7, centredMinTexts: 6,
+  /** Of the texts that are read: headings, and runs of at least this many words outside a button, link or field. */
+  centredShare: 0.7, centredMinTexts: 6, centredMinWords: 4,
   boxesMin: 6, boxesShare: 0.5, nestedMin: 2,
   /** The hue range, in degrees, of the gradient that runs from blue through violet to pink. */
   gradientHues: [200, 340],
@@ -101,6 +102,8 @@ export const CRAFT_LIMITS = {
   statMin: 3, statRatio: 1.75,
   /** Texts that join three or more facts with middle dots. */
   metaDotsMin: 3,
+  /** A patterned layer no bigger than this both ways is a mark (a transparency swatch), not a background. */
+  markMaxPx: 32,
   /** A page of this many sections with no picture, drawing, video or shader this big. */
   pageSectionsMin: 4, visualMinPx: 160,
   /** A file of this many screens whose saturated colours all lie within this many degrees of hue. */
@@ -171,6 +174,11 @@ const COMMAND_LIKE = /[{}()[\]=<>;$_\\/|`~#@]|--|\.\w{1,5}$|^(?:npm|npx|pnpm|yar
 /** Grotesk and neo-grotesk faces, the usual partner of a monospace face on generated pages. */
 const GROTESK = /grotesk|grotesque|\bsans\b|inter\b|helvetica|arial|geist|roboto|manrope|satoshi|s[oö]hne|suisse|figtree|outfit|sora\b|onest|neue|haas|aktiv|archivo|public sans|work sans|jakarta|instrument|switzer|general sans|sf pro|system-ui|-apple-system/i;
 const HEADING = /^h[1-6]$/;
+/** Elements whose words are a control's label, not text to read. */
+const CONTROL_TAGS = new Set(['button', 'a', 'label', 'select', 'option', 'input', 'textarea', 'summary']);
+const CONTROL_ROLES = /^(button|link|tab|menuitem|menuitemcheckbox|menuitemradio|option|switch|checkbox|radio|slider|spinbutton|combobox)$/;
+const TEXT_BLOCKS = /^(p|li|blockquote|dd|dt|figcaption|td|th|h[1-6])$/;
+const INLINE_TAGS = new Set(['span', 'b', 'strong', 'i', 'em', 'small', 'mark', 'code', 'kbd', 'sub', 'sup', 'abbr', 'time', 'cite', 'q', 's', 'u']);
 const round = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
 const quote = (text: string) => `"${text.replace(/\s+/g, ' ').trim().slice(0, 32)}"`;
 const list = (items: string[], max = 3) => items.slice(0, max).join(', ') + (items.length > max ? ` and ${items.length - max} more` : '');
@@ -395,15 +403,37 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
     const share = heavy.reduce((sum, n) => sum + n.text!.trim().length, 0) / total;
     if (share > L.heavyShare) add('heavy-type', root.id, heavy.map((n) => n.id), `${Math.round(share * 100)}% of the words are set in weight ${L.heavyWeight} or heavier. Bold only works against regular: set running text in 400 and keep the heavy weight for headings and the one thing to notice.`, { share: round(share) });
   }
-  const centred = texts.filter((n) => inherited(n, 'textAlign') === 'center');
-  if (texts.length >= L.centredMinTexts && centred.length / texts.length > L.centredShare) {
-    add('centred', root.id, centred.map((n) => n.id), `${centred.length} of ${texts.length} texts are centred. Centre one short statement at most; give the rest a common left edge, which is what makes a page look structured.`, { share: round(centred.length / texts.length) });
+  // Centring is about text that is read: headings and runs of words. The label of a button, a link or a field, an icon
+  // glyph and a short value sit in the middle of their control, and that is not a centred page.
+  const inControl = (n: BogenNode) => [n, ...ancestors(n)].some((a) => CONTROL_TAGS.has(a.tag) || CONTROL_ROLES.test(a.attrs?.role ?? ''));
+  const reading = texts.filter((n) => {
+    if (inControl(n) || isIconGlyph(n.text!)) return false;
+    // A run of a paragraph, such as the bold words in it, is read as part of that paragraph.
+    const up = INLINE_TAGS.has(n.tag) ? ancestors(n).find((a) => !INLINE_TAGS.has(a.tag)) : undefined;
+    const block = up && TEXT_BLOCKS.test(up.tag) ? up : n;
+    return HEADING.test(n.tag) || HEADING.test(block.tag) || words(block).split(' ').filter(Boolean).length >= L.centredMinWords;
+  });
+  const centred = reading.filter((n) => inherited(n, 'textAlign') === 'center');
+  if (reading.length >= L.centredMinTexts && centred.length / reading.length > L.centredShare) {
+    add('centred', root.id, centred.map((n) => n.id), `${centred.length} of ${reading.length} texts are centred. Centre one short statement at most; give the rest a common left edge, which is what makes a page look structured.`, { share: round(centred.length / reading.length) });
   }
   const sections = doc.getChildren(root.id).filter((c) => visible.has(c.id));
-  const actionsOf = (scope: BogenNode) => [scope, ...doc.descendants(scope.id)].filter((n) => visible.has(n.id) && composed(n) && (n.tag === 'button' || n.tag === 'a')).flatMap((n) => {
+  // A filled segment or tab that is the chosen one shows a state, not an action: it competes with nothing.
+  const chosen = (n: BogenNode) => /^(?:tab|radio|option|switch|menuitemradio|menuitemcheckbox)$/.test(n.attrs?.role ?? '')
+    || ['aria-pressed', 'aria-selected', 'aria-checked', 'aria-current'].some((a) => n.attrs?.[a] !== undefined && n.attrs[a] !== 'false');
+  // Behind an open modal everything is hidden from assistive technology and cannot be reached: seen, dimmed, but not
+  // something to do on this screen.
+  const behind = (n: BogenNode) => [n, ...ancestors(n)].some((a) => a.attrs?.['aria-hidden'] === 'true');
+  const actionsOf = (scope: BogenNode) => [scope, ...doc.descendants(scope.id)].filter((n) => visible.has(n.id) && composed(n) && (n.tag === 'button' || n.tag === 'a') && !chosen(n) && !behind(n)).flatMap((n) => {
     const fill = coloursIn(own(n, 'backgroundColor') ?? own(n, 'background') ?? '')[0];
     const label = words(n).toLowerCase();
-    return fill && fill.alpha >= 0.5 && label ? [{ n, label, fill: `${Math.round(fill.h)}/${round(fill.s, 1)}/${round(fill.l, 1)}` }] : [];
+    if (!fill || fill.alpha < 0.5 || !label) return [];
+    // The surface's own colour a step lighter or darker is a quiet, tonal button: a secondary action, not a second
+    // primary. A grey on grey, or a tinted dark on the same tinted dark, as a theme gives them.
+    const ground = [...ancestors(n), root].map((a) => coloursIn(own(a, 'backgroundColor') ?? own(a, 'background') ?? '')[0]).find((c) => c && c.alpha >= 0.5);
+    const hueGap = ground ? Math.min(Math.abs(fill.h - ground.h), 360 - Math.abs(fill.h - ground.h)) : 360;
+    if (ground && Math.abs(fill.l - ground.l) < 0.12 && Math.abs(fill.s - ground.s) < 0.2 && (fill.s < 0.15 || hueGap < 30)) return [];
+    return [{ n, label, fill: `${Math.round(fill.h)}/${round(fill.s, 1)}/${round(fill.l, 1)}` }];
   });
   for (const scope of sections.length >= 2 ? sections : [root]) {
     const byFill = new Map<string, { n: BogenNode; label: string }[]>();
@@ -444,7 +474,10 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
     const bg = [own(n, 'background'), own(n, 'backgroundImage')].filter(Boolean).join(' ');
     if (/gradient\(/.test(bg)) {
       const tile = lengths(own(n, 'backgroundSize') ?? (/\/\s*([^,]+)/.exec(bg)?.[1] ?? ''));
-      if (/repeating-radial-gradient\(/.test(bg) || (tile.length > 0 && tile.every((v) => v > 0 && v <= L.tileMaxPx))) patterned.push(n);
+      // A pattern this small is a mark, such as the checkerboard that shows a colour is see-through, not a surface.
+      const [pw] = lengths(own(n, 'width') ?? ''), [ph] = lengths(own(n, 'height') ?? '');
+      const mark = pw !== undefined && ph !== undefined && pw <= L.markMaxPx && ph <= L.markMaxPx;
+      if (!mark && (/repeating-radial-gradient\(/.test(bg) || (tile.length > 0 && tile.every((v) => v > 0 && v <= L.tileMaxPx)))) patterned.push(n);
       else {
         // Two or more saturated stops, all between blue and pink, with a violet one and one that is not: not a single hue.
         const stops = [...bg.matchAll(/(?:linear|radial|conic)-gradient\(((?:[^()]|\([^()]*\))*)\)/g)].flatMap((m) => coloursIn(m[1]!)).filter((c) => chromatic(c));
@@ -503,8 +536,14 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
   }
 
   // ---- Craft
+  // A box groups something. A control drawn with an outline is the control: a field around its input, a radio card,
+  // a key cap, a tab. A frame that holds nothing is a shape, such as a handle or a swatch.
+  const CONTROL_BOX = /^(?:button|checkbox|radio|switch|option|tab|menuitem|menuitemradio|menuitemcheckbox|searchbox|textbox|combobox|slider|spinbutton)$/;
+  const control = (n: BogenNode) => ['label', 'kbd'].includes(n.tag) || CONTROL_BOX.test(n.attrs?.role ?? '')
+    || doc.getChildren(n.id).some((c) => ['input', 'select', 'textarea'].includes(c.tag));
   const boxed = (n: BogenNode) => {
     if (n === root || n.type !== 'frame' || ['button', 'a', 'input', 'select', 'textarea', 'table', 'td', 'th', 'tr'].includes(n.tag)) return false;
+    if (!doc.getChildren(n.id).length || control(n)) return false;
     const border = own(n, 'border') ?? '';
     const width = own(n, 'borderWidth') ?? '';
     const lined = (border && !/^(none|0(px)?)\b/.test(border) && !/\bnone\b/.test(border)) || (!!width && lengths(width).some((v) => v > 0) && own(n, 'borderStyle') !== 'none');
@@ -606,7 +645,9 @@ export function craftFindings(doc: BogenDoc, rootId: string, viewportWidth = 144
     add('stat-row', statRows[0]!.id, statRows.map((n) => n.id),
       `${statRows.length === 1 ? 'A row' : `${statRows.length} rows`} of big figures over small labels (${list(figures.map((n) => quote(n.text!)))}), the stat strip of generated pages. Put each figure where it explains something: in the sentence, chart or table it belongs to, with its unit and its source, or make one of them the point of its section.`, { rows: statRows.length });
   }
-  const dotted = texts.filter((n) => composed(n) && (n.text!.match(/\s[·•]\s/g)?.length ?? 0) >= 2);
+  // A name someone gave a thing, marked translate="no" as names are, is theirs, not copy this screen composed.
+  const named = (n: BogenNode) => [n, ...ancestors(n)].some((a) => a.attrs?.translate === 'no');
+  const dotted = texts.filter((n) => composed(n) && !named(n) && (n.text!.match(/\s[·•]\s/g)?.length ?? 0) >= 2);
   if (dotted.length >= L.metaDotsMin) {
     add('meta-dots', dotted[0]!.id, dotted.map((n) => n.id),
       `${dotted.length} texts string facts together with middle dots (${list(dotted.map((n) => quote(n.text!)))}). A run of facts joined by dots is template chrome: give each fact its own place, label or column, or write the one that matters as words.`, { texts: dotted.length });

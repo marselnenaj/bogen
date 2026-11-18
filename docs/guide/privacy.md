@@ -163,12 +163,26 @@ as a mirror. It must be an `https` URL.
 
 ## Images
 
-Bogen sends nothing to an AI provider. It has no image generator and holds no AI keys. Images come from
+Bogen holds no AI keys and sends nothing to an AI provider by itself. When you, or an agent through
+`image_generate`, ask it to generate an image, it runs the Codex CLI on this computer with your own Codex
+sign-in: the description you wrote goes to OpenAI through Codex, under your account, like any other Codex
+request. It runs in an empty temporary folder in Codex's sandbox, with Codex's shell turned off and your
+Codex config, MCP servers and rules left out, and Bogen deletes Codex's copy of the picture once it is
+stored. Without the Codex CLI nothing is sent anywhere. Other images come from
 your agent, which draws them as SVG or CSS or makes them with its own image tool; that tool's requests
 are between the agent and its provider, under the agent's account. Codex's built-in image generation,
 for example, runs on your ChatGPT plan and keeps a copy under `~/.codex/generated_images`. When the agent
 stores the file with `asset_upload` and a path, the Bogen server reads that one file on this computer,
 and only an image under your home or temp folder.
+
+## Design critique
+
+When you, or an agent through `design_critique`, ask for a review, Bogen renders the chosen artboards to
+pictures and starts the Claude Code CLI on this computer with your own sign-in: the pictures, the file's
+brand rules and a written brief go to Anthropic through Claude Code, under your account, like any other
+Claude Code request. Each review is a new session with no tools and no MCP servers, kept nowhere
+(`--no-session-persistence`), in an empty temporary folder that is deleted afterwards. The result (score,
+findings, the reviewer's name, time and tokens) is kept on the file. Without Claude Code nothing is sent.
 
 Older versions could generate images with an OpenAI or Gemini key. A `config.json` that still has
 `openaiApiKey`, `geminiApiKey` or `imageProvider` loads as before; those fields are ignored, and you can

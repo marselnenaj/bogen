@@ -21,7 +21,7 @@ export function RedoScreenAction() {
     });
   };
   return <div className="redo-screen-action">
-    <button type="button" className="btn btn-quiet" disabled={running} onClick={redoSelectedScreen} data-testid="redo-screen-selected">{t('Redo this screen…')}</button>
-    <button type="button" className={`btn btn-quiet${selected ? ' is-active' : ''}`} aria-pressed={selected} onClick={toggleCover} data-testid="screen-cover">{t('Cover')}</button>
+    <button type="button" className="btn btn-outline" disabled={running} onClick={redoSelectedScreen} data-testid="redo-screen-selected">{t('Redo this screen…')}</button>
+    <button type="button" className={`btn btn-quiet${selected ? ' is-active' : ''}`} aria-pressed={selected} onClick={toggleCover} title={t("Show this screen on the file's card on Home")} data-testid="screen-cover">{t('Use as cover')}</button>
   </div>;
 }

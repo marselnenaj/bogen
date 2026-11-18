@@ -81,7 +81,10 @@ async function main(): Promise<void> {
     const focus = await agent.callTool({ name: 'selection_set', arguments: { file_id: id, node_ids: [note] } });
     const link = JSON.parse((focus.content as { text: string }[])[0]!.text).link as string;
     check('selection_set gives a link to the layer', link === `${server.base}/#/file/${id}?page=${encodeURIComponent(pageId)}&select=${note}`, link);
-    const second = await freshPage(browser);
+    // In another browser profile: a second window of this one would leave the file to the first (one window per file).
+    const elsewhere = await browser.createBrowserContext();
+    const second = await elsewhere.newPage();
+    await second.evaluateOnNewDocument('window.__name = (f) => f');
     await second.goto(link);
     await second.waitForSelector('[data-testid="canvas"]', { timeout: 20000 });
     check('the agent link opens with the layer selected', await until(async () => (await selectedIds(second)).includes(note)), await selectedIds(second));

@@ -91,7 +91,10 @@ const SHAPES: Record<string, z.ZodRawShape> = {
   design_lint: {
     total: z.number().describe('How many issues there are.'),
     counts: z.record(z.string(), z.number()).describe('Issues per rule.'),
-    issues: z.array(z.record(z.string(), z.unknown())).describe('Each with the layer, the rule, what is wrong and, where there is one, the style that fixes it.'),
+    hard: z.number().optional().describe('Hard findings across all pages.'),
+    issues: z.array(z.record(z.string(), z.unknown())).describe('This page of findings: layer, rule, message and optional fix.'),
+    next_offset: z.number().int().optional().describe('More findings: pass this as offset with the same scope and fix false.'),
+    paging: z.string().optional(),
     fixed: z.array(z.looseObject({ node_id: z.string(), rule: z.string(), style: z.unknown() })).optional().describe('With fix true: what was applied.'),
     note: z.string().optional(),
   },

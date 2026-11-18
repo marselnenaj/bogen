@@ -63,7 +63,7 @@ export function KindList({ files, scope, presets, query, themeFolder, onScope }:
     const active = scope.kind === kind && scope.platform === platform;
     const n = count(kind, platform);
     return (
-      <div key={`${kind}-${platform}`} className={`folder-row kind-row${active ? ' is-active' : ''}`} role="treeitem" aria-selected={active} aria-level={depth + 1} style={{ paddingLeft: 4 + depth * 12 }} data-testid="kind-row" data-kind={kind ?? ''} data-platform={platform ?? ''}>
+      <div key={`${kind}-${platform}`} className={`folder-row kind-row${active ? ' is-active' : ''}`} role="treeitem" aria-selected={active} aria-level={depth + 1} style={{ paddingLeft: depth ? `calc(var(--space-xs) + ${depth} * var(--space-md))` : 'var(--space-xs)' }} data-testid="kind-row" data-kind={kind ?? ''} data-platform={platform ?? ''}>
         <span className="layer-toggle" />
         <button type="button" className="folder-open" onClick={() => onScope({ kind, platform })}><span className="folder-name">{label}</span></button>
         {n ? <span className="folder-count">{n}</span> : null}

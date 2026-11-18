@@ -1,0 +1,199 @@
+/* Review like a designer (CritiqueDialog.tsx, CritiqueWall.tsx). The wall while it runs, the crit sheet after.
+   Amber is the reviewer at work and its pencil, as the agent working in the call bar; blue is the score and the
+   person's actions; red stays for errors. Designed in Bogen: "Bogen Brand System", page "Design critique", D2 to D4. */
+.critique-dialog {
+  --crit-amber: #9c5800; --crit-wall: color-mix(in oklab, var(--ui-bg-3) 55%, #c9c0b0);
+  --crit-light: rgb(255 190 100 / 26%); --crit-light-mid: rgb(255 214 150 / 10%);
+  --crit-unlit: .84;
+  /* As far from the window's foot as the scrim leaves at its top. */
+  width: min(760px, calc(100 * var(--ui-vw) - 32px)); max-height: calc(100 * var(--ui-vh) - 2 * var(--space-3xl) - 2 * var(--space-3xl)); outline: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme-mode='light']) .critique-dialog { --crit-amber: #f0b45a; --crit-wall: color-mix(in oklab, var(--ui-bg) 80%, #000); --crit-light: rgb(255 214 150 / 30%); --crit-light-mid: rgb(255 226 180 / 10%); --crit-unlit: .6; }
+}
+:root[data-theme-mode='dark'] .critique-dialog { --crit-amber: #f0b45a; --crit-wall: color-mix(in oklab, var(--ui-bg) 80%, #000); --crit-light: rgb(255 214 150 / 30%); --crit-light-mid: rgb(255 226 180 / 10%); --crit-unlit: .6; }
+
+.crit-head-bar { gap: var(--space-xs); }
+/* A clear step back from the editor: the review is the one thing in view. */
+.crit-scrim.dialog-scrim { background: rgb(0 0 0 / 46%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme-mode='light']) .crit-scrim.dialog-scrim { background: rgb(0 0 0 / 62%); } }
+:root[data-theme-mode='dark'] .crit-scrim.dialog-scrim { background: rgb(0 0 0 / 62%); }
+.crit-body { display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-xl); overflow: auto; min-height: 0; scrollbar-width: thin; }
+.crit-body > * { flex-shrink: 0; }
+.crit-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); flex-wrap: wrap; }
+.crit-lead { margin: 0; font-size: var(--text-xl); line-height: 1.35; font-weight: 600; color: var(--ui-fg); }
+.crit-note { margin: 0; font-size: var(--text-md); line-height: 1.45; color: var(--ui-fg-2); }
+.crit-error { margin: 0; font-size: var(--text-md); color: var(--ui-danger); }
+.crit-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.crit-field { display: flex; flex-direction: column; gap: var(--space-xs); border: 0; margin: 0; padding: 0; min-width: 0; }
+.crit-label { font-size: var(--text-md); font-weight: 600; color: var(--ui-fg); margin-bottom: var(--space-xs); padding: 0; }
+.crit-radio { display: flex; align-items: center; gap: var(--space-sm); min-height: 28px; font-size: var(--text-md); color: var(--ui-fg); }
+.crit-radio input, .crit-check { width: 16px; height: 16px; margin: 0; flex: none; accent-color: var(--ui-accent); }
+.crit-select { min-height: 32px; padding: 0 var(--space-sm); border-radius: var(--radius); border: 1px solid var(--ui-border); background: var(--ui-bg-2); color: var(--ui-fg); font: inherit; font-size: var(--text-md); max-width: 320px; }
+.crit-select:focus-visible, .crit-radio input:focus-visible, .crit-check:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- the wall */
+
+.crit-wall { position: relative; overflow: hidden; margin: calc(-1 * var(--space-xl)) calc(-1 * var(--space-xl)) 0; padding: var(--space-xl); background: var(--crit-wall); border-bottom: 1px solid var(--ui-border); min-height: 200px; display: grid; place-items: center; }
+.crit-wall.is-compact { min-height: 0; padding: var(--space-lg) var(--space-xl); }
+.crit-wall-rows { display: flex; flex-direction: column; align-items: center; }
+.crit-wall-row { display: flex; align-items: center; justify-content: center; }
+.crit-print { position: relative; flex: none; border: 1px dashed color-mix(in oklab, var(--ui-fg) 28%, transparent); border-radius: 2px; }
+.crit-print > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0; transition: opacity 600ms ease; }
+.crit-print.is-in { border: 0; box-shadow: 0 1px 2px rgb(0 0 0 / 16%), 0 6px 16px rgb(0 0 0 / 18%); background: #fff; }
+.crit-print.is-in > img { opacity: 1; }
+/* Before the review, the screens as they are now, a little quiet: the wall is not working yet. */
+.crit-print.is-preview > img { opacity: .85; }
+/* While it works, the screen under the light is the bright one; the others step back into the dark, not into a veil. */
+.crit-print > img { transition: opacity 600ms ease, filter 900ms ease; }
+.crit-wall:not(.is-still):is([data-step='pictures'], [data-step='reviewer'], [data-step='writing']) .crit-print.is-in:not(.is-lit) > img { filter: brightness(var(--crit-unlit)); }
+.crit-light { animation: crit-fade 500ms ease-out both; }
+.crit-print.is-lit { box-shadow: 0 2px 4px rgb(0 0 0 / 18%), 0 12px 28px rgb(0 0 0 / 24%); }
+/* A quiet tick under each screen the light has passed: warm grey, never the amber that marks work or a problem. */
+.crit-passed { position: absolute; left: 50%; bottom: -9px; width: 14px; height: 2px; margin-left: -7px; border-radius: 1px; background: color-mix(in oklab, var(--ui-fg) 38%, transparent); animation: crit-pop 500ms ease-out both; }
+.crit-light {
+  position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, var(--crit-light) 0%, var(--crit-light-mid) 42%, transparent 70%);
+  transition: transform 2.4s cubic-bezier(.45, 0, .2, 1), opacity 600ms ease;
+}
+.crit-wall[data-step='rules'] .crit-light { opacity: .35; }
+.crit-wall[data-step='writing'] .crit-light { opacity: .55; }
+.crit-print.is-lit { animation: crit-wander 6s ease-in-out infinite alternate; }
+
+/* ---------------------------------------------------------------- waiting */
+
+.crit-waiting { gap: var(--space-lg); }
+.crit-who { display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap; }
+.crit-who .crit-lead { flex: 1 1 auto; min-width: 0; }
+.crit-clock { margin: 0; font-size: var(--text-lg); color: var(--ui-fg); white-space: nowrap; }
+.crit-clock-n { font-variant-numeric: tabular-nums; font-weight: 600; }
+.crit-clock-of { color: var(--ui-fg-2); }
+.crit-stages { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-sm); }
+.crit-stages li { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: var(--text-md); color: var(--ui-fg-2); }
+.crit-bar { height: 3px; border-radius: 2px; background: var(--ui-border); }
+.crit-stages li.is-done .crit-bar { background: var(--ui-fg-2); }
+.crit-stages li.is-now .crit-bar { position: relative; overflow: hidden; background: color-mix(in oklab, var(--crit-amber) 30%, var(--ui-border)); }
+/* The stage at work has a slow segment moving along it: a sign of life, not a measure. */
+.crit-stages li.is-now .crit-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 34%; border-radius: 2px; background: var(--crit-amber); animation: crit-sweep 2.4s cubic-bezier(.45, 0, .2, 1) infinite; }
+.crit-stage-name { display: inline-flex; align-items: center; gap: 4px; color: var(--ui-fg); }
+.crit-stages li:not(.is-done):not(.is-now) .crit-stage-name { color: var(--ui-fg-2); }
+.crit-stages li.is-now .crit-stage-name { font-weight: 600; }
+.crit-stage-check { color: var(--ui-fg-2); flex: none; }
+.crit-stage-detail { font-size: var(--text-sm); color: var(--ui-fg-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------- the crit sheet */
+
+.crit-result { padding-bottom: 0; gap: var(--space-lg); }
+.crit-top { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: var(--space-xl); align-items: center; }
+.crit-ring { position: relative; width: 112px; height: 112px; }
+.crit-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.crit-ring-track { fill: none; stroke: var(--ui-bg-3); stroke-width: 7; }
+.crit-ring-fill { fill: none; stroke: var(--ui-accent); stroke-width: 7; stroke-linecap: round; }
+.crit-ring-n { position: absolute; inset: 0; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--ui-fg); }
+.crit-ring-n > span:first-child { font-size: 34px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.crit-ring-of { font-size: var(--text-md); color: var(--ui-fg-2); }
+.crit-verdict { margin: 0; font-size: calc(var(--text-xl) + 1px); line-height: 1.45; color: var(--ui-fg); text-wrap: pretty; max-width: 60ch; }
+.crit-top-text { display: flex; flex-direction: column; gap: var(--space-sm); min-width: 0; }
+.crit-meta { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; font-size: var(--text-md); color: var(--ui-fg-2); }
+.crit-history { display: inline-flex; align-items: center; gap: var(--space-sm); }
+.crit-history-text { color: var(--ui-fg); font-variant-numeric: tabular-nums; }
+.crit-spark { fill: none; stroke: var(--ui-accent); stroke-width: 1.5; }
+.crit-spark-target { stroke: var(--ui-fg-2); stroke-width: 1; stroke-dasharray: 2 3; opacity: .7; }
+.crit-spark-dot { fill: var(--ui-bg-2); stroke: var(--ui-accent); stroke-width: 1.5; }
+.crit-spark-dot.is-now { fill: var(--ui-accent); }
+.crit-chips { display: inline-flex; gap: var(--space-xs); flex-wrap: wrap; }
+.crit-chip { min-height: var(--target); padding: 0 var(--space-sm); border-radius: 12px; border: 1px solid transparent; background: var(--active); color: var(--ui-fg-2); font: inherit; font-size: var(--text-sm); font-variant-numeric: tabular-nums; cursor: pointer; }
+.crit-chip.is-active { color: var(--ui-fg); font-weight: 600; border-color: var(--ui-border); background: transparent; }
+.crit-dims { margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-md); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--ui-border); }
+.crit-dim { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.crit-dim dt { font-size: var(--text-sm); color: var(--ui-fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crit-dim dd { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.crit-num { font-size: var(--text-xl); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ui-fg); }
+.crit-meter { height: 4px; border-radius: 2px; background: var(--ui-bg-3); overflow: hidden; }
+.crit-meter i { display: block; height: 100%; border-radius: 2px; background: var(--ui-accent); }
+.crit-meter i.is-low { background: var(--crit-amber); }
+.crit-fixing { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; padding: var(--space-sm) var(--space-md); border-radius: 8px; background: color-mix(in oklab, var(--crit-amber) 12%, var(--ui-bg-2)); font-size: var(--text-md); color: var(--ui-fg); }
+.crit-fixing-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--crit-amber); flex: none; animation: crit-breathe 2.4s ease-in-out infinite; }
+.crit-fixing-text { flex: 1 1 auto; min-width: 0; }
+.crit-sec { display: flex; flex-direction: column; }
+.crit-sec-head { display: flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap; padding-bottom: var(--space-xs); }
+.crit-sec-head h3 { margin: 0; font-size: var(--text-xl); font-weight: 600; color: var(--ui-fg); }
+.crit-sec-head span { font-size: var(--text-md); color: var(--ui-fg-2); }
+.crit-findings, .crit-notes, .crit-keep { margin: 0; padding: 0; list-style: none; }
+.crit-finding { display: grid; grid-template-columns: 16px 152px minmax(0, 1fr); gap: var(--space-md); align-items: start; padding: var(--space-md) 0; border-top: 1px solid var(--ui-border); }
+.crit-finding > .crit-check { margin-top: 2px; }
+.crit-crop { position: relative; width: 152px; height: 104px; overflow: hidden; border-radius: 4px; background: var(--ui-bg-3); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ui-fg) 10%, transparent); }
+.crit-crop > img { display: block; }
+.crit-crop-ring { position: absolute; border: 2px solid var(--crit-amber); border-radius: 8px; pointer-events: none; box-shadow: 0 0 0 1px rgb(255 255 255 / 55%); }
+.crit-fix-btn { background: transparent; box-shadow: inset 0 0 0 1px var(--ui-accent); color: var(--ui-accent); font-weight: 600; }
+.crit-fix-btn:hover:not(:disabled) { background: color-mix(in oklab, var(--ui-accent) 12%, transparent); }
+.crit-crop-name { position: absolute; inset: auto 6px 6px; font-size: var(--text-sm); color: var(--ui-fg-2); }
+.crit-crop-now { position: absolute; right: 4px; bottom: 4px; padding: 0 5px; border-radius: 6px; background: rgb(0 0 0 / 62%); color: #fff; font-size: 11px; line-height: 16px; }
+.crit-statuses { display: inline-flex; gap: var(--space-xs); margin-inline-start: auto; }
+.crit-status { display: inline-flex; align-items: center; padding: 0 var(--space-sm); border-radius: 10px; background: var(--ui-bg-3); color: var(--ui-fg); font-size: var(--text-sm); font-weight: 400; line-height: 20px; }
+.crit-status.is-fix { background: color-mix(in oklab, var(--crit-amber) 22%, var(--ui-bg-2)); }
+.crit-title > .crit-status { margin-inline-start: var(--space-sm); vertical-align: 1px; }
+.crit-finding-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.crit-head { display: flex; align-items: flex-start; gap: var(--space-md); }
+.crit-title { margin: 0; flex: 1 1 auto; font-size: var(--text-xl); line-height: 1.35; font-weight: 600; color: var(--ui-fg); }
+.crit-kind { flex: none; padding: 0 var(--space-sm); border-radius: 10px; background: var(--ui-bg-3); color: var(--ui-fg); font-size: var(--text-sm); line-height: 20px; }
+.crit-text { margin: 0; font-size: var(--text-md); line-height: 1.5; color: var(--ui-fg-2); overflow-wrap: anywhere; }
+.crit-where { color: var(--ui-fg); font-weight: 600; }
+.crit-fix { color: var(--ui-fg); }
+.crit-actions { display: flex; gap: var(--space-sm); padding-top: var(--space-xs); align-items: center; flex-wrap: wrap; }
+.crit-note-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--space-md); padding: var(--space-sm) 0; border-top: 1px solid var(--ui-border); }
+.crit-note-row > .crit-check { margin-top: 2px; }
+.crit-note-row .crit-title { font-size: var(--text-lg); }
+.crit-keep li { display: flex; gap: var(--space-sm); align-items: baseline; padding: var(--space-xs) 0; font-size: var(--text-md); line-height: 1.5; color: var(--ui-fg); }
+.crit-keep svg { flex: none; color: var(--ui-fg-2); transform: translateY(2px); }
+.crit-confirm { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-md); border-radius: 8px; border: 1px solid var(--ui-border); background: var(--ui-bg); font-size: var(--text-md); line-height: 1.45; }
+.crit-confirm p { margin: 0; }
+.crit-confirm-actions { display: flex; gap: var(--space-sm); }
+.crit-fixbar { position: sticky; bottom: 0; margin: 0 calc(-1 * var(--space-xl)); padding: var(--space-md) var(--space-xl); background: var(--ui-bg-2); border-top: 1px solid var(--ui-border); justify-content: flex-start; }
+.crit-loop { display: inline-flex; align-items: center; gap: var(--space-sm); min-height: var(--target); font-size: var(--text-md); color: var(--ui-fg); }
+.crit-fixbar-who { flex: 1 1 auto; font-size: var(--text-sm); color: var(--ui-fg-2); text-align: end; }
+.crit-fixbar > .btn-quiet:first-child { margin-inline-end: auto; }
+.crit-fixbar-go { display: inline-flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; justify-content: flex-end; }
+.crit-radio:has(input:disabled) { color: var(--ui-fg-2); }
+.crit-tab:focus-visible, .crit-chip:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+
+@keyframes crit-pop { from { transform: scaleX(0); opacity: 0; } }
+@keyframes crit-fade { from { opacity: 0; } }
+@keyframes crit-sweep { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@keyframes crit-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes crit-wander { from { transform: translate(0, 0); } to { transform: translate(0, -3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .crit-mark, .crit-stages li.is-now .crit-bar, .crit-fixing-dot, .crit-print.is-lit { animation: none; }
+  .crit-stages li.is-now .crit-bar { background: var(--crit-amber); }
+  .crit-stages li.is-now .crit-bar::after { display: none; }
+  .crit-light, .crit-print > img { transition: none; }
+}
+
+/* Phone width: a full sheet, one column, 44 px targets. */
+@media (max-width: 560px) {
+  .crit-scrim.dialog-scrim { padding: 0; place-items: stretch; }
+  .critique-dialog { width: 100vw; max-height: none; height: calc(100 * var(--ui-vh)); border-radius: 0; }
+  .crit-body { padding: var(--space-lg); }
+  .crit-body.crit-result { padding-bottom: 0; }
+  .crit-fixbar-go { flex: 1 0 100%; }
+  .crit-fixbar-go > .btn-primary { flex: 1 0 100%; }
+  .crit-wall { margin: calc(-1 * var(--space-lg)) calc(-1 * var(--space-lg)) 0; padding: var(--space-lg); min-height: 150px; }
+  .crit-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-md); }
+  .crit-top { grid-template-columns: 84px minmax(0, 1fr); gap: var(--space-md); }
+  .crit-ring { width: 84px; height: 84px; }
+  .crit-ring-n > span:first-child { font-size: 26px; }
+  .crit-verdict { font-size: var(--text-lg); }
+  .crit-dims { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* The crop across the top, then the tick beside the title. */
+  .crit-finding { grid-template-columns: 20px minmax(0, 1fr); row-gap: var(--space-sm); }
+  .crit-finding > .crit-crop { grid-column: 1 / -1; grid-row: 1; width: 100%; height: 132px; }
+  .crit-finding > .crit-check { grid-row: 2; margin-top: 4px; }
+  .crit-finding > .crit-finding-body { grid-row: 2; }
+  .crit-statuses { margin-inline-start: 0; }
+  .crit-title { font-size: var(--text-lg); }
+  .crit-fixbar { margin: 0 calc(-1 * var(--space-lg)); padding: var(--space-md) var(--space-lg) calc(var(--space-md) + env(safe-area-inset-bottom, 0px)); }
+  .crit-fixbar .btn-primary { min-height: 44px; }
+  .crit-fixbar-who { display: none; }
+  .critique-dialog .btn, .critique-dialog .crit-chip { min-height: 44px; }
+  .crit-check, .crit-radio input { width: 20px; height: 20px; }
+}

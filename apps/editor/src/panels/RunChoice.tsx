@@ -63,7 +63,7 @@ async function save(runner: string, scope: RunScope, field: 'model' | 'effort', 
   }
 }
 
-async function saveLimit(runner: string, limit: number): Promise<void> {
+export async function saveLimit(runner: string, limit: number): Promise<void> {
   try {
     const settings = await agentApi.saveRunSetting({ runner, limit });
     if (answer) answer = { ...answer, settings };
@@ -95,7 +95,7 @@ function autoLabel(catalog: RunnerCatalog | undefined, scope: RunScope, field: '
 }
 
 /** Model and effort for one runner, for one kind of run. Remembered on the server. */
-export function RunChoice({ runner, scope, testId }: { runner: string; scope: RunScope; testId?: string }) {
+export function RunChoice({ runner, scope, testId, labelled = false }: { runner: string; scope: RunScope; testId?: string; /** Each choice says what it is, as the chat's sheet shows them. */ labelled?: boolean }) {
   const t = useT();
   const data = useRunSettings();
   const [, force] = useState(0);
@@ -124,8 +124,8 @@ export function RunChoice({ runner, scope, testId }: { runner: string; scope: Ru
   ];
   return (
     <div className="run-choice" data-testid={testId}>
-      {onlyDefault ? null : <SelectField<string> value={current.model ?? AUTO} options={modelOptions} onChange={(v) => void save(runner, scope, 'model', v)} title={scope === 'comment' ? t('Model for comments') : t('Model for the prompt')} testId={testId ? `${testId}-model` : undefined} />}
-      {takesEffort && (efforts.length || current.effort) ? <SelectField<string> value={current.effort ?? AUTO} options={effortOptions} onChange={(v) => void save(runner, scope, 'effort', v)} title={t('Effort: how hard the model thinks. Lower costs less of your plan.')} testId={testId ? `${testId}-effort` : undefined} /> : null}
+      {onlyDefault ? null : <SelectField<string> {...(labelled ? { label: t('Model') } : {})} value={current.model ?? AUTO} options={modelOptions} onChange={(v) => void save(runner, scope, 'model', v)} title={scope === 'comment' ? t('Model for comments') : t('Model for the prompt')} testId={testId ? `${testId}-model` : undefined} />}
+      {takesEffort && (efforts.length || current.effort) ? <SelectField<string> {...(labelled ? { label: t('Effort') } : {})} value={current.effort ?? AUTO} options={effortOptions} onChange={(v) => void save(runner, scope, 'effort', v)} title={t('Effort: how hard the model thinks. Lower costs less of your plan.')} testId={testId ? `${testId}-effort` : undefined} /> : null}
       {onlyDefault ? <span className="run-choice-note" data-testid={testId ? `${testId}-default` : undefined}>{t('CLI default')}</span> : null}
     </div>
   );

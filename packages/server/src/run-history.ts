@@ -2,6 +2,7 @@ import { readFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { RunEnd, RunnerId, RunObserver, RunRequest, RunReview } from './agents.ts';
 import type { EventHub } from './events.ts';
+import type { SizedChoice } from './run-settings.ts';
 import { atomicWrite, errorMessage } from './util.ts';
 
 export type RunRecordStatus = 'running' | 'done' | 'failed' | 'stopped' | 'interrupted';
@@ -19,6 +20,8 @@ export interface RunRecord {
   effort?: string;
   /** What the CLI said it used. */
   actualModel?: string;
+  /** Set when nobody chose a model and Bogen picked one by the size of the request: the size, why, and what it picked. */
+  sized?: SizedChoice;
   /** Guidance delivered at start; not a claim about the model's reasoning or design quality. */
   knowledge?: { discipline: string; revision: string; customized: boolean };
   source: 'prompt' | 'comment' | 'live';
@@ -132,7 +135,7 @@ export class RunHistory implements RunObserver {
   started(runId: string, req: RunRequest): void {
     const record: RunRecord = {
       id: runId, fileId: req.fileId, prompt: req.prompt, ...(req.title ? { title: req.title.slice(0, 500) } : {}), runner: req.runner,
-      ...(req.model ? { model: req.model } : {}), ...(req.effort ? { effort: req.effort } : {}),
+      ...(req.model ? { model: req.model } : {}), ...(req.effort ? { effort: req.effort } : {}), ...(req.sized ? { sized: req.sized } : {}),
       ...(req.designGuidance ? { knowledge: { discipline:req.designGuidance.discipline, revision:req.designGuidance.revision, customized:req.designGuidance.customized } } : {}),
       source: req.live ? 'live' : req.threadId ? 'comment' : 'prompt',
       ...(req.threadId ? { threadId: req.threadId } : {}), ...(req.pageId ? { pageId: req.pageId } : {}), ...(req.review ? { review: req.review } : {}),

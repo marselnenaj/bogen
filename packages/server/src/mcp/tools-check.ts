@@ -1,3 +1,4 @@
+import { agentImage, layoutMap } from '../layout-map.ts';
 import { getModes, getTextStyles, textStylesCss, themeCss, type ThemeMode } from '@bogen/core';
 import type { BogenDoc, Token } from '@bogen/core';
 import { z } from 'zod';
@@ -10,9 +11,9 @@ import { assertUnlocked, fileIdArg, pageIdArg, type ToolDefiner } from './kit.ts
 import { fileDesignMd } from './tools-design-md.ts';
 
 const DIFF_RENDER_DIMENSION = 4000;
-const DIFF_IMAGE_DIMENSION = 1000;
+const DIFF_IMAGE_DIMENSION = 768;
 const DIFF_IMAGE_BYTES = 1_500_000;
-const WIDTH_SHOT_DIMENSION = 800;
+const WIDTH_SHOT_DIMENSION = 768;
 /** Most changed layers listed per viewport height. */
 const MAX_REPORTED = 30;
 
@@ -90,7 +91,10 @@ export async function responsiveReport(doc: BogenDoc, renderer: Renderer, { node
   return {
     content: [
       { type: 'text', text: JSON.stringify({ ...check.report, ...(viewportStability ? { viewport_stability: viewportStability } : {}) }, null, 1) },
-      ...check.shots.map((shot) => ({ type: 'image' as const, data: Buffer.from(shot).toString('base64'), mimeType: 'image/png' })),
+      ...await Promise.all(check.shots.flatMap((shot, i) => [
+        layoutMap(doc, renderer, { nodeIds: [node_id] }, { width: widths[i] }).then((map) => ({ type: 'text' as const, text: map })),
+        agentImage(renderer, { bytes: shot, mime: 'image/png' }),
+      ])),
     ],
   };
 }
@@ -121,7 +125,8 @@ export function registerCheckTools(define: ToolDefiner): void {
     return {
       content: [
         { type: 'text', text: JSON.stringify({ different_percent: percent, different_pixels: diff.different, total_pixels: diff.total, size_a: diff.sizeA, size_b: diff.sizeB, same_size: diff.sizeA.width === diff.sizeB.width && diff.sizeA.height === diff.sizeB.height, bounds: diff.bounds, picture: `${diff.pngWidth}x${diff.pngHeight}px, differences in red` }, null, 1) },
-        { type: 'image', data: Buffer.from(diff.png).toString('base64'), mimeType: 'image/png' },
+        await agentImage(renderer, { bytes: diff.png, mime: 'image/png' }),
+        { type: 'text', text: await layoutMap(room.doc, renderer, { nodeIds: [node_id] }) },
       ],
     };
   });

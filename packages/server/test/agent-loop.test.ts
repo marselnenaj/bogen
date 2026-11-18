@@ -311,7 +311,7 @@ describe('choosing a model, and what runs leave behind', () => {
     expect(more).toEqual([]);
     expect(asked!.stdin).toBe('make the title bigger fake:talk');
     expect(again!.stdin).toContain("make the title bigger fake:talk\n\n---\nYou already answered this request once. Your reply was:\nYou're right, that should be bigger.");
-    expect(again!.stdin).toMatch(/You replied without changing anything\. If the person asked for a change, make it now; if it truly was only a question, say so in one sentence\.$/);
+    expect(again!.stdin.endsWith('You replied without changing anything. If the person clearly asked for a change, make that change now and nothing beyond it. If they asked a question, or only asked for your review or opinion, change nothing and say so in one sentence.')).toBe(true);
     const record = (await history()).find((r) => r.id === nudged)!;
     expect(record).toMatchObject({ status: 'done', nudged: true, firstReply: "You're right, that should be bigger.", result: 'All done with fake.' });
     expect(record.layers).toHaveLength(1);

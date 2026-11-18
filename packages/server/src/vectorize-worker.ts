@@ -12,6 +12,8 @@ export interface TraceJob {
   png?: Uint8Array;
   rgba?: Rgba;
   colors: number;
+  /** Trace to exactly these colours instead of ones found in the image. */
+  palette?: { r: number; g: number; b: number; a: number }[];
   options: Record<string, number | boolean>;
   maxPixels: number;
 }
@@ -20,7 +22,9 @@ export interface TraceResult { svg: string; width: number; height: number; trace
 export function trace(job: TraceJob): TraceResult {
   const full = job.rgba ?? decodePng(job.png!);
   const img = downscale(full, job.maxPixels);
-  const options = { ...job.options, numberofcolors: job.colors, colorsampling: 2, viewbox: true, desc: false, layering: 0 };
+  const options: Record<string, unknown> = { ...job.options, numberofcolors: job.palette?.length ?? job.colors, colorsampling: 2, viewbox: true, desc: false, layering: 0 };
+  // One cycle: the tracer would otherwise move the given colours to the average of the pixels they took.
+  if (job.palette?.length) { options.pal = job.palette.map((c) => ({ ...c })); options.colorquantcycles = 1; }
   const data = tracer.imagedataToTracedata(img, options);
   // Fully transparent colours are the background showing through: no paths for them.
   data.layers = data.layers.map((layer, i) => (data.palette[i] && data.palette[i]!.a === 0 ? [] : layer));

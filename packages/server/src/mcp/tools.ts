@@ -4,6 +4,7 @@ import type { BogenServer } from '../http/server.ts';
 import { toolDefiner, type Session, type ToolDefiner } from './kit.ts';
 import { installToolModes, reviewerRefusal, type ToolMode } from './tool-modes.ts';
 import { registerBrandTools } from './tools-brand.ts';
+import { registerBrandEditionTools } from './tools-brand-edition.ts';
 import { registerBatchTool } from './tools-batch.ts';
 import { registerScriptTool } from './tools-script.ts';
 import { registerComponentTools } from './tools-components.ts';
@@ -20,7 +21,16 @@ import { registerPdfTools } from './tools-pdf.ts';
 import { registerDriftTools } from './tools-drift.ts';
 import { registerFileTools } from './tools-files.ts';
 import { registerFontTools } from './tools-fonts.ts';
+import { registerOutlineTools } from './tools-outline.ts';
+import { registerPatternTools } from './tools-pattern.ts';
+import { registerMockupTools } from './tools-mockup.ts';
+import { registerPresentationTools } from './tools-presentation.ts';
 import { registerImageTools } from './tools-images.ts';
+import { registerTreatmentTools } from './tools-treatment.ts';
+import { registerImageSearchTools } from './tools-image-search.ts';
+import { registerImageGenerateTools } from './tools-image-generate.ts';
+import { registerCritiqueTools } from './tools-critique.ts';
+import { registerShaderTools } from './tools-shaders.ts';
 import { registerCanvasPlanTools } from './tools-canvas-plan.ts';
 import { registerLayoutTools } from './tools-layout.ts';
 import { registerLibraryTools } from './tools-library.ts';
@@ -71,11 +81,11 @@ export function registerAllTools(server: McpServer, app: BogenServer, session: S
   define.tools = plain.tools;
   define.outOfScope = plain.outOfScope;
   const areas: [string, (d: ToolDefiner) => void][] = [
-    ['files', registerFileTools], ['read', registerReadTools], ['edit', registerWriteTools], ['edit', registerCraftTools], ['tokens', registerDesignTools],
-    ['files', registerDesignKnowledgeTools], ['images', registerImageTools], ['images', registerReferenceTools], ['fonts', registerFontTools], ['components', registerComponentTools], ['code', registerCodeTools],
+    ['files', registerFileTools], ['read', registerReadTools], ['edit', registerWriteTools], ['edit', registerCraftTools], ['edit', registerPatternTools], ['tokens', registerDesignTools],
+    ['files', registerDesignKnowledgeTools], ['images', registerImageTools], ['images', registerTreatmentTools], ['images', registerImageSearchTools], ['images', registerImageGenerateTools], ['images', registerShaderTools], ['images', registerMockupTools], ['images', registerReferenceTools], ['fonts', registerFontTools], ['fonts', registerOutlineTools], ['components', registerComponentTools], ['code', registerCodeTools],
     ['components', registerLibraryTools], ['layout', registerLayoutTools], ['layout', registerCanvasPlanTools], ['comments', registerLiveTools], ['checks', registerCheckTools],
-    ['checks', registerComplianceTools], ['prototype', registerPrototypeTools], ['checks', registerCustomCheckTools], ['proposals', registerProposalTools],
-    ['proposals', registerRevisionTools], ['proposals', registerDesignBranchTools], ['web', registerWebTools], ['brand', registerBrandTools], ['components', registerTemplateTools],
+    ['checks', registerComplianceTools], ['checks', registerCritiqueTools], ['prototype', registerPrototypeTools], ['checks', registerCustomCheckTools], ['proposals', registerProposalTools],
+    ['proposals', registerRevisionTools], ['proposals', registerDesignBranchTools], ['web', registerWebTools], ['brand', registerBrandTools], ['brand', registerBrandEditionTools], ['brand', registerPresentationTools], ['components', registerTemplateTools],
     ['omarchy', registerOmarchyTools], ['transfer', registerTransferTools], ['transfer', registerReplayTools], ['transfer', registerTomaccoTools], ['web', registerPublishTools], ['web', registerTranslationTools],
     ['checks', registerDriftTools], ['components', registerKitTools], ['data', registerDataTools], ['proposals', registerRunTools], ['transfer', registerPdfTools], ['edit', registerDiagramTools], ['tokens', registerDesignMdTools],
   ];

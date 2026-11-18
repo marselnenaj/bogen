@@ -15,6 +15,10 @@ export interface TemplateEnv {
   components: Set<string>;
   version: number | null;
   date: Date;
+  /** Tokens the file holds for the brand's suggestions (brand_link makes them): usable as var() like confirmed ones. */
+  provisional?: Set<string>;
+  /** The file's token values, so a suggestion whose token the file already holds at the same value is used as var(). */
+  tokenValues?: Map<string, string>;
 }
 
 /** Marks a layer as a deliberate example of what not to do. brand_check leaves it out of the score, and says so. */
@@ -90,10 +94,21 @@ export class BrandKit {
 
   // ---- colour
 
+  /** Whether an item's token stands in the file for it: confirmed, or a suggestion the file holds a provisional token for. */
+  private tokened(item: { suggested?: boolean; token: string; value?: string | number; size?: number; family?: string }): boolean {
+    if (!this.env.tokens.has(item.token)) return false;
+    if (!item.suggested || this.env.provisional?.has(item.token)) return true;
+    const held = this.env.tokenValues?.get(item.token);
+    if (held === undefined) return false;
+    const norm = (v: string) => (normalizeColor(v) ?? v).toLowerCase().replace(/["'\s]/g, '');
+    const own = typeof item.value === 'string' ? item.value : typeof item.value === 'number' ? `${item.value}px` : item.size !== undefined ? `${item.size}px` : item.family ? familyStack(item as BrandFamily) : '';
+    return Boolean(own) && norm(held) === norm(own);
+  }
+
   /** A colour as the file should hold it. */
   c(color: BrandColor | null | undefined, fallback = NEUTRAL_DARK): string {
     if (!color) return fallback;
-    return !color.suggested && this.env.tokens.has(color.token) ? `var(--${color.token})` : color.value;
+    return this.tokened(color) ? `var(--${color.token})` : color.value;
   }
 
   private role(c: BrandColor): string {
@@ -206,7 +221,7 @@ export class BrandKit {
 
   stack(f: BrandFamily | undefined): string {
     if (!f) return 'system-ui, sans-serif';
-    return !f.suggested && this.env.tokens.has(f.token) ? `var(--${f.token})` : familyStack(f);
+    return this.tokened(f) ? `var(--${f.token})` : familyStack(f);
   }
 
   /**
@@ -241,7 +256,7 @@ export class BrandKit {
   private fromStep(step: BrandTypeStep, weight?: number): TypeRole {
     const fam = this.familyOf(step) ?? this.family(this.isMono(step) ? 'mono' : 'body');
     return {
-      size: !step.suggested && this.env.tokens.has(step.token) ? `var(--${step.token})` : `${step.size}px`, px: step.size,
+      size: this.tokened(step) ? `var(--${step.token})` : `${step.size}px`, px: step.size,
       family: this.stack(fam), weight: this.weight(fam, weight ?? (step.weight || 400)), lineHeight: step.lineHeight || (step.size >= 32 ? '1.05' : '1.4'),
       ...(step.tracking ? { tracking: step.tracking } : {}), step,
     };
@@ -354,7 +369,7 @@ export class BrandKit {
   // ---- spacing and shape
 
   private spacingSteps(): { value: number; token?: string }[] {
-    const list = this.data.spacing.map((s) => ({ value: s.value, ...(!s.suggested && this.env.tokens.has(s.token) ? { token: s.token } : {}) })).filter((s) => s.value > 0);
+    const list = this.data.spacing.map((s) => ({ value: s.value, ...(this.tokened(s) ? { token: s.token } : {}) })).filter((s) => s.value > 0);
     return list.length ? list : FALLBACK_SPACING.map((value) => ({ value }));
   }
 
@@ -373,14 +388,14 @@ export class BrandKit {
     const list = this.data.radius.filter((r) => r.value < 999).sort((a, b) => a.value - b.value);
     const r = list.find((x) => x.value > 0) ?? list[0];
     if (!r) return '0px';
-    return !r.suggested && this.env.tokens.has(r.token) ? `var(--${r.token})` : `${r.value}px`;
+    return this.tokened(r) ? `var(--${r.token})` : `${r.value}px`;
   }
 
   /** The radius for pills, when the brand has a round one. */
   roundRadius(): string {
     const r = [...this.data.radius].sort((a, b) => b.value - a.value)[0];
     if (!r || r.value === 0) return this.radius();
-    return !r.suggested && this.env.tokens.has(r.token) ? `var(--${r.token})` : `${r.value}px`;
+    return this.tokened(r) ? `var(--${r.token})` : `${r.value}px`;
   }
 
   // ---- logos

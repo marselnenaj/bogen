@@ -1,5 +1,5 @@
 import { artboardProxyStyle } from './artboard-proxy.ts';
-import { createElement, memo, useCallback, useEffect, useMemo, type CSSProperties, type ReactNode } from 'react';
+import { createContext, createElement, memo, useCallback, useContext, useEffect, useMemo, type CSSProperties, type ReactNode } from 'react';
 import { renderSpec } from '@bogen/core';
 import { useChildren, useNode } from '../doc/hooks.ts';
 import { resolveAsset } from '../lib/api.ts';
@@ -33,6 +33,20 @@ function reactProps(attrs: Record<string, string>): Record<string, unknown> {
   return out;
 }
 
+/**
+ * Whether a design's own main elements are main landmarks where it is drawn. True on its own page (the preview);
+ * false inside an app that has its main already, such as the phone's file screen, where a board's main is drawn as a
+ * div that says what it was (data-bogen-tag), so that the screen keeps one main and the design looks the same.
+ */
+export const DesignLandmarks = createContext(true);
+
+/**
+ * Where a design is drawn inside the editor (DesignLandmarks false), each artboard is a named region of the canvas, so
+ * that a screen reader lists the boards by name under the editor's one main landmark. This is the word it says for a
+ * board; the editor provides it in the interface language.
+ */
+export const ArtboardDescription = createContext('Artboard');
+
 /** The same element object for a layer every time, which lets React skip it without comparing anything. */
 const elements = new Map<string, ReactNode>();
 function childElement(id: string): ReactNode {
@@ -53,6 +67,8 @@ export const NodeView = memo(function NodeView({ id, renderChildren = true, onEl
   const spec = useMemo(() => (node ? renderSpec(node, resolveAsset) : null), [node]);
   const props = useMemo(() => (spec ? reactProps(spec.attrs) : null), [spec]);
   const hasRules = Boolean(node?.rules);
+  const landmarks = useContext(DesignLandmarks);
+  const boardWord = useContext(ArtboardDescription);
   // The canvas style sheet holds this layer's pseudo-elements and conditions while it is on screen.
   useEffect(() => (hasRules ? showRules(id) : undefined), [id, hasRules, node]);
   if (!node || !spec || !props) return null;
@@ -64,6 +80,19 @@ export const NodeView = memo(function NodeView({ id, renderChildren = true, onEl
 
   const full: Record<string, unknown> = { ...props, style: renderChildren ? spec.style : artboardProxyStyle(spec.style, deferredHeight), ref, 'data-bogen-id': id, 'data-bogen-deferred': renderChildren ? undefined : '', 'data-bogen-estimated': !renderChildren && deferredHeight !== undefined ? '' : undefined };
   if (tag === 'img') full.draggable = false;
+  if (!landmarks && (tag === 'main' || full.role === 'main')) {
+    if (tag === 'main') tag = 'div';
+    if (full.role === 'main') delete full.role;
+    full['data-bogen-tag'] = 'main';
+  }
+  // An artboard in the editor is a region named after it. As a section it also keeps the design's own header and
+  // footer from becoming the editor's banner and contentinfo. Exports, the preview and publishing keep the markup.
+  if (!landmarks && node.artboard && (tag === 'div' || tag === 'section') && full.role === undefined) {
+    if (tag === 'div' && full['data-bogen-tag'] === undefined) full['data-bogen-tag'] = 'div';
+    tag = 'section';
+    if (full['aria-label'] === undefined && full['aria-labelledby'] === undefined) full['aria-label'] = node.name;
+    full['aria-roledescription'] = boardWord;
+  }
 
   if (spec.html !== undefined) {
     full.dangerouslySetInnerHTML = { __html: spec.html };

@@ -109,7 +109,7 @@ Deliver: ${p.deliver.join('; ')}. Do not add states or screens without a task-sp
 
 ${w.priorities.join('\n')}
 For each finding record: ${w.finding.fields.join('; ')}.
-After the last edit, capture the complete affected artboard with canvas_screenshot and call design_verify using ${id}, with specific observations for priority, content and context and the scored rubric. A hard finding (an objective defect: overflow, unreadable text, placeholder copy) keeps the rubric from counting until it is fixed. Advisory findings say why a choice often reads as default; keep one with its reason in kept. The built-in completion gate permits at most two additional repair turns; unresolved work remains explicit.
+Check edits with map_only or design_lint. After the last edit, screenshot the whole artboard and call design_verify once using ${id}, with observations for priority, content and context and the scored rubric. Hard findings block the rubric until fixed. Advisory findings explain default-looking choices; keep one with a reason in kept. Rerun it only after fixing hard defects. At most two repair turns follow; name what stays open.
 
 ${p.review.map(r => `- ${r.id}: ${r.question}`).join('\n')}
 

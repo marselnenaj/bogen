@@ -83,8 +83,8 @@ export function TextStylesList() {
       <div className="token-group-title">{t('Text styles')}</div>
       {styles.map((st) => (
         <div key={st.key} className="token-row text-style-row" data-testid="text-style-row" data-style={st.key}>
-          <span className="text-style-name" dir="auto" title={st.style.fontFamily}>{st.name}</span>
-          <span className="text-style-sample">{sample(st)}</span>
+          <span className="text-style-name" dir="auto" translate="no" title={st.style.fontFamily ? `${st.name}\n${st.style.fontFamily}` : st.name}>{st.name}</span>
+          <span className="text-style-sample" title={sample(st)}>{sample(st)}</span>
           <IconButton className="row-action" icon={<Trash2 size={13} />} title={t('Delete {name}', { name: st.name })} onClick={() => s.tx(() => deleteTextStyle(s.doc, st.key))} tabIndex={-1} />
         </div>
       ))}

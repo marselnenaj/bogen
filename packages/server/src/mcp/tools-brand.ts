@@ -1,3 +1,4 @@
+import { agentCapture } from '../layout-map.ts';
 import { BRAND_BOOK_CHAPTERS, brandBookOutline, brandBookReadiness, brandLanguages, brandOriginOf, chapterLanguage, declaredLanguageOf, judgeCopy, normalizeLanguageTag, resolveContentLanguage, updateBrandBookChapter, type BrandBookChapterId } from '@bogen/core';
 import {
   BRAND_NOTICE, BRAND_SECTIONS, bindingBrand, brandFieldProblem, brandItemProblem, brandItemsMap, previewBrandItem, contentLanguageOf, voiceFindings, voiceProfile, voiceProfileLines, brandCompact, brandCounts, brandLinkOf, brandRulesText, brandVersionHead, brandVersions, confirmBrandItems, deleteBrandItem, diffBrand, listMains, luminance, markBrandFields, materialize, normalizeColor, pairingTable, pickLogo, readBrand, resolveBrandColor, sanitizeSvgMarkup, setBrandField, svgAspect, upsertBrandItem,
@@ -225,6 +226,7 @@ Sections and their fields, each item with an optional id to change an existing o
 - voiceExamples: good, bad, note, lang
 - artboards: nodeId (a layer in the brand), name, verdict good or bad, template, note
 - assets: name, asset, kind, tags, alt
+- devices: name, spec (a pattern_set spec as an object: columns, rows, cell, fill, threshold, roughness, colors as var(--token) and the rest), use (where it goes, such as "bottom edge of posters, one band per layout"), note. A graphic device is the brand's own motif beyond the logo; pattern_set draws it with preset.
 
 Languages: language is the primary language and languages the others the brand speaks, as BCP 47 tags such as en, de-AT or pt-BR. lang on a word, example or rule is the language it belongs to: copy is checked against the words, examples and text rules of the language it is written in, and those without lang belong to the primary; "*" is every language, such as a product name. Never translate the brand's words or examples yourself to fill a language.
 
@@ -607,21 +609,34 @@ What you add is a suggestion unless confirmed is true, and suggestions bind nobo
     const example = example_id ? data.artboards.find((a) => a.id === example_id || a.nodeId === example_id) : data.artboards.find((a) => a.verdict === 'good' && !a.suggested) ?? data.artboards[0];
     if (!example) throw new Error('This brand has no examples.');
     if (!doc.getNode(example.nodeId)) throw new Error('That example is gone from the brand, or has not synced yet.');
-    const shot = await ctx.app.renderer.screenshot(doc, { nodeIds: [example.nodeId] }, { format: 'png', scale: 1, maxDimension: 1600 });
+    const capture = await agentCapture(doc, ctx.app.renderer, { nodeIds: [example.nodeId] });
     return { content: [
       { type: 'text' as const, text: JSON.stringify({ name: example.name, verdict: example.verdict, ...(example.note ? { note: example.note } : {}), notice: BRAND_NOTICE }) },
-      { type: 'image' as const, data: Buffer.from(shot.bytes).toString('base64'), mimeType: 'image/png' },
+      ...capture.content,
     ] };
   });
 
-  define('brand_sheet', { description: 'See the brand: a rendered sheet generated from its data, with logos, colours and pairs, type, spacing and rules.', readOnly: true }, { brand_id: brandIdArg }, async ({ brand_id }, ctx) => {
+  define('brand_sheet', { description: 'See the brand book: the brand laid out as landscape pages (cover, contents, brand idea, logo, colour and contrast, type, space, voice, imagery, rules, tokens, applications), generated from its data. Without page it returns the contents and the first page of up to six sections; with page, that one page. Sections the brand has no data for are listed as still to add.', readOnly: true }, {
+    brand_id: brandIdArg,
+    page: z.number().int().min(1).max(200).optional().describe('One page by its number, as the contents lists it.'),
+  }, async ({ brand_id, page }, ctx) => {
     const { doc, data } = await brandOf(ctx, brand_id);
-    const sheet = ctx.app.brands.sheetDoc(data, doc);
+    const book = await ctx.app.brands.sheetDoc(data, doc, 'pages');
     try {
-      const shot = await ctx.app.renderer.screenshot(sheet.doc, { nodeIds: [sheet.rootId] }, { format: 'png', scale: 1, maxDimension: 2000 });
-      return { content: [{ type: 'image' as const, data: Buffer.from(shot.bytes).toString('base64'), mimeType: 'image/png' }] };
+      const shoot = async (id: string) => (await agentCapture(book.doc, ctx.app.renderer, { nodeIds: [id] })).content;
+      const index = book.titles.map((t, i) => `${i + 1}. ${t.replace(/^\d{2} /, '')}`).join('\n');
+      if (page !== undefined) {
+        const id = book.pageIds[page - 1];
+        if (!id) throw new Error(`The book has ${book.pageIds.length} pages.`);
+        return { content: [{ type: 'text' as const, text: `Page ${page} of ${book.pageIds.length}: ${book.titles[page - 1]!.replace(/^\d{2} /, '')}` }, ...await shoot(id)] };
+      }
+      // The contents, then the first page of each section, up to six pictures.
+      const firsts = book.titles.map((t, i) => ({ t, i })).filter(({ t }, k, all) => k === 1 || (k > 1 && !/continued$/.test(t) && k < all.length - 1)).slice(0, 6);
+      const images = [];
+      for (const { i } of firsts) images.push(...await shoot(book.pageIds[i]!));
+      return { content: [{ type: 'text' as const, text: `The brand book, ${book.pageIds.length} pages:\n${index}\nShown: ${firsts.map(({ i }) => i + 1).join(', ')}. Ask for another with page.` }, ...images] };
     } finally {
-      sheet.doc.y.destroy();
+      book.doc.y.destroy();
     }
   });
 }
