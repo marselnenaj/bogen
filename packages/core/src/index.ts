@@ -43,6 +43,7 @@ export * from './design-craft.ts';
 export * from './palette.ts';
 export * from './pattern.ts';
 export * from './mockup.ts';
+export * from './device-frames.ts';
 export * from './run-intent.ts';
 export * from './run-size.ts';
 export * from './content-language.ts';

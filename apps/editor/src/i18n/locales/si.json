@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” {author} වෙතින්.",
  "“{text}” {agent} answered.": "“{text}” {agent} පිළිතුරු දුන්නා.",
  "… cut here, the selection is large.": "… මෙතැනින් කපා ඇත, තේරීම විශාලයි.",
- "…the rest is cut here": "…ඉතිරිය මෙතැනින් කපා ඇත"
+ "…the rest is cut here": "…ඉතිරිය මෙතැනින් කපා ඇත",
+ "Finish": "නිමාව",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "උපාංගයකට දමන්න: තෝරාගත් ආර්ට්බෝඩය දුරකථනයක, ටැබ්ලටයක හෝ බ්‍රවුසර කවුළුවක සජීවීව",
+ "Show or hide the device frame around the selected artboard": "තෝරාගත් ආර්ට්බෝඩය වටා උපාංග රාමුව පෙන්වන්න හෝ සඟවන්න",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "කැන්වසයේ ආර්ට්බෝඩය වටා පෙන්වයි. එය ආර්ට්බෝඩය හෝ එහි අපනයනය වෙනස් නොකරයි.",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} උපාංගයක පෙන්වයි. නිර්මාණය වෙනස් කළ විට තිරයද අනුගමනය කරයි."
 }

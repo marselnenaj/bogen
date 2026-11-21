@@ -5282,5 +5282,10 @@
  "“{text}” From {author}.": "“{text}” Ó {author}.",
  "“{text}” {agent} answered.": "“{text}” D’fhreagair {agent}.",
  "… cut here, the selection is large.": "… gearrtha anseo, tá an roghnúchán mór.",
- "…the rest is cut here": "…tá an chuid eile gearrtha anseo"
+ "…the rest is cut here": "…tá an chuid eile gearrtha anseo",
+ "Finish": "Bailchríoch",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Cuir i ngléas: an clár ealaíne roghnaithe beo i bhfón, i dtáibléad nó i bhfuinneog bhrabhsálaí",
+ "Show or hide the device frame around the selected artboard": "Taispeáin nó folaigh fráma an ghléis timpeall ar an gclár ealaíne roghnaithe",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Taispeántar é timpeall ar an gclár ealaíne ar an gcanbhás. Ní athraíonn sé an clár ealaíne ná a easpórtáil.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Taispeánann sé {name} i ngléas. Athraigh an dearadh agus leanfaidh an scáileán é."
 }

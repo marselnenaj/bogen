@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "«{text}» De {author}.",
  "“{text}” {agent} answered.": "«{text}» {agent} respondeu.",
  "… cut here, the selection is large.": "… cortado aqui, a seleção é grande.",
- "…the rest is cut here": "…o resto é cortado aqui"
+ "…the rest is cut here": "…o resto é cortado aqui",
+ "Finish": "Acabamento",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Colocar num dispositivo: a prancheta escolhida em direto num telemóvel, tablet ou janela do navegador",
+ "Show or hide the device frame around the selected artboard": "Mostrar ou ocultar a moldura do dispositivo à volta da prancheta escolhida",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Aparece à volta da prancheta na tela. Não altera a prancheta nem a sua exportação.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Mostra {name} num dispositivo. Altere o design e o ecrã acompanha."
 }

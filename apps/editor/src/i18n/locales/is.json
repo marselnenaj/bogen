@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "„{text}“ Frá {author}.",
  "“{text}” {agent} answered.": "„{text}“ {agent} svaraði.",
  "… cut here, the selection is large.": "… klippt hér, valið er stórt.",
- "…the rest is cut here": "…afgangurinn er klipptur hér"
+ "…the rest is cut here": "…afgangurinn er klipptur hér",
+ "Finish": "Áferð",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Setja í tæki: valinn teikniflötur í beinni í síma, spjaldtölvu eða vafraglugga",
+ "Show or hide the device frame around the selected artboard": "Sýna eða fela tækjaramma um valinn teikniflöt",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Birtist um teikniflötinn á striganum. Breytir hvorki teikifletinum né útflutningi hans.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Sýnir {name} í tæki. Breyttu hönnuninni og skjárinn fylgir."
 }

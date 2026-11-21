@@ -4370,5 +4370,10 @@
  "“{text}” From {author}.": "“{text}” {author} 작성.",
  "“{text}” {agent} answered.": "“{text}” {agent}이(가) 답했습니다.",
  "… cut here, the selection is large.": "… 선택 항목이 커서 여기서 잘랐습니다.",
- "…the rest is cut here": "…나머지는 여기서 잘림"
+ "…the rest is cut here": "…나머지는 여기서 잘림",
+ "Finish": "마감",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "기기에 넣기: 선택한 아트보드를 휴대폰, 태블릿 또는 브라우저 창에 실시간으로",
+ "Show or hide the device frame around the selected artboard": "선택한 아트보드 주위의 기기 프레임 표시 또는 숨기기",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "캔버스에서 아트보드 주위에 표시됩니다. 아트보드나 내보내기는 바뀌지 않습니다.",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name}을(를) 기기에 표시합니다. 디자인을 바꾸면 화면도 따라 바뀝니다."
 }

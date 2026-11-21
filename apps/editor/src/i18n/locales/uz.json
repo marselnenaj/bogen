@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "«{text}» Muallif: {author}.",
  "“{text}” {agent} answered.": "«{text}» {agent} javob berdi.",
  "… cut here, the selection is large.": "… shu yerda qirqildi, tanlov katta.",
- "…the rest is cut here": "…qolgani shu yerda qirqildi"
+ "…the rest is cut here": "…qolgani shu yerda qirqildi",
+ "Finish": "Qoplama",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Qurilmaga joylash: tanlangan artbord jonli ravishda telefon, planshet yoki brauzer oynasida",
+ "Show or hide the device frame around the selected artboard": "Tanlangan artbord atrofidagi qurilma ramkasini ko‘rsatish yoki yashirish",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Tuvalda artbord atrofida ko‘rsatiladi. Artbordni ham, uning eksportini ham o‘zgartirmaydi.",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} ni qurilmada ko‘rsatadi. Dizaynni o‘zgartiring, ekran ham ergashadi."
 }

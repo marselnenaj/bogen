@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” {author} کی طرف سے۔",
  "“{text}” {agent} answered.": "“{text}” {agent} نے جواب دیا۔",
  "… cut here, the selection is large.": "… یہاں کاٹ دیا گیا، انتخاب بڑا ہے۔",
- "…the rest is cut here": "…باقی یہاں کاٹ دیا گیا"
+ "…the rest is cut here": "…باقی یہاں کاٹ دیا گیا",
+ "Finish": "فنش",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "ڈیوائس میں رکھیں: منتخب آرٹ بورڈ براہِ راست فون، ٹیبلٹ یا براؤزر ونڈو میں",
+ "Show or hide the device frame around the selected artboard": "منتخب آرٹ بورڈ کے گرد ڈیوائس فریم دکھائیں یا چھپائیں",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "کینوس پر آرٹ بورڈ کے گرد دکھایا جاتا ہے۔ یہ آرٹ بورڈ یا اس کی ایکسپورٹ نہیں بدلتا۔",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} کو ڈیوائس میں دکھاتا ہے۔ ڈیزائن بدلیں اور اسکرین ساتھ بدلے گی۔"
 }

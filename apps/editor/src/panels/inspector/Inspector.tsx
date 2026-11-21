@@ -26,6 +26,7 @@ import { CodeSection } from './CodeSection.tsx';
 import { PageSummary } from './PageSummary.tsx';
 import { FRAME_PRESETS, presetOfSize, type FramePresetGroup } from '@bogen/core';
 import { LayoutGridSection } from './LayoutGridSection.tsx';
+import { ArtboardDeviceRow, DeviceSection, isDevice } from './DeviceSection.tsx';
 import { resizeToPreset, swapOrientation } from '../../ops/frames.ts';
 import { setSpacing, spacingInfo } from '../../ops/ops.ts';
 import { addArtboard } from '../../ops/ops.ts';
@@ -228,6 +229,7 @@ function PositionSection({ nodes }: { nodes: BogenNode[] }) {
         <SizeField nodes={nodes} axis="height" label={t('H')} />
       </Row>
       {nodes.length === 1 && nodes[0]!.artboard ? <FramePresetRow node={nodes[0]!} /> : null}
+      {nodes.length === 1 && nodes[0]!.artboard ? <ArtboardDeviceRow node={nodes[0]!} /> : null}
       <Row>
         <NumberField label="∠" value={common(rots) ?? 0} precision={1} suffix="°" testId="insp-rotation" title={t('Rotation')} onChange={(v) => inspectorStyle(ids, { rotate: normalizeDeg(v) === 0 ? null : `${fmt(normalizeDeg(v))}deg` })} />
         <div className="row-tight">
@@ -629,6 +631,7 @@ export function Inspector() {
       <PathActions nodes={nodes} />
       {hasMedia && isPattern(hasMedia) ? <PatternSection node={hasMedia} /> : null}
       {hasMedia && isMockup(hasMedia) ? <MockupSection node={hasMedia} /> : null}
+      {hasMedia && isDevice(hasMedia) ? <DeviceSection node={hasMedia} /> : null}
       {hasMedia?.type === 'svg' && !isPattern(hasMedia) ? <VectorSection node={hasMedia} /> : null}
       {anyText ? <TypographySection nodes={nodes} allText={allText} /> : null}
       <ModeSection nodes={nodes} />

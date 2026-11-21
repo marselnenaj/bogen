@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "«{text}» От {author}.",
  "“{text}” {agent} answered.": "«{text}» Ответил {agent}.",
  "… cut here, the selection is large.": "… обрезано здесь, выделение большое.",
- "…the rest is cut here": "…остальное обрезано здесь"
+ "…the rest is cut here": "…остальное обрезано здесь",
+ "Finish": "Отделка",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Поместить в устройство: выбранный артборд вживую в телефоне, планшете или окне браузера",
+ "Show or hide the device frame around the selected artboard": "Показать или скрыть рамку устройства вокруг выбранного артборда",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Показывается вокруг артборда на холсте. Не меняет артборд и его экспорт.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Показывает {name} в устройстве. Измените дизайн, и экран последует за ним."
 }

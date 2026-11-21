@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "”{text}” Från {author}.",
  "“{text}” {agent} answered.": "”{text}” {agent} svarade.",
  "… cut here, the selection is large.": "… avkapat här, markeringen är stor.",
- "…the rest is cut here": "…resten är avkapat här"
+ "…the rest is cut here": "…resten är avkapat här",
+ "Finish": "Finish",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Lägg i en enhet: den valda ritytan live i en telefon, surfplatta eller ett webbläsarfönster",
+ "Show or hide the device frame around the selected artboard": "Visa eller dölj enhetsramen runt den valda ritytan",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Visas runt ritytan på arbetsytan. Ändrar varken ritytan eller dess export.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Visar {name} i en enhet. Ändra designen så följer skärmen med."
 }

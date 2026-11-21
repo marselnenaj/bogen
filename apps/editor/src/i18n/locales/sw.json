@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” Kutoka kwa {author}.",
  "“{text}” {agent} answered.": "“{text}” {agent} amejibu.",
  "… cut here, the selection is large.": "… imekatwa hapa, uteuzi ni mkubwa.",
- "…the rest is cut here": "…zilizobaki zimekatwa hapa"
+ "…the rest is cut here": "…zilizobaki zimekatwa hapa",
+ "Finish": "Umaliziaji",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Weka kwenye kifaa: ubao wa sanaa uliochaguliwa moja kwa moja kwenye simu, kompyuta kibao au dirisha la kivinjari",
+ "Show or hide the device frame around the selected artboard": "Onyesha au ficha fremu ya kifaa kuzunguka ubao wa sanaa uliochaguliwa",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Inaonyeshwa kuzunguka ubao wa sanaa kwenye turubai. Haibadilishi ubao wa sanaa wala uhamishaji wake.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Inaonyesha {name} kwenye kifaa. Badilisha muundo na skrini itafuata."
 }

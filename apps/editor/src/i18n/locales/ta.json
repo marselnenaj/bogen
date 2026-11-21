@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” {author} இடமிருந்து.",
  "“{text}” {agent} answered.": "“{text}” {agent} பதிலளித்தது.",
  "… cut here, the selection is large.": "… இங்கே வெட்டப்பட்டது, தெரிவு பெரியது.",
- "…the rest is cut here": "…மீதி இங்கே வெட்டப்பட்டது"
+ "…the rest is cut here": "…மீதி இங்கே வெட்டப்பட்டது",
+ "Finish": "பூச்சு",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "சாதனத்தில் வை: தேர்ந்த வரைபலகை நேரலையாக தொலைபேசி, டேப்லெட் அல்லது உலாவி சாளரத்தில்",
+ "Show or hide the device frame around the selected artboard": "தேர்ந்த வரைபலகையைச் சுற்றி சாதனச் சட்டகத்தைக் காட்டு அல்லது மறை",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "கேன்வாஸில் வரைபலகையைச் சுற்றிக் காட்டப்படும். இது வரைபலகையையோ அதன் ஏற்றுமதியையோ மாற்றாது.",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} ஐ ஒரு சாதனத்தில் காட்டுகிறது. வடிவமைப்பை மாற்றினால் திரையும் தொடரும்."
 }

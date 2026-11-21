@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” Van {author}.",
  "“{text}” {agent} answered.": "“{text}” {agent} heeft geantwoord.",
  "… cut here, the selection is large.": "… hier afgebroken, de selectie is groot.",
- "…the rest is cut here": "…de rest is hier afgebroken"
+ "…the rest is cut here": "…de rest is hier afgebroken",
+ "Finish": "Afwerking",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "In een apparaat zetten: het gekozen tekengebied live in een telefoon, tablet of browservenster",
+ "Show or hide the device frame around the selected artboard": "Apparaatframe rond het gekozen tekengebied tonen of verbergen",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Wordt rond het tekengebied op het canvas getoond. Verandert het tekengebied en de export niet.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Toont {name} in een apparaat. Wijzig het ontwerp en het scherm volgt."
 }

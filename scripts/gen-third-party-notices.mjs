@@ -18,6 +18,8 @@ const OUT = join(root, 'THIRD_PARTY_NOTICES.md');
 const { packages, merged, label: LABEL } = shippedPackages(root);
 const licenseOf = (path, entry) => licenseIn(root, path, entry);
 const repoOf = (path) => repoIn(root, path);
+// The bundled axe-core's version, named in the MPL-2.0 note below.
+const AXE_VERSION = JSON.parse(readFileSync(join(root, 'node_modules/axe-core/package.json'), 'utf8')).version;
 
 const LICENSE_FILE = /^(licen[cs]e|copying|unlicense)([.-].*)?$/i;
 const NOTICE_FILE = /^(notice|licen[cs]e-3rd-party)(\..*)?$/i;
@@ -155,7 +157,7 @@ Other material from third parties:
 - **Accessibility engine.** \`compliance_check\` runs \`axe-core\` (MPL-2.0, Deque Systems) in the headless renderer,
   bundled into the CLI. MPL-2.0 section 3.3 allows a Larger Work that contains it to be distributed under the GNU GPL
   as a Secondary License, because axe-core is not marked "Incompatible With Secondary Licenses". Its files stay under
-  MPL-2.0; their source form is the npm package \`axe-core\` 4.14.0 and <https://github.com/dequelabs/axe-core>, and
+  MPL-2.0; their source form is the npm package \`axe-core\` ${AXE_VERSION} and <https://github.com/dequelabs/axe-core>, and
   the notices of what axe-core itself includes are in its \`LICENSE-3RD-PARTY.txt\`.
 - **Fonts.** The editor's interface font is Source Sans 3 and the brand font is Archivo, both from Fontsource
   packages under the SIL Open Font License 1.1, listed below. Fonts a design uses from Google Fonts are loaded from

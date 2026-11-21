@@ -20,6 +20,7 @@ import { BrandMarkers } from './BrandMarkers.tsx';
 import { DriftOverlay } from './DriftOverlay.tsx';
 import { FindHighlights } from './FindBar.tsx';
 import { LayoutGridsLayer } from './LayoutGrids.tsx';
+import { DeviceFramesLayer, frameTopOf } from './DeviceFrames.tsx';
 import { SpacingHandles } from './SpacingHandles.tsx';
 import { readableOn } from '../lib/readable.ts';
 import { CommentInput } from '../panels/CommentInput.tsx';
@@ -88,7 +89,7 @@ function FrameLabelsOn({ pageId }: { pageId: string }) {
         if (!r) return null;
         const selected = selection.includes(n.id);
         return (
-          <div key={n.id} className={`ov-frame-label${selected ? ' is-selected' : ''}`} translate="no" title={renaming === n.id ? undefined : n.name} style={{ ...anchored(r.x, r.y), '--ww': r.w, ...(renaming === n.id ? { maxWidth: 'none' } : {}) } as CSSProperties} data-frame-label={n.id}>
+          <div key={n.id} className={`ov-frame-label${selected ? ' is-selected' : ''}`} translate="no" title={renaming === n.id ? undefined : n.name} style={{ ...anchored(r.x, r.y - frameTopOf(n.id, r.w, r.h)), '--ww': r.w, ...(renaming === n.id ? { maxWidth: 'none' } : {}) } as CSSProperties} data-frame-label={n.id}>
             {renaming === n.id ? (
               <input
                 data-ui
@@ -574,6 +575,7 @@ export function Overlay({ rootRef, previewRef }: { rootRef: RefObject<HTMLDivEle
       <div ref={previewRef} data-testid="screen-paint-layer" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, transformOrigin: '0 0', transform: 'translate(calc(var(--cx) * 1px), calc(var(--cy) * 1px)) scale(var(--z))', pointerEvents: 'none' }} />
       <PixelGrid />
       <EmptyHint />
+      <DeviceFramesLayer />
       <LayoutGridsLayer />
       <CanvasSections />
       <FrameLabels />

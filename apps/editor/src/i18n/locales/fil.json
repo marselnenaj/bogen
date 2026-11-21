@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” Mula kay {author}.",
  "“{text}” {agent} answered.": "“{text}” Sumagot si {agent}.",
  "… cut here, the selection is large.": "… pinutol dito, malaki ang pinili.",
- "…the rest is cut here": "…pinutol dito ang natitira"
+ "…the rest is cut here": "…pinutol dito ang natitira",
+ "Finish": "Finish",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Ilagay sa device: ang napiling artboard nang live sa phone, tablet o browser window",
+ "Show or hide the device frame around the selected artboard": "Ipakita o itago ang frame ng device sa paligid ng napiling artboard",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Ipinapakita sa paligid ng artboard sa canvas. Hindi nito binabago ang artboard o ang export nito.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Ipinapakita ang {name} sa isang device. Baguhin ang disenyo at susunod ang screen."
 }

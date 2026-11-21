@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "„{text}“ Von {author}.",
  "“{text}” {agent} answered.": "„{text}“ {agent} hat geantwortet.",
  "… cut here, the selection is large.": "… hier abgeschnitten, die Auswahl ist groß.",
- "…the rest is cut here": "…der Rest ist hier abgeschnitten"
+ "…the rest is cut here": "…der Rest ist hier abgeschnitten",
+ "Finish": "Ausführung",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "In ein Gerät setzen: die gewählte Zeichenfläche live in einem Telefon, Tablet oder Browserfenster",
+ "Show or hide the device frame around the selected artboard": "Geräterahmen um die gewählte Zeichenfläche ein- oder ausblenden",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Wird auf der Arbeitsfläche um die Zeichenfläche gezeigt. Ändert weder die Zeichenfläche noch ihren Export.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Zeigt {name} in einem Gerät. Ändere das Design, und der Bildschirm folgt."
 }

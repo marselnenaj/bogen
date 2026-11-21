@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "«{text}» Από {author}.",
  "“{text}” {agent} answered.": "«{text}» Απάντησε το {agent}.",
  "… cut here, the selection is large.": "… αποκοπή εδώ, η επιλογή είναι μεγάλη.",
- "…the rest is cut here": "…το υπόλοιπο αποκόπτεται εδώ"
+ "…the rest is cut here": "…το υπόλοιπο αποκόπτεται εδώ",
+ "Finish": "Φινίρισμα",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Τοποθέτηση σε συσκευή: ο επιλεγμένος πίνακας σχεδίασης ζωντανά σε τηλέφωνο, tablet ή παράθυρο προγράμματος περιήγησης",
+ "Show or hide the device frame around the selected artboard": "Εμφάνιση ή απόκρυψη του πλαισίου συσκευής γύρω από τον επιλεγμένο πίνακα σχεδίασης",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Εμφανίζεται γύρω από τον πίνακα σχεδίασης στον καμβά. Δεν αλλάζει τον πίνακα σχεδίασης ούτε την εξαγωγή του.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Δείχνει το {name} σε συσκευή. Αλλάξτε το σχέδιο και η οθόνη ακολουθεί."
 }

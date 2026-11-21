@@ -4370,5 +4370,10 @@
  "“{text}” From {author}.": "“{text}” Daripada {author}.",
  "“{text}” {agent} answered.": "“{text}” {agent} menjawab.",
  "… cut here, the selection is large.": "… dipotong di sini, pilihan terlalu besar.",
- "…the rest is cut here": "…selebihnya dipotong di sini"
+ "…the rest is cut here": "…selebihnya dipotong di sini",
+ "Finish": "Kemasan",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Letak dalam peranti: papan seni dipilih secara langsung dalam telefon, tablet atau tetingkap pelayar",
+ "Show or hide the device frame around the selected artboard": "Tunjukkan atau sembunyikan bingkai peranti di sekeliling papan seni dipilih",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Ditunjukkan di sekeliling papan seni pada kanvas. Ia tidak mengubah papan seni atau eksportnya.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Menunjukkan {name} dalam peranti. Ubah reka bentuk dan skrin akan mengikut."
 }

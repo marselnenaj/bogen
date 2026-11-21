@@ -4370,5 +4370,10 @@
  "“{text}” From {author}.": "“{text}”来自 {author}。",
  "“{text}” {agent} answered.": "“{text}”{agent} 已回复。",
  "… cut here, the selection is large.": "…在此截断，所选内容过大。",
- "…the rest is cut here": "…其余内容在此截断"
+ "…the rest is cut here": "…其余内容在此截断",
+ "Finish": "外观",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "放入设备：所选画板实时显示在手机、平板或浏览器窗口中",
+ "Show or hide the device frame around the selected artboard": "显示或隐藏所选画板周围的设备边框",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "在画布上显示于画板周围。不会更改画板或其导出。",
+ "Shows {name} in a device. Change the design and the screen follows.": "在设备中显示 {name}。更改设计后，屏幕会随之更新。"
 }

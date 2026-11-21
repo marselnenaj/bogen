@@ -35,7 +35,7 @@ describe('compliance_check', () => {
   it('fails the flawed page on what it shows, criterion by criterion, with layers', async () => {
     const r = await call(agent, 'compliance_check', { file_id: file, node_id: flawed, profile: 'wcag-2.2-aa', legal: true });
     expect(r.score.overall).toBe('fails');
-    expect(r.engines.axe).toBe('4.14.0');
+    expect(r.engines.axe).toBe('4.14.1');
     const failed = keys(r.failed);
     for (const k of ['wcag:1.4.3', 'wcag:1.4.10', 'wcag:1.4.11', 'wcag:1.4.12', 'wcag:3.1.1', 'wcag:1.3.5', 'wcag:3.3.1', 'wcag:3.3.2']) expect(failed).toContain(k);
     const ev = (k: string) => r.failed.find((c: any) => c.key === k).evidence;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.4
+
+Your screens in their device, and fresher dependencies.
+
+- **Device frames.** A phone or tablet artboard can show its device around it on the canvas: the current iPhones drawn to Apple's dimensional drawings (body, continuous corners, Dynamic Island or notch, buttons), Pixel and Galaxy phones and tablets, and a browser window for web pages. The island lies over the design as on the phone. **Put in a device** places a screen live in a device inside a design, such as a phone on a landing page, and it follows every change to the screen. Agents use `device_list` and `device_frame`.
+- **Up-to-date dependencies.** The PDF reader (pdfjs-dist 6.5), the headless renderer's driver (puppeteer-core 25.18), the accessibility engine (axe-core 4.14.1), WebSockets (ws 8.23) and the icons (lucide-react 1.74) are updated. `npm audit` finds nothing.
+
 ## 0.4.3
 
 Agents get on with it.

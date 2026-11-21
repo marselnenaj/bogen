@@ -22,6 +22,7 @@ import { startTextEdit } from '../canvas/text-edit.ts';
 import { session } from '../doc/session.ts';
 import { brandApi } from '../lib/brand-api.ts';
 import { placeInMockup } from '../panels/inspector/BrandApps.tsx';
+import { placeInDevice, toggleCanvasFrame } from '../panels/inspector/DeviceSection.tsx';
 import { api } from '../lib/api.ts';
 import { CRAFT_COMMANDS, FIGMA_ALIASES } from './craft.ts';
 import { gradientKey } from '../canvas/gradient-drag.ts';
@@ -156,6 +157,8 @@ export const COMMANDS: Command[] = [
   { id: 'component.detach', title: msg('Detach instance'), group: msg('Layers'), keys: ['mod+alt+b'], needsSelection: sel, run: detachSelection },
   { id: 'component.main', title: msg('Go to main component'), group: msg('Layers'), needsSelection: sel, run: () => goToMain() },
   { id: 'layer.mockup', title: msg('Place in a mockup: the selected artboard on a poster, bag, sign or screen'), group: msg('Layers'), needsSelection: sel, run: () => { const id = editor().selection[0]; const node = id ? session().doc.getNode(id) : null; if (node?.type === 'frame') placeInMockup(node); } },
+  { id: 'layer.device', title: msg('Put in a device: the selected artboard live in a phone, tablet or browser window'), group: msg('Layers'), needsSelection: sel, run: () => { const id = editor().selection[0]; const node = id ? session().doc.getNode(id) : null; if (node?.type === 'frame') placeInDevice(node); } },
+  { id: 'view.device-frame', title: msg('Show or hide the device frame around the selected artboard'), group: msg('View'), needsSelection: sel, run: () => { const id = editor().selection[0]; const node = id ? session().doc.getNode(id) : null; if (node?.artboard) toggleCanvasFrame(node); } },
   { id: 'code.pullRequest', title: msg('Open a pull request'), group: msg('Code'), needsSelection: sel, when: linked, run: pullRequestFromSelection },
   { id: 'code.repoTokens', title: msg('Tokens and the repository'), group: msg('Code'), when: linked, run: () => ui().set({ repoTokensOpen: true }) },
   { id: 'layer.group', title: msg('Group'), group: msg('Layers'), keys: ['mod+g'], needsSelection: sel, run: ops.groupSelection },

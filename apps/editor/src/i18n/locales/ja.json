@@ -4370,5 +4370,10 @@
  "“{text}” From {author}.": "「{text}」{author} より。",
  "“{text}” {agent} answered.": "「{text}」{agent} が回答しました。",
  "… cut here, the selection is large.": "… 選択範囲が大きいため、ここで省略しています。",
- "…the rest is cut here": "…以降はここで省略"
+ "…the rest is cut here": "…以降はここで省略",
+ "Finish": "仕上げ",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "デバイスに入れる: 選択したアートボードをスマートフォン、タブレット、ブラウザウィンドウにライブ表示",
+ "Show or hide the device frame around the selected artboard": "選択したアートボードのデバイスフレームを表示または非表示",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "キャンバス上でアートボードの周りに表示されます。アートボードやその書き出しは変わりません。",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} をデバイスに表示します。デザインを変えると画面も追従します。"
 }

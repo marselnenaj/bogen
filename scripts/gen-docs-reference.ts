@@ -42,8 +42,8 @@ const GROUPS: { title: string; intro: string; tools: string[] }[] = [
   },
   {
     title: 'Brand applications',
-    intro: 'A brand beyond its logo: graphic devices drawn as pattern layers, and designs placed onto photos and objects as mockups.',
-    tools: ['pattern_set', 'mockup_list', 'mockup_place', 'brand_presentation', 'brand_site', 'presentation_check'],
+    intro: 'A brand beyond its logo: graphic devices drawn as pattern layers, designs placed onto photos and objects as mockups, and screens put into phones, tablets and browser windows.',
+    tools: ['pattern_set', 'mockup_list', 'mockup_place', 'device_list', 'device_frame', 'brand_presentation', 'brand_site', 'presentation_check'],
   },
   {
     title: 'Designs from data',

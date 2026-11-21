@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "„{text}“ Nuo {author}.",
  "“{text}” {agent} answered.": "„{text}“ {agent} atsakė.",
  "… cut here, the selection is large.": "… nukirpta čia, žymėjimas didelis.",
- "…the rest is cut here": "…likusi dalis nukirpta čia"
+ "…the rest is cut here": "…likusi dalis nukirpta čia",
+ "Finish": "Apdaila",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Įdėti į įrenginį: pasirinkta piešimo lenta gyvai telefone, planšetėje ar naršyklės lange",
+ "Show or hide the device frame around the selected artboard": "Rodyti arba slėpti įrenginio rėmelį aplink pasirinktą piešimo lentą",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Rodomas aplink piešimo lentą drobėje. Nekeičia piešimo lentos ir jos eksporto.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Rodo {name} įrenginyje. Pakeiskite dizainą ir ekranas seks."
 }

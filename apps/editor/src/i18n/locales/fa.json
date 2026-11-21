@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "«{text}» از {author}.",
  "“{text}” {agent} answered.": "«{text}» {agent} پاسخ داد.",
  "… cut here, the selection is large.": "… اینجا بریده شد، انتخاب بزرگ است.",
- "…the rest is cut here": "…بقیه اینجا بریده شده"
+ "…the rest is cut here": "…بقیه اینجا بریده شده",
+ "Finish": "رنگ بدنه",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "قرار دادن در دستگاه: آرت‌بورد انتخاب‌شده به‌صورت زنده در گوشی، تبلت یا پنجرهٔ مرورگر",
+ "Show or hide the device frame around the selected artboard": "نمایش یا پنهان کردن قاب دستگاه دور آرت‌بورد انتخاب‌شده",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "روی بوم دور آرت‌بورد نمایش داده می‌شود. آرت‌بورد یا خروجی آن را تغییر نمی‌دهد.",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} را در یک دستگاه نشان می‌دهد. طراحی را تغییر دهید و صفحه از آن پیروی می‌کند."
 }

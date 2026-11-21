@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "„{text}” Od: {author}.",
  "“{text}” {agent} answered.": "„{text}” {agent} je odgovorio.",
  "… cut here, the selection is large.": "… ovdje je odrezano, odabir je velik.",
- "…the rest is cut here": "…ostatak je ovdje odrezan"
+ "…the rest is cut here": "…ostatak je ovdje odrezan",
+ "Finish": "Završna obrada",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Stavi u uređaj: odabrana radna ploča uživo u telefonu, tabletu ili prozoru preglednika",
+ "Show or hide the device frame around the selected artboard": "Prikaži ili sakrij okvir uređaja oko odabrane radne ploče",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Prikazuje se oko radne ploče na platnu. Ne mijenja radnu ploču ni njezin izvoz.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Prikazuje {name} u uređaju. Promijenite dizajn i zaslon ga prati."
 }

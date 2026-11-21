@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "„{text}“ Saatja: {author}.",
  "“{text}” {agent} answered.": "„{text}“ {agent} vastas.",
  "… cut here, the selection is large.": "… siit lõigatud, valik on suur.",
- "…the rest is cut here": "…ülejäänu on siit ära lõigatud"
+ "…the rest is cut here": "…ülejäänu on siit ära lõigatud",
+ "Finish": "Viimistlus",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Pane seadmesse: valitud joonistusala otse telefonis, tahvelarvutis või brauseriaknas",
+ "Show or hide the device frame around the selected artboard": "Näita või peida seadme raam valitud joonistusala ümber",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Kuvatakse lõuendil joonistusala ümber. See ei muuda joonistusala ega selle eksporti.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Näitab {name} seadmes. Muuda kujundust ja ekraan järgib."
 }

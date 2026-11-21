@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” Gönderen: {author}.",
  "“{text}” {agent} answered.": "“{text}” {agent} yanıtladı.",
  "… cut here, the selection is large.": "… burada kesildi, seçim büyük.",
- "…the rest is cut here": "…gerisi burada kesildi"
+ "…the rest is cut here": "…gerisi burada kesildi",
+ "Finish": "Kaplama",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Cihaza yerleştir: seçili çalışma yüzeyi canlı olarak telefonda, tablette veya tarayıcı penceresinde",
+ "Show or hide the device frame around the selected artboard": "Seçili çalışma yüzeyinin etrafındaki cihaz çerçevesini göster veya gizle",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Tuvalde çalışma yüzeyinin etrafında gösterilir. Çalışma yüzeyini ve dışa aktarımını değiştirmez.",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} öğesini bir cihazda gösterir. Tasarımı değiştirin, ekran da takip eder."
 }

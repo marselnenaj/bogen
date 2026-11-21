@@ -5510,5 +5510,10 @@
  "“{text}” From {author}.": "«{text}» من {author}.",
  "“{text}” {agent} answered.": "«{text}» أجاب {agent}.",
  "… cut here, the selection is large.": "… قُطع هنا، التحديد كبير.",
- "…the rest is cut here": "…قُطع الباقي هنا"
+ "…the rest is cut here": "…قُطع الباقي هنا",
+ "Finish": "التشطيب",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "ضع في جهاز: لوحة الرسم المحددة حيّة في هاتف أو جهاز لوحي أو نافذة متصفح",
+ "Show or hide the device frame around the selected artboard": "إظهار إطار الجهاز حول لوحة الرسم المحددة أو إخفاؤه",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "يظهر حول لوحة الرسم على اللوحة. لا يغيّر لوحة الرسم ولا تصديرها.",
+ "Shows {name} in a device. Change the design and the screen follows.": "يعرض {name} في جهاز. غيّر التصميم وستتبعه الشاشة."
 }

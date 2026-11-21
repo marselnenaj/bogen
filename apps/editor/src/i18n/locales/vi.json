@@ -4370,5 +4370,10 @@
  "“{text}” From {author}.": "“{text}” Từ {author}.",
  "“{text}” {agent} answered.": "“{text}” {agent} đã trả lời.",
  "… cut here, the selection is large.": "… cắt ở đây, vùng chọn quá lớn.",
- "…the rest is cut here": "…phần còn lại bị cắt ở đây"
+ "…the rest is cut here": "…phần còn lại bị cắt ở đây",
+ "Finish": "Màu hoàn thiện",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Đặt vào thiết bị: bảng vẽ đã chọn hiển thị trực tiếp trong điện thoại, máy tính bảng hoặc cửa sổ trình duyệt",
+ "Show or hide the device frame around the selected artboard": "Hiện hoặc ẩn khung thiết bị quanh bảng vẽ đã chọn",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Hiển thị quanh bảng vẽ trên vùng vẽ. Không thay đổi bảng vẽ hay bản xuất của nó.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Hiển thị {name} trong một thiết bị. Thay đổi thiết kế và màn hình sẽ theo."
 }

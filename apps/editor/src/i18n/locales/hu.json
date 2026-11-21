@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "„{text}” Szerző: {author}.",
  "“{text}” {agent} answered.": "„{text}” {agent} válaszolt.",
  "… cut here, the selection is large.": "… itt levágva, a kijelölés nagy.",
- "…the rest is cut here": "…a többi itt levágva"
+ "…the rest is cut here": "…a többi itt levágva",
+ "Finish": "Kivitel",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Eszközbe helyezés: a kijelölt rajztábla élőben telefonban, táblagépben vagy böngészőablakban",
+ "Show or hide the device frame around the selected artboard": "Az eszközkeret megjelenítése vagy elrejtése a kijelölt rajztábla körül",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "A vásznon a rajztábla körül jelenik meg. Nem módosítja a rajztáblát és az exportját.",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} megjelenítése egy eszközben. Módosítsd a tervet, és a képernyő követi."
 }

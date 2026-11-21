@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "”{text}” Lähettäjä {author}.",
  "“{text}” {agent} answered.": "”{text}” {agent} vastasi.",
  "… cut here, the selection is large.": "… katkaistu tähän, valinta on suuri.",
- "…the rest is cut here": "…loput on katkaistu tähän"
+ "…the rest is cut here": "…loput on katkaistu tähän",
+ "Finish": "Viimeistely",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Laita laitteeseen: valittu piirtoalue elävänä puhelimessa, tabletissa tai selainikkunassa",
+ "Show or hide the device frame around the selected artboard": "Näytä tai piilota laitekehys valitun piirtoalueen ympäriltä",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Näkyy piirtoalueen ympärillä kankaalla. Se ei muuta piirtoaluetta eikä sen vientiä.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Näyttää kohteen {name} laitteessa. Muuta suunnittelua, niin näyttö seuraa."
 }

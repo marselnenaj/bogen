@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "«{text}» De {author}.",
  "“{text}” {agent} answered.": "«{text}» Ha respost {agent}.",
  "… cut here, the selection is large.": "… tallat aquí, la selecció és gran.",
- "…the rest is cut here": "…la resta es talla aquí"
+ "…the rest is cut here": "…la resta es talla aquí",
+ "Finish": "Acabat",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Posa en un dispositiu: la taula de treball triada en directe en un telèfon, una tauleta o una finestra del navegador",
+ "Show or hide the device frame around the selected artboard": "Mostra o amaga el marc del dispositiu al voltant de la taula de treball triada",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Es mostra al voltant de la taula de treball al llenç. No canvia la taula de treball ni la seva exportació.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Mostra {name} en un dispositiu. Canvia el disseny i la pantalla el segueix."
 }

@@ -1,4 +1,5 @@
 import {
+  DEVICE_ATTR, DEVICE_PROFILES, deviceForSize, deviceGeometry, deviceLayer, deviceProfile, readDeviceConfig, setCanvasDeviceFrame, type DeviceLayerConfig,
   MOCKUP_ATTR, MOCKUP_BLENDS, MOCKUP_SCENES, createComponent, meshAspect, mockupChildren, quadMesh, readMesh, readMockupConfig, sceneById,
   type BogenDoc, type BogenNode, type Mesh, type MockupConfig, type Point, type Quad,
 } from '@bogen/core';
@@ -147,6 +148,103 @@ export function registerMockupTools(define: ToolDefiner): void {
       id, width, height, scene: sceneId, strips: scaled.top.length - 1, design: main,
       ...(made ? { note: `${doc.getNode(main)?.name ?? 'The design'} is now a component, in place, so the mockup follows its changes.` } : {}),
       next: 'Look at it with canvas_screenshot. Nudge corners with node_id and corners if the print does not sit right, and use the same scene light across one presentation.',
+    };
+  });
+
+  define('device_list', { description: 'The device frames for device_frame: current iPhones (measured from Apple\'s dimensional drawings: body, continuous corners, island or notch, buttons), Pixel and Galaxy phones and tablets, and a browser window, each with its screen size in points and its finishes.', readOnly: true }, {}, async () => ({
+    devices: DEVICE_PROFILES.map((p) => ({ id: p.id, name: p.name, kind: p.kind, screen: `${p.width} x ${p.height}`, finishes: p.finishes.map((f, i) => `${i}: ${f.name}`) })),
+  }));
+
+  define('device_frame', { description: 'A device around a screen. Two uses. In a design (a store page, a landing page, a slide): put an artboard live into a phone, tablet or browser window with source (it becomes a component in place, so the screen follows every change), or a screenshot with image, or leave both out for an empty screen; the layer is real SVG and HTML and exports like any other. On the canvas: around shows the frame around an artboard while you design it, without changing the artboard (device none removes it). The device defaults to the one the screen\'s size is. Give node_id of a device layer to change its device, finish, screen or size.' }, {
+    node_id: z.string().optional().describe('A device layer to change.'),
+    around: z.string().optional().describe('An artboard to show in a device frame on the canvas, instead of placing a layer.'),
+    source: z.string().optional().describe('The artboard or frame to show live in the screen.'),
+    image: z.string().optional().describe('Or a screenshot: an image layer id or a bogen-asset src.'),
+    device: z.string().optional().describe('A device id from device_list, or none (with around) to remove the frame. Default: the one matching the screen\'s size.'),
+    finish: z.number().int().min(0).max(9).optional().describe('The finish (colour) by its number in device_list. Default: the darkest.'),
+    width: z.number().min(80).max(6000).optional().describe('Width of the layer in px; its height follows the device. Default: the device at its own size.'),
+    address: z.string().max(120).optional().describe('For the browser window: the address shown in its bar.'),
+    x: z.number().optional(),
+    y: z.number().optional(),
+    parent_id: z.string().optional().describe('A frame to put it in, such as a hero section. Default is the page.'),
+    name: z.string().min(1).max(200).optional(),
+    page_id: pageIdArg,
+    file_id: fileIdArg,
+  }, async (args, ctx) => {
+    const room = await ctx.room(args.file_id);
+    const { doc } = room;
+    if (args.around) {
+      const board = doc.getNode(args.around);
+      if (!board) throw new Error(`No layer with id ${args.around}.`);
+      if (!board.artboard) throw new Error(`${board.name} is not an artboard. A frame on the canvas goes around an artboard; to put a layer in a device, use source.`);
+      if (args.device === 'none') {
+        ctx.write(room, () => setCanvasDeviceFrame(doc, board.id, null));
+        return { around: board.id, device: null };
+      }
+      const size = await sourceSize(ctx, doc, board);
+      const p = args.device ? deviceProfile(args.device) : deviceForSize(size.width, size.height);
+      if (!p) throw new Error(`No device "${args.device}". device_list has them.`);
+      ctx.write(room, () => setCanvasDeviceFrame(doc, board.id, { device: p.id, ...(args.finish !== undefined ? { finish: args.finish } : {}) }));
+      return { around: board.id, device: p.id, name: p.name, screen: `${p.width} x ${p.height}`, size: `${size.width} x ${size.height}`, ...(Math.abs(p.width - Math.min(size.width, size.height)) > 0.5 ? { note: `The artboard is not ${p.name}'s size, so the frame is scaled to its width.` } : {}) };
+    }
+    const existing = args.node_id ? doc.getNode(args.node_id) : null;
+    if (args.node_id && !existing) throw new Error(`No layer with id ${args.node_id}.`);
+    const before = existing ? readDeviceConfig(existing.attrs?.[DEVICE_ATTR]) : null;
+    if (existing && !before) throw new Error(`${existing.name} is not a device layer. Leave node_id out to make one.`);
+    if (existing) assertUnlocked(doc, [existing.id]);
+    if (args.source && args.image) throw new Error('Give source or image, not both.');
+
+    let config: DeviceLayerConfig = before ? { ...before } : { device: '', width: 0 };
+    let made = false;
+    if (args.source) {
+      const node = doc.getNode(args.source);
+      if (!node) throw new Error(`No layer with id ${args.source}.`);
+      if (node.type !== 'frame') throw new Error(`${node.name} is a ${node.type} layer. Show an artboard or a frame.`);
+      const size = await sourceSize(ctx, doc, node);
+      let main = '';
+      ({ main, made } = ctx.write(room, () => ensureMain(doc, node)));
+      config = { ...config, source: main, sourceWidth: size.width, sourceHeight: size.height };
+      delete config.image;
+    } else if (args.image) {
+      const src = args.image.startsWith('bogen-asset:') || /^https?:/.test(args.image) ? args.image : doc.getNode(args.image)?.src;
+      if (!src) throw new Error(`${args.image} is not an image layer with an image, nor an image src.`);
+      config = { ...config, image: src };
+      delete config.source; delete config.sourceWidth; delete config.sourceHeight;
+    }
+    const p = args.device ? deviceProfile(args.device) : before ? deviceProfile(before.device) : config.sourceWidth && config.sourceHeight ? deviceForSize(config.sourceWidth, config.sourceHeight) : DEVICE_PROFILES[0];
+    if (!p) throw new Error(`No device "${args.device}". device_list has them.`);
+    if (args.device && before && args.device !== before.device) delete config.finish;
+    config.device = p.id;
+    if (args.finish !== undefined) config.finish = Math.min(args.finish, p.finishes.length - 1);
+    if (args.address !== undefined) config.address = args.address;
+    // By default the device at its own size: its screen as many px wide as the device has points.
+    config.width = args.width ?? (before && !args.device ? before.width : Math.round(deviceGeometry(p).width * 100) / 100);
+    const ground = config.source ? doc.getNode(config.source)?.style.backgroundColor : undefined;
+    const layer = deviceLayer(config, ground);
+    const attrs = { [DEVICE_ATTR]: JSON.stringify(config), role: 'img', 'aria-label': `${config.source ? doc.getNode(config.source)?.name ?? 'A screen' : 'A screen'} on ${p.name}` };
+    const style: Record<string, string> = { width: `${layer.width}px`, height: `${layer.height}px`, flexShrink: '0' };
+    const parent = existing ? existing.parent : args.parent_id ?? ctx.page(room, args.page_id);
+    if (!existing && args.parent_id) assertUnlocked(doc, [args.parent_id]);
+    if (args.x !== undefined || args.y !== undefined || (!existing && doc.pages.has(parent))) Object.assign(style, { position: 'absolute', left: `${args.x ?? 0}px`, top: `${args.y ?? 0}px` });
+    else style.position = 'relative';
+    const id = ctx.write(room, () => {
+      if (existing) {
+        const patch: Record<string, string> = { width: style.width!, height: style.height! };
+        if (args.x !== undefined || args.y !== undefined) Object.assign(patch, { position: 'absolute', left: style.left!, top: style.top! });
+        doc.updateStyle(existing.id, patch);
+        doc.updateFields(existing.id, { attrs: { ...(existing.attrs ?? {}), ...attrs }, ...(args.name ? { name: args.name } : {}) });
+        const old = doc.getChildren(existing.id).map((c) => c.id);
+        if (old.length) doc.delete(old);
+        doc.insertMany(existing.id, layer.children);
+        return existing.id;
+      }
+      return doc.insert(parent, { type: 'frame', tag: 'figure', name: args.name ?? `Device · ${p.name}`, style, attrs, children: layer.children });
+    });
+    ctx.touch([id]);
+    return {
+      id, device: p.id, name: p.name, width: layer.width, height: layer.height, ...(config.source ? { design: config.source } : {}),
+      ...(made ? { note: `${doc.getNode(config.source!)?.name ?? 'The design'} is now a component, in place, so the screen follows its changes.` } : {}),
+      ...(!config.source && !config.image ? { next: 'The screen is empty: give source (an artboard) or image (a screenshot) with node_id.' } : {}),
     };
   });
 }

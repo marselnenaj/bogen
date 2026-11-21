@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "„{text}” De la {author}.",
  "“{text}” {agent} answered.": "„{text}” A răspuns {agent}.",
  "… cut here, the selection is large.": "… tăiat aici, selecția este mare.",
- "…the rest is cut here": "…restul este tăiat aici"
+ "…the rest is cut here": "…restul este tăiat aici",
+ "Finish": "Finisaj",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Pune într-un dispozitiv: planșeta aleasă în direct într-un telefon, o tabletă sau o fereastră de browser",
+ "Show or hide the device frame around the selected artboard": "Arată sau ascunde rama de dispozitiv în jurul planșetei alese",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Apare în jurul planșetei pe pânză. Nu schimbă planșeta și nici exportul ei.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Arată {name} într-un dispozitiv. Schimbă designul și ecranul îl urmează."
 }

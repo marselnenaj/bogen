@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” Fra {author}.",
  "“{text}” {agent} answered.": "“{text}” {agent} svarede.",
  "… cut here, the selection is large.": "… afskåret her, markeringen er stor.",
- "…the rest is cut here": "…resten er afskåret her"
+ "…the rest is cut here": "…resten er afskåret her",
+ "Finish": "Finish",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Sæt i en enhed: det valgte tegneflade live i en telefon, tablet eller et browservindue",
+ "Show or hide the device frame around the selected artboard": "Vis eller skjul enhedsrammen om den valgte tegneflade",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Vises om tegnefladen på lærredet. Den ændrer ikke tegnefladen eller dens eksport.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Viser {name} i en enhed. Ændr designet, og skærmen følger med."
 }

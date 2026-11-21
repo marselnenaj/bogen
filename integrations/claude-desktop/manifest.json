@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "bogen",
   "display_name": "Bogen",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "A local design canvas where every layer is real HTML and CSS, drawn by Claude.",
   "long_description": "Bogen is an open source design canvas on your own computer. Claude draws, checks and comments on screens through its tools while you watch and edit in the browser. This extension starts the bogen command that the install script puts in ~/.local/bin, which talks to the Bogen server on this computer only. Install Bogen first: curl -fsSL https://bogen.dev/install.sh | bash",
   "author": {

@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "„{text}“ Od {author}.",
  "“{text}” {agent} answered.": "„{text}“ {agent} odpovedal.",
  "… cut here, the selection is large.": "… tu je to orezané, výber je veľký.",
- "…the rest is cut here": "…zvyšok je tu orezaný"
+ "…the rest is cut here": "…zvyšok je tu orezaný",
+ "Finish": "Povrch",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Vložiť do zariadenia: vybraná kresliaca plocha naživo v telefóne, tablete alebo okne prehliadača",
+ "Show or hide the device frame around the selected artboard": "Zobraziť alebo skryť rám zariadenia okolo vybranej kresliacej plochy",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Zobrazuje sa okolo kresliacej plochy na plátne. Nemení kresliacu plochu ani jej export.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Zobrazuje {name} v zariadení. Zmeňte návrh a obrazovka ho nasleduje."
 }

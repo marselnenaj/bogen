@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "\"{text}\" מאת {author}.",
  "“{text}” {agent} answered.": "\"{text}\" {agent} ענה.",
  "… cut here, the selection is large.": "… נחתך כאן, הבחירה גדולה.",
- "…the rest is cut here": "…ההמשך נחתך כאן"
+ "…the rest is cut here": "…ההמשך נחתך כאן",
+ "Finish": "גימור",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "הכנסה למכשיר: משטח העבודה שנבחר בשידור חי בטלפון, בטאבלט או בחלון דפדפן",
+ "Show or hide the device frame around the selected artboard": "הצגה או הסתרה של מסגרת המכשיר סביב משטח העבודה שנבחר",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "מוצגת סביב משטח העבודה בקנבס. היא לא משנה את משטח העבודה ולא את הייצוא שלו.",
+ "Shows {name} in a device. Change the design and the screen follows.": "מציג את {name} במכשיר. שנו את העיצוב והמסך יתעדכן."
 }

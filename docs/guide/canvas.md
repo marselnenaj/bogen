@@ -102,7 +102,20 @@ place an artboard of that size. Phone and tablet sizes are the CSS viewport of t
 page is laid out at. **New artboard:** with the name of a size in the palette does the same from the
 keyboard. With an artboard selected, the field under W and H names its size, or says Custom size; pick
 another to resize it, and the button next to it swaps width and height, from portrait to landscape and
-back (Swap width and height in the palette). There are no device frames around artboards yet.
+back (Swap width and height in the palette).
+
+**Device frames:** an artboard can show the device it is for, drawn around it on the canvas: pick one
+under Device frame in the inspector, or run **Show or hide the device frame around the selected
+artboard** in the palette, which picks the device of the artboard's size. The iPhones are drawn to Apple's
+dimensional drawings, with their body, continuous corners, Dynamic Island or notch and buttons; the Pixel
+and Galaxy phones and tablets to their makers' screen sizes, with approximate bezels; a wide artboard gets
+a browser window. The island lies over your design as it does on the phone, so you see what it hides.
+Finish picks the colour. The frame is a view: it does not change the artboard or what it exports.
+
+To put a screen into a device inside a design, such as a phone on a landing page or a store image, run
+**Put in a device** with the artboard selected. The device layer shows the artboard live, so it follows
+every change to it; it is SVG and HTML like any other layer and exports with the page. Select it to change
+the device or finish. Agents do the same with `device_frame`, also with a screenshot in the screen.
 
 ## Layout grids
 

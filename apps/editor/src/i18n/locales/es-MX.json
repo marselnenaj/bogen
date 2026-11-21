@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "“{text}” De {author}.",
  "“{text}” {agent} answered.": "“{text}” Respondió {agent}.",
  "… cut here, the selection is large.": "… se corta aquí, la selección es grande.",
- "…the rest is cut here": "…el resto se corta aquí"
+ "…the rest is cut here": "…el resto se corta aquí",
+ "Finish": "Acabado",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Poner en un dispositivo: la mesa de trabajo elegida en vivo en un teléfono, tableta o ventana del navegador",
+ "Show or hide the device frame around the selected artboard": "Mostrar u ocultar el marco de dispositivo alrededor de la mesa de trabajo elegida",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Se muestra alrededor de la mesa de trabajo en el lienzo. No cambia la mesa de trabajo ni su exportación.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Muestra {name} en un dispositivo. Cambia el diseño y la pantalla lo sigue."
 }

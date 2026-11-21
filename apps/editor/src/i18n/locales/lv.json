@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "„{text}” No {author}.",
  "“{text}” {agent} answered.": "„{text}” {agent} atbildēja.",
  "… cut here, the selection is large.": "… nogriezts šeit, atlase ir liela.",
- "…the rest is cut here": "…pārējais nogriezts šeit"
+ "…the rest is cut here": "…pārējais nogriezts šeit",
+ "Finish": "Apdare",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Ievietot ierīcē: atlasītais zīmēšanas laukums tiešraidē tālrunī, planšetdatorā vai pārlūka logā",
+ "Show or hide the device frame around the selected artboard": "Rādīt vai paslēpt ierīces rāmi ap atlasīto zīmēšanas laukumu",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Tiek rādīts ap zīmēšanas laukumu audeklā. Tas nemaina zīmēšanas laukumu un tā eksportu.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Rāda {name} ierīcē. Mainiet dizainu, un ekrāns sekos."
 }

@@ -4370,5 +4370,10 @@
  "“{text}” From {author}.": "“{text}” จาก {author}",
  "“{text}” {agent} answered.": "“{text}” {agent} ตอบแล้ว",
  "… cut here, the selection is large.": "… ตัดไว้ตรงนี้ ส่วนที่เลือกมีขนาดใหญ่",
- "…the rest is cut here": "…ส่วนที่เหลือถูกตัดไว้ตรงนี้"
+ "…the rest is cut here": "…ส่วนที่เหลือถูกตัดไว้ตรงนี้",
+ "Finish": "สีตัวเครื่อง",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "ใส่ในอุปกรณ์: อาร์ตบอร์ดที่เลือกแบบสดในโทรศัพท์ แท็บเล็ต หรือหน้าต่างเบราว์เซอร์",
+ "Show or hide the device frame around the selected artboard": "แสดงหรือซ่อนกรอบอุปกรณ์รอบอาร์ตบอร์ดที่เลือก",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "แสดงรอบอาร์ตบอร์ดบนแคนวาส ไม่เปลี่ยนอาร์ตบอร์ดหรือการส่งออก",
+ "Shows {name} in a device. Change the design and the screen follows.": "แสดง {name} ในอุปกรณ์ เปลี่ยนดีไซน์แล้วหน้าจอจะตามไปด้วย"
 }

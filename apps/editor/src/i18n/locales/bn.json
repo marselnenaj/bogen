@@ -4598,5 +4598,10 @@
  "“{text}” From {author}.": "“{text}” {author}-এর কাছ থেকে।",
  "“{text}” {agent} answered.": "“{text}” {agent} উত্তর দিয়েছে।",
  "… cut here, the selection is large.": "… এখানে কাটা হয়েছে, নির্বাচনটি বড়।",
- "…the rest is cut here": "…বাকিটা এখানে কাটা হয়েছে"
+ "…the rest is cut here": "…বাকিটা এখানে কাটা হয়েছে",
+ "Finish": "ফিনিশ",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "ডিভাইসে রাখুন: নির্বাচিত আর্টবোর্ড সরাসরি ফোন, ট্যাবলেট বা ব্রাউজার উইন্ডোতে",
+ "Show or hide the device frame around the selected artboard": "নির্বাচিত আর্টবোর্ডের চারপাশে ডিভাইস ফ্রেম দেখান বা লুকান",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "ক্যানভাসে আর্টবোর্ডের চারপাশে দেখানো হয়। এটি আর্টবোর্ড বা তার এক্সপোর্ট বদলায় না।",
+ "Shows {name} in a device. Change the design and the screen follows.": "{name} একটি ডিভাইসে দেখায়। ডিজাইন বদলালে স্ক্রিনও বদলায়।"
 }

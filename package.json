@@ -1,7 +1,7 @@
 {
   "name": "bogen-monorepo",
   "private": true,
-  "version": "0.4.3",
+  "version": "0.4.4",
   "type": "module",
   "license": "GPL-3.0-or-later",
   "workspaces": ["packages/core", "packages/server", "apps/editor"],
@@ -25,7 +25,7 @@
     "@vue/compiler-sfc": "^3.5.45",
     "svelte": "^5.57.3",
     "typescript": "^5.9",
-    "vitest": "^5"
+    "vitest": "^5.1.1"
   },
   "overrides": {
     "image-size": "2.1.0"

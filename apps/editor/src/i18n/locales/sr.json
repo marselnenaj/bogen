@@ -4826,5 +4826,10 @@
  "“{text}” From {author}.": "„{text}“ Од: {author}.",
  "“{text}” {agent} answered.": "„{text}“ {agent} је одговорио.",
  "… cut here, the selection is large.": "… исечено овде, избор је велик.",
- "…the rest is cut here": "…остатак је исечен овде"
+ "…the rest is cut here": "…остатак је исечен овде",
+ "Finish": "Завршна обрада",
+ "Put in a device: the selected artboard live in a phone, tablet or browser window": "Стави у уређај: изабрана радна табла уживо у телефону, таблету или прозору прегледача",
+ "Show or hide the device frame around the selected artboard": "Прикажи или сакриј оквир уређаја око изабране радне табле",
+ "Shown around the artboard on the canvas. It does not change the artboard or its export.": "Приказује се око радне табле на платну. Не мења радну таблу нити њен извоз.",
+ "Shows {name} in a device. Change the design and the screen follows.": "Приказује {name} у уређају. Промените дизајн и екран га прати."
 }

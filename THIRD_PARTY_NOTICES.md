@@ -70,7 +70,7 @@ Other material from third parties:
 - **Accessibility engine.** `compliance_check` runs `axe-core` (MPL-2.0, Deque Systems) in the headless renderer,
   bundled into the CLI. MPL-2.0 section 3.3 allows a Larger Work that contains it to be distributed under the GNU GPL
   as a Secondary License, because axe-core is not marked "Incompatible With Secondary Licenses". Its files stay under
-  MPL-2.0; their source form is the npm package `axe-core` 4.14.0 and <https://github.com/dequelabs/axe-core>, and
+  MPL-2.0; their source form is the npm package `axe-core` 4.14.1 and <https://github.com/dequelabs/axe-core>, and
   the notices of what axe-core itself includes are in its `LICENSE-3RD-PARTY.txt`.
 - **Fonts.** The editor's interface font is Source Sans 3 and the brand font is Archivo, both from Fontsource
   packages under the SIL Open Font License 1.1, listed below. Fonts a design uses from Google Fonts are loaded from
@@ -188,7 +188,7 @@ Other material from third parties:
 | `ansi-styles` | 4.3.0 | MIT | npm install | <https://github.com/chalk/ansi-styles> |
 | `ansi-styles` | 6.2.3 | MIT | npm install | <https://github.com/chalk/ansi-styles> |
 | `async-retry` | 1.3.3 | MIT | npm install | <https://github.com/vercel/async-retry> |
-| `axe-core` | 4.14.0 | MPL-2.0 | CLI | <https://github.com/dequelabs/axe-core> |
+| `axe-core` | 4.14.1 | MPL-2.0 | CLI | <https://github.com/dequelabs/axe-core> |
 | `body-parser` | 2.4.0 | MIT | CLI | <https://github.com/expressjs/body-parser> |
 | `boolbase` | 2.0.0 | ISC | CLI | <https://github.com/fb55/boolbase> |
 | `bytes` | 3.1.2 | MIT | CLI, npm install | <https://github.com/visionmedia/bytes.js> |
@@ -362,7 +362,7 @@ Other material from third parties:
 | `log-symbols` | 7.0.1 | MIT | npm install | <https://github.com/sindresorhus/log-symbols> |
 | `long` | 5.3.2 | Apache-2.0 | npm install | <https://github.com/dcodeIO/long.js> |
 | `lowdb` | 7.0.1 | MIT | npm install | <https://github.com/typicode/lowdb> |
-| `lucide-react` | 1.72.0 | ISC | Editor | <https://github.com/lucide-icons/lucide> |
+| `lucide-react` | 1.74.0 | ISC | Editor | <https://github.com/lucide-icons/lucide> |
 | `marked` | 16.4.2 | MIT | CLI | <https://github.com/markedjs/marked> |
 | `math-intrinsics` | 1.1.0 | MIT | CLI | <https://github.com/es-shims/math-intrinsics> |
 | `media-typer` | 1.1.1 | MIT | CLI | <https://github.com/jshttp/media-typer> |
@@ -403,7 +403,7 @@ Other material from third parties:
 | `path-key` | 3.1.1 | MIT | CLI, npm install | <https://github.com/sindresorhus/path-key> |
 | `path-to-regexp` | 8.4.2 | MIT | CLI | <https://github.com/pillarjs/path-to-regexp> |
 | `pdf-lib` | 1.17.1 | MIT | CLI | <https://github.com/Hopding/pdf-lib> |
-| `pdfjs-dist` | 6.4.299 | Apache-2.0 | CLI | <https://github.com/mozilla/pdf.js> |
+| `pdfjs-dist` | 6.5.438 | Apache-2.0 | CLI | <https://github.com/mozilla/pdf.js> |
 | `pkce-challenge` | 5.0.1 | MIT | CLI | <https://github.com/crouchcd/pkce-challenge> |
 | `platform` | 1.3.6 | MIT | npm install | <https://github.com/bestiejs/platform.js> |
 | `points-on-curve` | 0.2.0 | MIT | CLI | <https://github.com/pshihn/bezier-points> |
@@ -416,7 +416,7 @@ Other material from third parties:
 | `proper-lockfile` | 4.1.2 | MIT | npm install |  |
 | `protobufjs` | 7.6.6 | BSD-3-Clause | npm install | <https://github.com/protobufjs/protobuf.js> |
 | `proxy-addr` | 2.0.8 | MIT | CLI | <https://github.com/jshttp/proxy-addr> |
-| `puppeteer-core` | 25.17.0 | Apache-2.0 | npm install | <https://github.com/puppeteer/puppeteer/tree/main/packages/puppeteer-core> |
+| `puppeteer-core` | 25.18.1 | Apache-2.0 | npm install | <https://github.com/puppeteer/puppeteer/tree/main/packages/puppeteer-core> |
 | `qs` | 6.17.1 | BSD-3-Clause | CLI | <https://github.com/ljharb/qs> |
 | `quickjs-emscripten-core` | 0.32.0 | MIT | CLI | <https://github.com/justjake/quickjs-emscripten> |
 | `range-parser` | 1.3.0 | MIT | CLI | <https://github.com/jshttp/range-parser> |
@@ -491,7 +491,7 @@ Other material from third parties:
 | `wrap-ansi` | 7.0.0 | MIT | npm install | <https://github.com/chalk/wrap-ansi> |
 | `wrap-ansi` | 9.0.2 | MIT | npm install | <https://github.com/chalk/wrap-ansi> |
 | `wrappy` | 1.0.2 | ISC | CLI | <https://github.com/npm/wrappy> |
-| `ws` | 8.22.2 | MIT | CLI, npm install | <https://github.com/websockets/ws> |
+| `ws` | 8.23.0 | MIT | CLI, npm install | <https://github.com/websockets/ws> |
 | `y-protocols` | 1.0.7 | MIT | CLI, Editor | <https://github.com/yjs/y-protocols> |
 | `y-websocket` | 3.1.0 | MIT | Editor | <https://github.com/yjs/y-websocket> |
 | `y18n` | 5.0.8 | ISC | npm install | <https://github.com/yargs/y18n> |
@@ -661,7 +661,7 @@ license file; its license is the one in its `package.json`.
 - `ansi-styles` 4.3.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `ansi-styles` 6.2.3: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `async-retry` 1.3.3: Copyright (c) 2021 Vercel, Inc.
-- `axe-core` 4.14.0: Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors; Copyright (c) 2010, Linden Research, Inc.; Copyright (c) 2012, Joshua Bell
+- `axe-core` 4.14.1: Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors; Copyright (c) 2010, Linden Research, Inc.; Copyright (c) 2012, Joshua Bell
 - `body-parser` 2.4.0: Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>; Copyright (c) 2014-2015 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `boolbase` 2.0.0: Copyright (c) 2014-2015, Felix Boehm <me@feedic.com>
 - `bytes` 3.1.2: Copyright (c) 2012-2014 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2015 Jed Watson <jed.watson@me.com>
@@ -822,7 +822,7 @@ license file; its license is the one in its `package.json`.
 - `lodash.debounce` 4.0.8: Copyright jQuery Foundation and other contributors <https://jquery.org/>; Copyright and related rights for sample code are waived via CC0. Sample
 - `log-symbols` 7.0.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `lowdb` 7.0.1: Copyright (c) 2021 typicode
-- `lucide-react` 1.72.0: Copyright (c) 2026 Lucide Icons and Contributors; Copyright (c) 2013-present Cole Bemis
+- `lucide-react` 1.74.0: Copyright (c) 2026 Lucide Icons and Contributors; Copyright (c) 2013-present Cole Bemis
 - `marked` 16.4.2: Copyright (c) 2018+, MarkedJS (https://github.com/markedjs/); Copyright (c) 2011-2018, Christopher Jeffrey (https://github.com/chjj/); Copyright © 2004, John Gruber
 - `math-intrinsics` 1.1.0: Copyright (c) 2024 ECMAScript Shims
 - `media-typer` 1.1.1: Copyright (c) 2014-2017 Douglas Christopher Wilson
@@ -942,7 +942,7 @@ license file; its license is the one in its `package.json`.
 - `wrap-ansi` 7.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `wrap-ansi` 9.0.2: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `wrappy` 1.0.2: Copyright (c) Isaac Z. Schlueter and Contributors
-- `ws` 8.22.2: Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>; Copyright (c) 2013 Arnout Kazemier and contributors; Copyright (c) 2016 Luigi Pinca and contributors
+- `ws` 8.23.0: Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>; Copyright (c) 2013 Arnout Kazemier and contributors; Copyright (c) 2016 Luigi Pinca and contributors
 - `y-protocols` 1.0.7: Copyright (c) 2019 Kevin Jahns <kevin.jahns@protonmail.com>.
 - `y-websocket` 3.1.0: Copyright (c) 2025 Kevin Jahns <kevin.jahns@protonmail.com>.
 - `y18n` 5.0.8: Copyright (c) 2015, Contributors
@@ -958,7 +958,7 @@ license file; its license is the one in its `package.json`.
 - `zod-to-json-schema` 3.25.2: Copyright (c) 2020, Stefan Terdell
 - `zustand` 5.1.0: Copyright (c) 2019 Paul Henschel
 
-No license file in the package: `@fugood/node-whisper-wasm` 1.1.3 (MIT), `@puppeteer/browsers` 3.2.7 (Apache-2.0), `@reflink/reflink` 0.1.19 (MIT), `guid-typescript` 1.0.9 (ISC), `https` 1.0.0 (ISC), `isarray` 1.0.0 (MIT), `onnxruntime-common` 1.31.1 (MIT), `onnxruntime-web` 1.31.1 (MIT), `puppeteer-core` 25.17.0 (Apache-2.0), `sherpa-onnx-node` 2.0.1 (Apache-2.0).
+No license file in the package: `@fugood/node-whisper-wasm` 1.1.3 (MIT), `@puppeteer/browsers` 3.2.7 (Apache-2.0), `@reflink/reflink` 0.1.19 (MIT), `guid-typescript` 1.0.9 (ISC), `https` 1.0.0 (ISC), `isarray` 1.0.0 (MIT), `onnxruntime-common` 1.31.1 (MIT), `onnxruntime-web` 1.31.1 (MIT), `puppeteer-core` 25.18.1 (Apache-2.0), `sherpa-onnx-node` 2.0.1 (Apache-2.0).
 
 ## NOTICE files
 
@@ -984,7 +984,7 @@ Powered by Paper Shaders:
 https://shaders.paper.design
 ```
 
-### axe-core 4.14.0, LICENSE-3RD-PARTY.txt
+### axe-core 4.14.1, LICENSE-3RD-PARTY.txt
 
 ```text
 -----------------------------------------------------------------------------
@@ -3497,7 +3497,7 @@ SOFTWARE.
 
 ### MPL-2.0
 
-From `axe-core 4.14.0`, file `LICENSE`.
+From `axe-core 4.14.1`, file `LICENSE`.
 
 ```text
 Mozilla Public License, version 2.0
